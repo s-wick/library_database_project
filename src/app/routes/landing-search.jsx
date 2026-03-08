@@ -1,6 +1,10 @@
 import React, { useState } from "react"
 import { Search } from "lucide-react"
-import { Input } from "@/components/ui/input"
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -11,6 +15,8 @@ import {
   CardFooter,
 } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { useTheme } from "@/components/theme-provider"
+import { Moon, Sun } from "lucide-react"
 
 // Background image import
 import bgImage from "@/assets/library-hero.png"
@@ -75,6 +81,7 @@ const libraryBooks = [
 
 export default function LandingSearchPage() {
   const [searchQuery, setSearchQuery] = useState("")
+  const { theme, setTheme } = useTheme()
 
   // Filter books based on title, author, or genre
   const filteredBooks = libraryBooks.filter((book) => {
@@ -87,7 +94,31 @@ export default function LandingSearchPage() {
   })
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
+    <div>
+      <div className="sticky top-0 z-20 flex h-16 items-center justify-end border-b bg-background px-6">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() =>
+            setTheme(
+              theme === "dark" ||
+                (theme === "system" &&
+                  window.matchMedia("(prefers-color-scheme: dark)").matches)
+                ? "light"
+                : "dark"
+            )
+          }
+        >
+          {theme === "dark" ? (
+            <Sun className="h-5 w-5" />
+          ) : (
+            <Moon className="h-5 w-5" />
+          )}
+          <span className="sr-only">Toggle theme</span>
+        </Button>
+      </div>
+
+      {/* lassName="flex min-h-screen flex-col bg-background">
       {/* Hero Section with Background Image */}
       <div
         className="relative flex h-[400px] items-center justify-center p-6"
@@ -102,27 +133,24 @@ export default function LandingSearchPage() {
 
         <div className="relative z-10 w-full max-w-2xl px-4 text-center">
           <h1 className="mb-6 text-4xl font-bold tracking-tight text-white md:text-5xl">
-            Discover Your Next Read
+            Browse Our Library Catalog
           </h1>
           <p className="mb-8 text-lg text-slate-200">
             Search books, audiobooks, and resources in our catalog.
           </p>
 
           {/* Search Bar */}
-          <div className="relative mx-auto flex max-w-xl items-center overflow-hidden rounded-md shadow-lg">
-            <div className="absolute left-3 text-slate-400">
-              <Search className="h-5 w-5" />
-            </div>
-            <Input
-              type="text"
-              placeholder="Search by title, author, or genre..."
-              className="text-md h-14 w-full rounded-r-none border-0 bg-white pl-10 text-black focus-visible:ring-0 focus-visible:ring-offset-0"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            <Button className="text-md h-14 rounded-l-none px-8 font-semibold">
-              Search
-            </Button>
+          <div className="relative mx-auto flex max-w-xl items-center overflow-hidden rounded-md bg-background shadow-lg">
+            <InputGroup>
+              <InputGroupInput
+                placeholder="Search by title, author, or genre..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              <InputGroupAddon>
+                <Search />
+              </InputGroupAddon>
+            </InputGroup>
           </div>
         </div>
       </div>

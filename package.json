@@ -3,6 +3,10 @@
   "private": true,
   "version": "0.0.1",
   "type": "module",
+
+  "simple-git-hooks": {
+    "pre-commit": "npm run lint && npm run format"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -37,6 +41,8 @@
     "globals": "^16.5.0",
     "prettier": "^3.8.1",
     "prettier-plugin-tailwindcss": "^0.7.2",
+    "pretty-quick": "^4.2.2",
+    "simple-git-hooks": "^2.13.1",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
     "vite": "^7.2.4"

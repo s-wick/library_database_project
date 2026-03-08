@@ -1,5 +1,6 @@
 import React, { useState } from "react"
 import { Search } from "lucide-react"
+import { Link } from "react-router-dom"
 import {
   InputGroup,
   InputGroupAddon,
@@ -96,6 +97,9 @@ export default function LandingSearchPage() {
   return (
     <div>
       <div className="sticky top-0 z-20 flex h-16 items-center justify-end border-b bg-background px-6">
+        <Button asChild variant="outline" className="mr-2">
+          <Link to="/auth">Sign in</Link>
+        </Button>
         <Button
           variant="ghost"
           size="icon"

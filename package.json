@@ -3,7 +3,6 @@
   "private": true,
   "version": "0.0.1",
   "type": "module",
-
   "simple-git-hooks": {
     "pre-commit": "npm run lint && npm run format"
   },
@@ -11,7 +10,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "format": "prettier --write \"**/*.{ts,tsx,jsx}\"",
+    "format": "prettier --write .",
     "preview": "vite preview"
   },
   "dependencies": {

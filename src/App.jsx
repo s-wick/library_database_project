@@ -1,9 +1,7 @@
-import { Container } from '@mui/material';
-import Button from '@mui/material/Button';
+import { AppProvider } from "@/app/provider"
 
-export default function ButtonUsage() {
-  // return <Button variant="contained">Hello world</Button>;
-  return (
-    <Container><Button variant="contained">Hello world</Button></Container>
-  )
+export function App() {
+  return <AppProvider />
 }
+
+export default App

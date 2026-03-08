@@ -1,21 +1,25 @@
-# React + TypeScript + Vite + shadcn/ui
+# Library Database Project
 
-This is a template for a new Vite project with React, TypeScript, and shadcn/ui.
+This is a fullstack project that emulates a library cataloging system. It was built for COSC 3380.
 
-## Adding components
+## Getting started
 
-To add components to your app, run the following command:
+### Prerequisites
+- [NodeJS](https://nodejs.org/en)
+- [git](https://git-scm.com/)
+- [Visual Studio Code](https://code.visualstudio.com/download) (recommended but not required)
+
+### Setting up your workspace
+
+Run the following commands to clone the repo and install the necessary packages:
 
 ```bash
-npx shadcn@latest add button
+git clone https://github.com/s-wick/library_database_project/
+cd library_database_project
+npm install
 ```
 
-This will place the ui components in the `src/components` directory.
-
-## Using components
-
-To use the components in your app, import them as follows:
-
-```tsx
-import { Button } from "@/components/ui/button"
-```
+## Relevant Links
+- [React](https://react.dev/)
+- [Vite](https://vite.dev/)
+- [shadcn](https://ui.shadcn.com/)

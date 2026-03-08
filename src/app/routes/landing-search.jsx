@@ -13,7 +13,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 
 // Background image import
-import bgImage from "../../assets/sign-in-bg.png"
+import bgImage from "@/assets/library-hero.png"
 
 // Placeholder library data
 const libraryBooks = [

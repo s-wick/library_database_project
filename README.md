@@ -5,6 +5,7 @@ This is a fullstack project that emulates a library cataloging system. It was bu
 ## Getting started
 
 ### Prerequisites
+
 - [NodeJS](https://nodejs.org/en)
 - [git](https://git-scm.com/)
 - [Visual Studio Code](https://code.visualstudio.com/download) (recommended but not required)
@@ -20,6 +21,7 @@ npm install
 ```
 
 ## Relevant Links
+
 - [React](https://react.dev/)
 - [Vite](https://vite.dev/)
 - [shadcn](https://ui.shadcn.com/)

@@ -4,6 +4,7 @@ import { Link } from "react-router-dom"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field"
 
 const roles = [
   { id: "admin", label: "Admin / Staff" },
@@ -20,7 +21,7 @@ export default function AuthPage() {
   const [selectedRole, setSelectedRole] = useState("admin")
   const [mode, setMode] = useState("signin")
   const [form, setForm] = useState(emptyForm)
-  const [error, setError] = useState("")
+  const [errors, setErrors] = useState({})
   const [success, setSuccess] = useState("")
 
   const isSignUp = mode === "signup"
@@ -37,34 +38,33 @@ export default function AuthPage() {
 
   function switchMode(nextMode) {
     setMode(nextMode)
-    setError("")
+    setErrors({})
     setSuccess("")
     setForm(emptyForm)
   }
 
   function handleSubmit(event) {
     event.preventDefault()
-    setError("")
+    setErrors({})
     setSuccess("")
 
     if (!form.email.trim()) {
-      setError("Email is required.")
-      return
+      setErrors({ email: "Email is required." })
     }
 
     if (!form.password.trim()) {
-      setError("Password is required.")
+      setErrors((prev) => ({ ...prev, password: "Password is required." }))
       return
     }
 
     if (isSignUp) {
       if (!form.confirmPassword.trim()) {
-        setError("Retype password is required.")
+        setErrors({ confirmPassword: "Retype password is required." })
         return
       }
 
       if (form.password !== form.confirmPassword) {
-        setError("Passwords do not match.")
+        setErrors({ confirmPassword: "Passwords do not match." })
         return
       }
     }
@@ -76,27 +76,25 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="min-h-screen bg-muted/30 px-4 py-8">
-      <div className="mx-auto w-full max-w-4xl">
-        <Card className="rounded-4xl border bg-card py-8 sm:py-10">
-          <CardHeader className="px-6 sm:px-12">
+    <div className="flex min-h-screen items-center justify-center bg-muted/30 px-4 py-8">
+      <div className="mx-auto w-full max-w-md">
+        <Card className="border bg-card">
+          <CardHeader>
             <Link
               to="/"
-              className="mb-6 inline-flex items-center gap-2 text-2xl text-primary hover:opacity-90"
+              className="mb-4 inline-flex items-center gap-2 text-sm text-primary hover:opacity-90"
             >
-              <ArrowLeft className="size-6" />
+              <ArrowLeft className="size-4" />
               <span>Back to home</span>
             </Link>
-            <CardTitle className="text-5xl font-semibold tracking-tight">
+            <CardTitle className="text-2xl font-semibold tracking-tight">
               {isSignUp ? "Sign up" : "Sign in"}
             </CardTitle>
-            <p className="mt-1 text-3xl text-muted-foreground">
-              University Library
-            </p>
+            <p className="text-sm text-muted-foreground">University Library</p>
           </CardHeader>
 
-          <CardContent className="space-y-6 px-6 sm:px-12">
-            <div className="grid grid-cols-2 overflow-hidden rounded-xl border">
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-2 overflow-hidden rounded-md border">
               {roles.map((role) => {
                 const isActive = selectedRole === role.id
                 return (
@@ -104,7 +102,7 @@ export default function AuthPage() {
                     key={role.id}
                     type="button"
                     onClick={() => setSelectedRole(role.id)}
-                    className={`h-12 text-lg font-medium transition ${
+                    className={`h-10 text-sm font-medium transition ${
                       isActive
                         ? "bg-primary text-primary-foreground"
                         : "bg-background text-muted-foreground hover:bg-muted"
@@ -116,61 +114,94 @@ export default function AuthPage() {
               })}
             </div>
 
-            <form className="space-y-5" onSubmit={handleSubmit}>
-              <div className="space-y-2">
-                <label className="text-2xl font-medium" htmlFor="email">
+            <form className="space-y-4" onSubmit={handleSubmit}>
+              <Field className="space-y-0">
+                <FieldLabel htmlFor={errors.email ? "input-invalid" : "email"}>
                   Email
-                </label>
+                </FieldLabel>
                 <Input
-                  id="email"
+                  id={errors.email ? "input-invalid" : "email"}
                   name="email"
                   type="email"
                   placeholder="you@university.edu"
                   value={form.email}
                   onChange={handleChange}
-                  className="h-12 text-lg"
+                  aria-invalid={!!errors.email}
+                  className={
+                    errors.email
+                      ? "border-destructive text-destructive focus-visible:ring-destructive"
+                      : ""
+                  }
                 />
-              </div>
+                {errors.email && (
+                  <p className="text-sm font-medium text-destructive">
+                    {errors.email}
+                  </p>
+                )}
+              </Field>
 
-              <div className="space-y-2">
-                <label className="text-2xl font-medium" htmlFor="password">
+              <Field>
+                <FieldLabel
+                  htmlFor={errors.password ? "input-invalid" : "password"}
+                >
                   Password
-                </label>
+                </FieldLabel>
                 <Input
-                  id="password"
+                  id={errors.password ? "input-invalid" : "password"}
                   name="password"
                   type="password"
                   placeholder="Enter your password"
                   value={form.password}
                   onChange={handleChange}
-                  className="h-12 text-lg"
+                  aria-invalid={!!errors.password}
+                  className={
+                    errors.password
+                      ? "border-destructive text-destructive focus-visible:ring-destructive"
+                      : ""
+                  }
                 />
-              </div>
+                {errors.password && (
+                  <p className="text-sm font-medium text-destructive">
+                    {errors.password}
+                  </p>
+                )}
+              </Field>
 
               {isSignUp && (
-                <div className="space-y-2">
-                  <label
-                    className="text-2xl font-medium"
-                    htmlFor="confirmPassword"
+                <Field>
+                  <FieldLabel
+                    htmlFor={
+                      errors.confirmPassword
+                        ? "input-invalid"
+                        : "confirmPassword"
+                    }
                   >
                     Retype password
-                  </label>
+                  </FieldLabel>
                   <Input
-                    id="confirmPassword"
+                    id={
+                      errors.confirmPassword
+                        ? "input-invalid"
+                        : "confirmPassword"
+                    }
                     name="confirmPassword"
                     type="password"
                     placeholder="Retype your password"
                     value={form.confirmPassword}
                     onChange={handleChange}
-                    className="h-12 text-lg"
+                    aria-invalid={!!errors.confirmPassword}
+                    className={
+                      errors.confirmPassword
+                        ? "border-destructive text-destructive focus-visible:ring-destructive"
+                        : ""
+                    }
                   />
-                </div>
-              )}
-
-              {error && (
-                <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                  {error}
-                </p>
+                  {errors.confirmPassword && (
+                    <p className="text-sm font-medium text-destructive">
+                      {errors.confirmPassword}
+                    </p>
+                  )}
+                </Field>
               )}
 
               {success && (
@@ -179,12 +210,12 @@ export default function AuthPage() {
                 </p>
               )}
 
-              <Button type="submit" className="h-12 w-full text-2xl">
+              <Button type="submit" className="w-full">
                 {submitLabel}
               </Button>
             </form>
 
-            <div className="text-center text-base text-muted-foreground">
+            <div className="text-center text-sm text-muted-foreground">
               {isSignUp ? "Already have an account?" : "Need an account?"}{" "}
               <button
                 type="button"

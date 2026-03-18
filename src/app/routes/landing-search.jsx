@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useTheme } from "@/components/theme-provider"
-import { Moon, Sun } from "lucide-react"
+import { Moon, Sun, LayoutDashboard } from "lucide-react"
 
 // Background image import
 import bgImage from "@/assets/library-hero.png"
@@ -84,7 +84,9 @@ export default function LandingSearchPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const { theme, setTheme } = useTheme()
 
-  // Filter books based on title, author, or genre
+  // Simulate whether a user is logged in — swap to your real auth check
+  const isLoggedIn = true
+
   const filteredBooks = libraryBooks.filter((book) => {
     const lowerCaseQuery = searchQuery.toLowerCase()
     return (
@@ -96,10 +98,25 @@ export default function LandingSearchPage() {
 
   return (
     <div>
-      <div className="sticky top-0 z-20 flex h-16 items-center justify-end border-b bg-background px-6">
-        <Button asChild variant="outline" className="mr-2">
-          <Link to="/auth">Sign in</Link>
+      {/* ── Top Navigation Bar ── */}
+      <div className="sticky top-0 z-20 flex h-16 items-center justify-end border-b bg-background px-6 gap-2">
+
+        {/* Dashboard button — shown when logged in */}
+        {isLoggedIn && (
+          <Button asChild variant="default" className="mr-1 gap-2">
+            <Link to="/user-dashboard">
+              <LayoutDashboard className="h-4 w-4" />
+              My Dashboard
+            </Link>
+          </Button>
+        )}
+
+        {/* Sign in / Sign out */}
+        <Button asChild variant="outline">
+          <Link to="/auth">{isLoggedIn ? "Sign out" : "Sign in"}</Link>
         </Button>
+
+        {/* Theme toggle */}
         <Button
           variant="ghost"
           size="icon"
@@ -122,8 +139,7 @@ export default function LandingSearchPage() {
         </Button>
       </div>
 
-      {/* lassName="flex min-h-screen flex-col bg-background">
-      {/* Hero Section with Background Image */}
+      {/* ── Hero Section ── */}
       <div
         className="relative flex h-[400px] items-center justify-center p-6"
         style={{
@@ -132,8 +148,7 @@ export default function LandingSearchPage() {
           backgroundPosition: "center",
         }}
       >
-        {/* Dark Overlay for text readability */}
-        <div className="absolute inset-0 z-0 bg-black/60"></div>
+        <div className="absolute inset-0 z-0 bg-black/60" />
 
         <div className="relative z-10 w-full max-w-2xl px-4 text-center">
           <h1 className="mb-6 text-4xl font-bold tracking-tight text-white md:text-5xl">
@@ -143,7 +158,6 @@ export default function LandingSearchPage() {
             Search books, audiobooks, and resources in our catalog.
           </p>
 
-          {/* Search Bar */}
           <div className="relative mx-auto flex max-w-xl items-center overflow-hidden rounded-md bg-background shadow-lg">
             <InputGroup>
               <InputGroupInput
@@ -159,7 +173,7 @@ export default function LandingSearchPage() {
         </div>
       </div>
 
-      {/* Main Content / Results */}
+      {/* ── Main Content / Results ── */}
       <main className="mx-auto w-full max-w-6xl flex-1 p-6 md:p-10">
         <div className="mb-8">
           <h2 className="text-2xl font-semibold tracking-tight">

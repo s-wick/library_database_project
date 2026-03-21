@@ -262,9 +262,6 @@ function BorrowedBooks() {
                   </span>
                 </div>
               </div>
-              <Button variant="outline" size="sm" className="shrink-0 text-xs">
-                Renew
-              </Button>
             </div>
           )
         })}
@@ -334,40 +331,60 @@ function FinesPanel() {
           )}
         </div>
       </CardHeader>
-      <CardContent className="space-y-2">
+      <CardContent className="space-y-3">
         {fines.map((fine) => (
           <div
             key={fine.id}
-            className="flex items-center justify-between rounded-lg p-2.5 text-sm"
+            className="flex items-center justify-between rounded-xl border bg-muted/30 p-3"
           >
-            <div>
-              <p className="font-medium">{fine.book}</p>
-              <p className="text-xs text-muted-foreground">
-                {fine.daysOverdue} days overdue
-              </p>
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/40">
+                <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+              </div>
+              <div>
+                <p className="leading-tight font-semibold">{fine.book}</p>
+                <p className="text-xs text-muted-foreground">
+                  {fine.daysOverdue} days overdue
+                </p>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span
-                className={`font-semibold ${
-                  fine.status === "paid"
-                    ? "text-muted-foreground line-through"
-                    : "text-red-600"
-                }`}
-              >
-                ${fine.amount.toFixed(2)}
-              </span>
-              {fine.status === "unpaid" ? (
-                <Badge variant="destructive" className="text-xs">
-                  Unpaid
-                </Badge>
-              ) : (
-                <Badge variant="secondary" className="text-xs">
-                  Paid
-                </Badge>
-              )}
+            <div className="flex items-center gap-4">
+              <div className="text-right">
+                <span
+                  className={`font-bold ${
+                    fine.status === "paid"
+                      ? "text-muted-foreground line-through"
+                      : "text-red-600"
+                  }`}
+                >
+                  ${fine.amount.toFixed(2)}
+                </span>
+                <div className="mt-1">
+                  {fine.status === "unpaid" ? (
+                    <Badge
+                      variant="destructive"
+                      className="h-4 px-1.5 py-0 text-[10px] tracking-wider uppercase"
+                    >
+                      Unpaid
+                    </Badge>
+                  ) : (
+                    <Badge
+                      variant="secondary"
+                      className="h-4 px-1.5 py-0 text-[10px] tracking-wider uppercase"
+                    >
+                      Paid
+                    </Badge>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         ))}
+        {fines.length === 0 && (
+          <p className="py-4 text-center text-sm text-muted-foreground">
+            No fines found.
+          </p>
+        )}
       </CardContent>
       {total > 0 && (
         <CardFooter className="pt-0">
@@ -381,35 +398,63 @@ function FinesPanel() {
 }
 
 function BorrowHistory() {
+  const [isLoading, setIsLoading] = useState(false)
+  const [displayedItems, setDisplayedItems] = useState(5)
+
+  const handleLoadMore = () => {
+    setIsLoading(true)
+    setTimeout(() => {
+      setDisplayedItems((prev) => prev + 5)
+      setIsLoading(false)
+    }, 800)
+  }
+
+  const visibleHistory = borrowHistory.slice(0, displayedItems)
+
   return (
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-lg">Borrow History</CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="divide-y">
-          {borrowHistory.map((item) => (
-            <div
-              key={item.id}
-              className="flex items-center justify-between py-3"
-            >
+      <CardContent className="space-y-3">
+        {visibleHistory.map((item) => (
+          <div
+            key={item.id}
+            className="flex items-center justify-between rounded-xl border bg-muted/30 p-3"
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800">
+                <Clock className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+              </div>
               <div>
-                <p className="leading-tight font-medium">{item.title}</p>
+                <p className="leading-tight font-semibold">{item.title}</p>
                 <p className="text-xs text-muted-foreground">{item.author}</p>
               </div>
-              <div className="text-right">
-                <p className="text-xs text-muted-foreground">Returned</p>
-                <p className="text-xs font-medium">{item.returned}</p>
-              </div>
             </div>
-          ))}
-        </div>
+            <div className="text-right">
+              <p className="text-xs text-muted-foreground">Returned</p>
+              <p className="text-xs font-semibold">{item.returned}</p>
+            </div>
+          </div>
+        ))}
+        {borrowHistory.length === 0 && (
+          <p className="py-4 text-center text-sm text-muted-foreground">
+            No history found.
+          </p>
+        )}
       </CardContent>
-      <CardFooter>
-        <Button variant="outline" size="sm" className="w-full text-xs">
-          View Full History <ArrowUpRight className="ml-1 h-3 w-3" />
-        </Button>
-      </CardFooter>
+      {borrowHistory.length > visibleHistory.length && (
+        <CardFooter className="pt-0">
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={handleLoadMore}
+            disabled={isLoading}
+          >
+            {isLoading ? "Loading..." : "Load More"}
+          </Button>
+        </CardFooter>
+      )}
     </Card>
   )
 }
@@ -487,14 +532,6 @@ export default function UserDashboard() {
               </p>
             </div>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2 self-start sm:self-auto"
-          >
-            <User className="h-4 w-4" />
-            Edit Profile
-          </Button>
         </div>
 
         {/* Tab Navigation */}
@@ -542,7 +579,7 @@ export default function UserDashboard() {
         )}
 
         {activeTab === "fines" && (
-          <div className="max-w-lg space-y-4">
+          <div className="space-y-4">
             <FinesPanel />
             <p className="text-center text-xs text-muted-foreground">
               Fines accrue at $0.25/day per overdue item.
@@ -551,7 +588,7 @@ export default function UserDashboard() {
         )}
 
         {activeTab === "history" && (
-          <div className="max-w-lg space-y-4">
+          <div className="space-y-4">
             <BorrowHistory />
           </div>
         )}

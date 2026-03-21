@@ -99,8 +99,7 @@ export default function LandingSearchPage() {
   return (
     <div>
       {/* ── Top Navigation Bar ── */}
-      <div className="sticky top-0 z-20 flex h-16 items-center justify-end border-b bg-background px-6 gap-2">
-
+      <div className="sticky top-0 z-20 flex h-16 items-center justify-end gap-2 border-b bg-background px-6">
         {/* Dashboard button — shown when logged in */}
         {isLoggedIn && (
           <Button asChild variant="default" className="mr-1 gap-2">

@@ -192,7 +192,7 @@ function OverviewCards() {
           className="group relative overflow-hidden rounded-2xl border bg-card p-5 shadow-sm transition-shadow hover:shadow-md"
         >
           <div
-            className="absolute -right-3 -top-3 h-16 w-16 rounded-full opacity-10 transition-transform group-hover:scale-125"
+            className="absolute -top-3 -right-3 h-16 w-16 rounded-full opacity-10 transition-transform group-hover:scale-125"
             style={{ backgroundColor: accent }}
           />
           <div
@@ -214,7 +214,11 @@ function BorrowedBooks() {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-3">
         <CardTitle className="text-lg">Currently Borrowed</CardTitle>
-        <Button variant="ghost" size="sm" className="text-xs text-muted-foreground">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-xs text-muted-foreground"
+        >
           View all <ChevronRight className="ml-1 h-3 w-3" />
         </Button>
       </CardHeader>
@@ -234,7 +238,9 @@ function BorrowedBooks() {
                 <BookOpen className="h-5 w-5 opacity-70" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate font-semibold leading-tight">{book.title}</p>
+                <p className="truncate leading-tight font-semibold">
+                  {book.title}
+                </p>
                 <p className="text-xs text-muted-foreground">{book.author}</p>
                 <div className="mt-1.5 flex items-center gap-2">
                   <StatusBadge status={book.status} />
@@ -242,8 +248,8 @@ function BorrowedBooks() {
                     {days < 0
                       ? `${Math.abs(days)}d overdue`
                       : days === 0
-                      ? "Due today"
-                      : `${days}d left`}
+                        ? "Due today"
+                        : `${days}d left`}
                   </span>
                 </div>
               </div>
@@ -275,7 +281,7 @@ function HoldQueue() {
                 #{item.queuePosition}
               </div>
               <div>
-                <p className="font-semibold leading-tight">{item.title}</p>
+                <p className="leading-tight font-semibold">{item.title}</p>
                 <p className="text-xs text-muted-foreground">{item.author}</p>
               </div>
             </div>
@@ -283,14 +289,18 @@ function HoldQueue() {
               <p className="text-xs font-medium text-muted-foreground">
                 {item.estimatedWait}
               </p>
-              <Button variant="ghost" size="sm" className="mt-1 h-6 px-2 text-xs text-red-500 hover:text-red-600">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mt-1 h-6 px-2 text-xs text-red-500 hover:text-red-600"
+              >
                 Cancel
               </Button>
             </div>
           </div>
         ))}
         {holdQueue.length === 0 && (
-          <p className="text-center text-sm text-muted-foreground py-4">
+          <p className="py-4 text-center text-sm text-muted-foreground">
             No holds placed.
           </p>
         )}
@@ -330,15 +340,21 @@ function FinesPanel() {
             <div className="flex items-center gap-2">
               <span
                 className={`font-semibold ${
-                  fine.status === "paid" ? "text-muted-foreground line-through" : "text-red-600"
+                  fine.status === "paid"
+                    ? "text-muted-foreground line-through"
+                    : "text-red-600"
                 }`}
               >
                 ${fine.amount.toFixed(2)}
               </span>
               {fine.status === "unpaid" ? (
-                <Badge variant="destructive" className="text-xs">Unpaid</Badge>
+                <Badge variant="destructive" className="text-xs">
+                  Unpaid
+                </Badge>
               ) : (
-                <Badge variant="secondary" className="text-xs">Paid</Badge>
+                <Badge variant="secondary" className="text-xs">
+                  Paid
+                </Badge>
               )}
             </div>
           </div>
@@ -364,9 +380,12 @@ function BorrowHistory() {
       <CardContent>
         <div className="divide-y">
           {borrowHistory.map((item) => (
-            <div key={item.id} className="flex items-center justify-between py-3">
+            <div
+              key={item.id}
+              className="flex items-center justify-between py-3"
+            >
               <div>
-                <p className="font-medium leading-tight">{item.title}</p>
+                <p className="leading-tight font-medium">{item.title}</p>
                 <p className="text-xs text-muted-foreground">{item.author}</p>
               </div>
               <div className="text-right">
@@ -386,7 +405,7 @@ function BorrowHistory() {
   )
 }
 
-// Main Dashboard 
+// Main Dashboard
 export default function UserDashboard() {
   const { theme, setTheme } = useTheme()
   const [activeTab, setActiveTab] = useState("overview")
@@ -404,7 +423,10 @@ export default function UserDashboard() {
       {/* Top Nav */}
       <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/80 px-6 backdrop-blur">
         <div className="flex items-center gap-3">
-          <Link to="/" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+          <Link
+            to="/"
+            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+          >
             <Home className="h-4 w-4" />
             <span className="hidden sm:inline">Back to Catalog</span>
           </Link>
@@ -413,7 +435,7 @@ export default function UserDashboard() {
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon" className="relative">
             <Bell className="h-4 w-4" />
-            <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-red-500" />
+            <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-red-500" />
           </Button>
           <Button
             variant="ghost"
@@ -428,7 +450,11 @@ export default function UserDashboard() {
               )
             }
           >
-            {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            {theme === "dark" ? (
+              <Sun className="h-4 w-4" />
+            ) : (
+              <Moon className="h-4 w-4" />
+            )}
           </Button>
           <Button variant="ghost" size="icon">
             <LogOut className="h-4 w-4" />
@@ -452,7 +478,11 @@ export default function UserDashboard() {
               </p>
             </div>
           </div>
-          <Button variant="outline" size="sm" className="gap-2 self-start sm:self-auto">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2 self-start sm:self-auto"
+          >
             <User className="h-4 w-4" />
             Edit Profile
           </Button>

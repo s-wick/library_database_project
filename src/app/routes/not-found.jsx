@@ -14,8 +14,6 @@ function NotFoundRoute() {
         <Button asChild size="lg">
           <Link to="/">Go Home</Link>
         </Button>
-
-        
       </div>
     </div>
   )

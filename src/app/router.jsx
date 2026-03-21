@@ -1,7 +1,7 @@
 import { createBrowserRouter } from "react-router-dom"
 import LandingSearchPage from "./routes/landing-search"
 import AuthPage from "./routes/auth"
-import UserDashboardPage from "./routes/User_Dashboard"
+import UserDashboardPage from "./routes/user-dashboard"
 import { NotFoundRoute } from "./routes/not-found"
 
 export const router = createBrowserRouter([

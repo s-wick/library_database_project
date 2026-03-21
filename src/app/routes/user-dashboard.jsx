@@ -1,5 +1,5 @@
 import React, { useState } from "react"
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import {
   BookOpen,
   Clock,
@@ -23,6 +23,14 @@ import {
 import { useTheme } from "@/components/theme-provider"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import {
   Card,
   CardHeader,
@@ -463,6 +471,12 @@ function BorrowHistory() {
 export default function UserDashboard() {
   const { theme, setTheme } = useTheme()
   const [activeTab, setActiveTab] = useState("overview")
+  const navigate = useNavigate()
+
+  const handleSignOut = () => {
+    localStorage.setItem("isLoggedIn", "false")
+    navigate("/")
+  }
 
   const tabs = [
     { id: "overview", label: "Overview", icon: Home },
@@ -479,18 +493,16 @@ export default function UserDashboard() {
         <div className="flex items-center gap-3">
           <Link
             to="/"
-            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+            className="flex items-center gap-2 transition-opacity hover:opacity-90"
+            aria-label="Back to home"
           >
-            <Home className="h-4 w-4" />
-            <span className="hidden sm:inline">Back to Catalog</span>
+            <div className="inline-flex h-8 min-w-[2.5rem] items-center justify-center rounded-md bg-primary px-2 text-[12px] font-bold whitespace-nowrap text-primary-foreground ring-1 ring-border">
+              LIBRARY LOGO HERE
+            </div>
           </Link>
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="h-4 w-4" />
-            <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-red-500" />
-          </Button>
           <Button
             variant="ghost"
             size="icon"
@@ -510,9 +522,31 @@ export default function UserDashboard() {
               <Moon className="h-4 w-4" />
             )}
           </Button>
-          <Button variant="ghost" size="icon">
-            <LogOut className="h-4 w-4" />
-          </Button>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="ml-1 flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-violet-600 shadow-md transition-opacity outline-none hover:opacity-90">
+                <Avatar className="h-9 w-9 bg-transparent">
+                  <AvatarFallback className="bg-transparent text-sm font-bold text-white">
+                    {user.avatarInitials}
+                  </AvatarFallback>
+                </Avatar>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem asChild>
+                <Link to="/user-dashboard" className="w-full cursor-pointer">
+                  Dashboard
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={handleSignOut}
+                className="w-full cursor-pointer"
+              >
+                Sign out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </header>
 
@@ -525,73 +559,66 @@ export default function UserDashboard() {
             </div>
             <div>
               <h1 className="text-2xl font-bold tracking-tight">
-                Welcome back, {user.name.split(" ")[0]}
+                Hello, {user.name.split(" ")[0]}
               </h1>
-              <p className="text-sm text-muted-foreground">
-                Member since {user.memberSince} · Card {user.cardNumber}
-              </p>
             </div>
           </div>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="mb-6 flex gap-1 overflow-x-auto rounded-xl border bg-muted/40 p-1">
-          {tabs.map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              onClick={() => setActiveTab(id)}
-              className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
-                activeTab === id
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <Icon className="h-4 w-4 shrink-0" />
-              <span className="hidden sm:inline">{label}</span>
-            </button>
-          ))}
-        </div>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="mb-6 flex h-auto w-full justify-start gap-1 overflow-x-auto rounded-xl border bg-muted/40 p-1">
+            {tabs.map(({ id, label, icon: Icon }) => (
+              <TabsTrigger
+                key={id}
+                value={id}
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+                <span className="hidden sm:inline">{label}</span>
+              </TabsTrigger>
+            ))}
+          </TabsList>
 
-        {/* Tab Content */}
-        {activeTab === "overview" && (
-          <div className="space-y-6">
-            <OverviewCards />
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-              <BorrowedBooks />
-              <div className="space-y-6">
-                <HoldQueue />
-                <FinesPanel />
+          <TabsContent value="overview">
+            <div className="space-y-6">
+              <OverviewCards />
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                <BorrowedBooks />
+                <div className="space-y-6">
+                  <HoldQueue />
+                  <FinesPanel />
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          </TabsContent>
 
-        {activeTab === "borrowed" && (
-          <div className="space-y-4">
-            <BorrowedBooks />
-          </div>
-        )}
+          <TabsContent value="borrowed">
+            <div className="space-y-4">
+              <BorrowedBooks />
+            </div>
+          </TabsContent>
 
-        {activeTab === "holds" && (
-          <div className="space-y-4">
-            <HoldQueue />
-          </div>
-        )}
+          <TabsContent value="holds">
+            <div className="space-y-4">
+              <HoldQueue />
+            </div>
+          </TabsContent>
 
-        {activeTab === "fines" && (
-          <div className="space-y-4">
-            <FinesPanel />
-            <p className="text-center text-xs text-muted-foreground">
-              Fines accrue at $0.25/day per overdue item.
-            </p>
-          </div>
-        )}
+          <TabsContent value="fines">
+            <div className="space-y-4">
+              <FinesPanel />
+              <p className="text-center text-xs text-muted-foreground">
+                Fines accrue at $0.25/day per overdue item.
+              </p>
+            </div>
+          </TabsContent>
 
-        {activeTab === "history" && (
-          <div className="space-y-4">
-            <BorrowHistory />
-          </div>
-        )}
+          <TabsContent value="history">
+            <div className="space-y-4">
+              <BorrowHistory />
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   )

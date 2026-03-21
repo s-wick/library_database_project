@@ -16,6 +16,13 @@ import {
   CardFooter,
 } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useTheme } from "@/components/theme-provider"
 import { Moon, Sun, LayoutDashboard } from "lucide-react"
 
@@ -27,10 +34,22 @@ export default function LandingSearchPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const { theme, setTheme } = useTheme()
 
-  // Simulate whether a user is logged in — swap to your real auth check
-  const isLoggedIn = true
+  // Track login state in local storage to simulate authentication
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    // For demo purposes, if unset let's show logged in initially, else use the setting.
+    const stored = localStorage.getItem("isLoggedIn")
+    return stored === null ? true : stored === "true"
+  })
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+
   const activeUser = studentUsers[0]
   const avatarInitials = `${activeUser.first_name[0]}${activeUser.last_name[0]}`
+
+  const handleSignOut = () => {
+    localStorage.setItem("isLoggedIn", "false")
+    setIsLoggedIn(false)
+    setDropdownOpen(false)
+  }
 
   // Compute availability dynamically from borrowing entities
   const libraryBooks = books.map((book) => {
@@ -66,42 +85,73 @@ export default function LandingSearchPage() {
   return (
     <div>
       {/* ── Top Navigation Bar ── */}
-      <div className="sticky top-0 z-20 flex h-16 items-center justify-end gap-3 border-b bg-background px-6">
-        {/* Sign in / Sign out */}
-        <Button asChild variant="outline">
-          <Link to="/auth">{isLoggedIn ? "Sign out" : "Sign in"}</Link>
-        </Button>
-
-        {/* Dashboard avatar — shown when logged in */}
-        {isLoggedIn && (
-          <Link to="/user-dashboard">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-violet-600 text-sm font-bold text-white shadow-md transition-opacity hover:opacity-90">
-              {avatarInitials}
-            </div>
-          </Link>
-        )}
-
-        {/* Theme toggle */}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() =>
-            setTheme(
-              theme === "dark" ||
-                (theme === "system" &&
-                  window.matchMedia("(prefers-color-scheme: dark)").matches)
-                ? "light"
-                : "dark"
-            )
-          }
+      <div className="sticky top-0 z-20 flex h-16 items-center justify-between border-b bg-background px-6">
+        {/* Logo Placeholder */}
+        <Link
+          to="/"
+          className="flex items-center gap-2 transition-opacity hover:opacity-90"
+          aria-label="Back to home"
         >
-          {theme === "dark" ? (
-            <Sun className="h-5 w-5" />
+          <div className="inline-flex h-8 min-w-[2.5rem] items-center justify-center rounded-md bg-primary px-2 text-[12px] font-bold whitespace-nowrap text-primary-foreground ring-1 ring-border">
+            LIBRARY LOGO HERE
+          </div>
+        </Link>
+
+        <div className="flex items-center gap-3">
+          {/* Theme toggle */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() =>
+              setTheme(
+                theme === "dark" ||
+                  (theme === "system" &&
+                    window.matchMedia("(prefers-color-scheme: dark)").matches)
+                  ? "light"
+                  : "dark"
+              )
+            }
+          >
+            {theme === "dark" ? (
+              <Sun className="h-5 w-5" />
+            ) : (
+              <Moon className="h-5 w-5" />
+            )}
+            <span className="sr-only">Toggle theme</span>
+          </Button>
+
+          {/* User Dropdown or Sign in */}
+          {isLoggedIn ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-violet-600 shadow-md transition-opacity outline-none hover:opacity-90">
+                  <Avatar className="h-9 w-9 bg-transparent">
+                    <AvatarFallback className="bg-transparent text-sm font-bold text-white">
+                      {avatarInitials}
+                    </AvatarFallback>
+                  </Avatar>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem asChild>
+                  <Link to="/user-dashboard" className="w-full cursor-pointer">
+                    Dashboard
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={handleSignOut}
+                  className="w-full cursor-pointer"
+                >
+                  Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : (
-            <Moon className="h-5 w-5" />
+            <Button asChild variant="outline">
+              <Link to="/auth">Sign in</Link>
+            </Button>
           )}
-          <span className="sr-only">Toggle theme</span>
-        </Button>
+        </div>
       </div>
 
       {/* ── Hero Section ── */}
@@ -223,6 +273,31 @@ export default function LandingSearchPage() {
               </h3>
               <p className="mt-2 text-sm text-muted-foreground">
                 We are currently expanding our digital audio catalog.
+              </p>
+            </div>
+          </section>
+        )}
+
+        {/* Videos Section */}
+        {!searchQuery && (
+          <section>
+            <div className="mb-8 flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-semibold tracking-tight">
+                  Videos
+                </h2>
+                <p className="mt-1 text-muted-foreground">
+                  Watch movies, documentaries, and courses
+                </p>
+              </div>
+              <Button variant="ghost">View all</Button>
+            </div>
+            <div className="rounded-lg border border-dashed bg-slate-50 py-12 text-center dark:bg-slate-900">
+              <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100">
+                New Videos Coming Soon
+              </h3>
+              <p className="mt-2 text-sm text-muted-foreground">
+                We are currently expanding our digital video catalog.
               </p>
             </div>
           </section>

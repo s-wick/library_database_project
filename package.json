@@ -8,7 +8,8 @@
   "scripts": {
     "dev:frontend": "npm run dev --prefix frontend",
     "dev:backend": "npm run dev --prefix backend",
-    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\""
+    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "format": "prettier --write ."
   },
   "simple-git-hooks": {
     "pre-commit": "npm run lint --prefix frontend && npm run format --prefix frontend"

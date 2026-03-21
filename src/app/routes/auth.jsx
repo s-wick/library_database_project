@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react"
 import { ArrowLeft } from "lucide-react"
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -18,6 +18,7 @@ const emptyForm = {
 }
 
 export default function AuthPage() {
+  const navigate = useNavigate()
   const [selectedRole, setSelectedRole] = useState("admin")
   const [mode, setMode] = useState("signin")
   const [form, setForm] = useState(emptyForm)
@@ -73,6 +74,13 @@ export default function AuthPage() {
       selectedRole === "admin" ? "Admin / Staff" : "Student & Faculty"
     const action = isSignUp ? "Account created" : "Signed in"
     setSuccess(`${action} for ${roleLabel}.`)
+
+    // Redirect back to landing search page on sign in
+    if (!isSignUp) {
+      setTimeout(() => {
+        navigate("/")
+      }, 500) // gentle delay to show success message before redirect
+    }
   }
 
   return (

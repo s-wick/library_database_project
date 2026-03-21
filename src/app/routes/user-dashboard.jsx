@@ -31,99 +31,108 @@ import {
   CardFooter,
 } from "@/components/ui/card"
 
-// Mock Data
+import {
+  studentUsers,
+  books,
+  borrows,
+  holds,
+  fined_for,
+} from "@/data/dummy-data"
+
+// Computed Data Based on Entities
+const activeUser = studentUsers[0]
 const user = {
-  name: "Alex Rivera",
-  email: "alex.rivera@email.com",
-  memberSince: "March 2022",
-  avatarInitials: "AR",
-  cardNumber: "LIB-00421",
+  name: `${activeUser.first_name} ${activeUser.last_name}`,
+  email: activeUser.email,
+  memberSince: new Date(activeUser.created_at).toLocaleDateString("default", {
+    month: "long",
+    year: "numeric",
+  }),
+  avatarInitials: `${activeUser.first_name[0]}${activeUser.last_name[0]}`,
+  cardNumber: activeUser.student_id,
 }
 
-const borrowedBooks = [
-  {
-    id: 1,
-    title: "The Silent Cosmos",
-    author: "Elena Vance",
-    genre: "Sci-Fi",
-    dueDate: "2026-03-22",
-    status: "on_time",
-    coverColor: "#2D3A6B",
-  },
-  {
-    id: 2,
-    title: "Algorithms in Nature",
-    author: "Dr. Maya Lin",
-    genre: "Non-Fiction",
-    dueDate: "2026-03-18",
-    status: "due_soon",
-    coverColor: "#3D6B4A",
-  },
-  {
-    id: 3,
-    title: "Whispers in the Dark",
-    author: "Arthur Pendelton",
-    genre: "Mystery",
-    dueDate: "2026-03-10",
-    status: "overdue",
-    coverColor: "#6B2D2D",
-  },
-]
+const userBorrows = borrows.filter(
+  (b) => b.borrower_id === activeUser.user_id && b.borrower_type === 1
+)
 
-const holdQueue = [
-  {
-    id: 4,
-    title: "Mastering React",
-    author: "Jordan Walke",
-    queuePosition: 2,
-    estimatedWait: "~1 week",
-  },
-  {
-    id: 5,
-    title: "Echoes of the Past",
-    author: "Julian Thorne",
-    queuePosition: 1,
-    estimatedWait: "Ready soon",
-  },
-]
+const borrowedBooks = userBorrows
+  .filter((b) => b.return_date === null)
+  .map((b) => {
+    const book = books.find((bk) => bk.item_id === b.item_id)
+    const dueDate = new Date(b.due_date).toISOString().split("T")[0]
+    const diff = new Date(b.due_date) - new Date()
+    const days = Math.ceil(diff / (1000 * 60 * 60 * 24))
 
-const fines = [
-  {
-    id: 1,
-    book: "Whispers in the Dark",
-    daysOverdue: 6,
-    amount: 1.5,
-    status: "unpaid",
-  },
-  {
-    id: 2,
-    book: "The Midnight Thief",
-    daysOverdue: 3,
-    amount: 0.75,
-    status: "paid",
-  },
-]
+    let status = "on_time"
+    if (days < 0) status = "overdue"
+    else if (days <= 3) status = "due_soon"
 
-const borrowHistory = [
-  {
-    id: 1,
-    title: "Project Hail Mary",
-    author: "Andy Weir",
-    returned: "2026-02-14",
-  },
-  {
-    id: 2,
-    title: "Dune",
-    author: "Frank Herbert",
-    returned: "2026-01-30",
-  },
-  {
-    id: 3,
-    title: "Atomic Habits",
-    author: "James Clear",
-    returned: "2026-01-12",
-  },
-]
+    return {
+      id: b.borrow_transaction_id,
+      title: book?.title || "Unknown",
+      author: book?.author || "Unknown",
+      genre: book?.genre || "Unknown",
+      dueDate,
+      status,
+      coverColor: book?.coverColor || "#333",
+    }
+  })
+
+const holdQueue = holds
+  .filter((h) => h.user_id === activeUser.user_id && h.hold_status === "active")
+  .map((h) => {
+    const book = books.find((bk) => bk.item_id === h.item_id)
+    return {
+      id: h.hold_id,
+      title: book?.title || "Unknown",
+      author: book?.author || "Unknown",
+      queuePosition: h.queue_position,
+      estimatedWait: h.queue_position === 1 ? "Ready soon" : "~1 week",
+    }
+  })
+
+const fines = fined_for
+  .filter((f) => {
+    const borrowRecord = borrows.find(
+      (b) => b.borrow_transaction_id === f.borrow_transaction_id
+    )
+    return borrowRecord?.borrower_id === activeUser.user_id
+  })
+  .map((f) => {
+    const borrowRecord = borrows.find(
+      (b) => b.borrow_transaction_id === f.borrow_transaction_id
+    )
+    const book = books.find((bk) => bk.item_id === borrowRecord?.item_id)
+
+    // Calculate days overdue based on assignment date vs due date
+    const expectedDueDate = new Date(borrowRecord?.due_date)
+    const activeDate = new Date(f.date_assigned)
+    const daysOverdue = Math.max(
+      1,
+      Math.floor((activeDate - expectedDueDate) / (1000 * 60 * 60 * 24))
+    )
+
+    return {
+      id: f.fine_id,
+      book: book?.title || "Unknown",
+      daysOverdue,
+      amount: f.amount,
+      status: f.is_paid ? "paid" : "unpaid",
+    }
+  })
+
+const borrowHistory = userBorrows
+  .filter((b) => b.return_date !== null)
+  .map((b) => {
+    const book = books.find((bk) => bk.item_id === b.item_id)
+    return {
+      id: b.borrow_transaction_id,
+      title: book?.title || "Unknown",
+      author: book?.author || "Unknown",
+      returned: new Date(b.return_date).toISOString().split("T")[0],
+    }
+  })
 
 // Helpers
 function daysUntil(dateStr) {

@@ -21,64 +21,7 @@ import { Moon, Sun, LayoutDashboard } from "lucide-react"
 
 // Background image import
 import bgImage from "@/assets/library-hero.png"
-
-// Placeholder library data
-const libraryBooks = [
-  {
-    id: 1,
-    title: "The Silent Cosmos",
-    author: "Elena Vance",
-    genre: "Science Fiction",
-    description:
-      "A profound journey to the edge of the known universe, questioning what lies beyond.",
-    availability: "Available",
-  },
-  {
-    id: 2,
-    title: "Echoes of the Past",
-    author: "Julian Thorne",
-    genre: "Historical Fiction",
-    description:
-      "A haunting tale set during the twilight years of the Roman Empire.",
-    availability: "Checked Out",
-  },
-  {
-    id: 3,
-    title: "Algorithms in Nature",
-    author: "Dr. Maya Lin",
-    genre: "Non-Fiction",
-    description:
-      "Discovering computational patterns in biological ecosystems and plant growth.",
-    availability: "Available",
-  },
-  {
-    id: 4,
-    title: "Whispers in the Dark",
-    author: "Arthur Pendelton",
-    genre: "Mystery",
-    description:
-      "A small-town detective uncovers secrets that the locals would rather keep buried.",
-    availability: "Available",
-  },
-  {
-    id: 5,
-    title: "Mastering React",
-    author: "Jordan Walke",
-    genre: "Education",
-    description:
-      "An advanced guide to building scalable single page applications.",
-    availability: "Waitlist",
-  },
-  {
-    id: 6,
-    title: "The Last Horizon",
-    author: "Sarah Jenkins",
-    genre: "Fantasy",
-    description:
-      "In a world where magic is fading, one young mage must find the source of the draining power.",
-    availability: "Available",
-  },
-]
+import { books, borrows, holds } from "@/data/dummy-data"
 
 export default function LandingSearchPage() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -86,6 +29,28 @@ export default function LandingSearchPage() {
 
   // Simulate whether a user is logged in — swap to your real auth check
   const isLoggedIn = true
+
+  // Compute availability dynamically from borrowing entities
+  const libraryBooks = books.map((book) => {
+    const activeBorrowsCount = borrows.filter(
+      (b) => b.item_id === book.item_id && b.return_date === null
+    ).length
+    const activeHoldsCount = holds.filter(
+      (h) => h.item_id === book.item_id && h.hold_status === "active"
+    ).length
+
+    // If fully borrowed and holds exist: Waitlist. If borrowed but no holds: Checked Out.
+    let availability = "Available"
+    if (activeBorrowsCount >= book.books_in_stock) {
+      availability = activeHoldsCount > 0 ? "Waitlist" : "Checked Out"
+    }
+
+    return {
+      ...book,
+      id: book.book_id,
+      availability,
+    }
+  })
 
   const filteredBooks = libraryBooks.filter((book) => {
     const lowerCaseQuery = searchQuery.toLowerCase()

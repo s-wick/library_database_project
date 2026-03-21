@@ -1,5 +1,5 @@
 import React, { useState } from "react"
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import {
   BookOpen,
   Clock,
@@ -23,6 +23,14 @@ import {
 import { useTheme } from "@/components/theme-provider"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import {
   Card,
   CardHeader,
@@ -31,99 +39,108 @@ import {
   CardFooter,
 } from "@/components/ui/card"
 
-// Mock Data
+import {
+  studentUsers,
+  books,
+  borrows,
+  holds,
+  fined_for,
+} from "@/data/dummy-data"
+
+// Computed Data Based on Entities
+const activeUser = studentUsers[0]
 const user = {
-  name: "Alex Rivera",
-  email: "alex.rivera@email.com",
-  memberSince: "March 2022",
-  avatarInitials: "AR",
-  cardNumber: "LIB-00421",
+  name: `${activeUser.first_name} ${activeUser.last_name}`,
+  email: activeUser.email,
+  memberSince: new Date(activeUser.created_at).toLocaleDateString("default", {
+    month: "long",
+    year: "numeric",
+  }),
+  avatarInitials: `${activeUser.first_name[0]}${activeUser.last_name[0]}`,
+  cardNumber: activeUser.student_id,
 }
 
-const borrowedBooks = [
-  {
-    id: 1,
-    title: "The Silent Cosmos",
-    author: "Elena Vance",
-    genre: "Sci-Fi",
-    dueDate: "2026-03-22",
-    status: "on_time",
-    coverColor: "#2D3A6B",
-  },
-  {
-    id: 2,
-    title: "Algorithms in Nature",
-    author: "Dr. Maya Lin",
-    genre: "Non-Fiction",
-    dueDate: "2026-03-18",
-    status: "due_soon",
-    coverColor: "#3D6B4A",
-  },
-  {
-    id: 3,
-    title: "Whispers in the Dark",
-    author: "Arthur Pendelton",
-    genre: "Mystery",
-    dueDate: "2026-03-10",
-    status: "overdue",
-    coverColor: "#6B2D2D",
-  },
-]
+const userBorrows = borrows.filter(
+  (b) => b.borrower_id === activeUser.user_id && b.borrower_type === 1
+)
 
-const holdQueue = [
-  {
-    id: 4,
-    title: "Mastering React",
-    author: "Jordan Walke",
-    queuePosition: 2,
-    estimatedWait: "~1 week",
-  },
-  {
-    id: 5,
-    title: "Echoes of the Past",
-    author: "Julian Thorne",
-    queuePosition: 1,
-    estimatedWait: "Ready soon",
-  },
-]
+const borrowedBooks = userBorrows
+  .filter((b) => b.return_date === null)
+  .map((b) => {
+    const book = books.find((bk) => bk.item_id === b.item_id)
+    const dueDate = new Date(b.due_date).toISOString().split("T")[0]
+    const diff = new Date(b.due_date) - new Date()
+    const days = Math.ceil(diff / (1000 * 60 * 60 * 24))
 
-const fines = [
-  {
-    id: 1,
-    book: "Whispers in the Dark",
-    daysOverdue: 6,
-    amount: 1.5,
-    status: "unpaid",
-  },
-  {
-    id: 2,
-    book: "The Midnight Thief",
-    daysOverdue: 3,
-    amount: 0.75,
-    status: "paid",
-  },
-]
+    let status = "on_time"
+    if (days < 0) status = "overdue"
+    else if (days <= 3) status = "due_soon"
 
-const borrowHistory = [
-  {
-    id: 1,
-    title: "Project Hail Mary",
-    author: "Andy Weir",
-    returned: "2026-02-14",
-  },
-  {
-    id: 2,
-    title: "Dune",
-    author: "Frank Herbert",
-    returned: "2026-01-30",
-  },
-  {
-    id: 3,
-    title: "Atomic Habits",
-    author: "James Clear",
-    returned: "2026-01-12",
-  },
-]
+    return {
+      id: b.borrow_transaction_id,
+      title: book?.title || "Unknown",
+      author: book?.author || "Unknown",
+      genre: book?.genre || "Unknown",
+      dueDate,
+      status,
+      coverColor: book?.coverColor || "#333",
+    }
+  })
+
+const holdQueue = holds
+  .filter((h) => h.user_id === activeUser.user_id && h.hold_status === "active")
+  .map((h) => {
+    const book = books.find((bk) => bk.item_id === h.item_id)
+    return {
+      id: h.hold_id,
+      title: book?.title || "Unknown",
+      author: book?.author || "Unknown",
+      queuePosition: h.queue_position,
+      estimatedWait: h.queue_position === 1 ? "Ready soon" : "~1 week",
+    }
+  })
+
+const fines = fined_for
+  .filter((f) => {
+    const borrowRecord = borrows.find(
+      (b) => b.borrow_transaction_id === f.borrow_transaction_id
+    )
+    return borrowRecord?.borrower_id === activeUser.user_id
+  })
+  .map((f) => {
+    const borrowRecord = borrows.find(
+      (b) => b.borrow_transaction_id === f.borrow_transaction_id
+    )
+    const book = books.find((bk) => bk.item_id === borrowRecord?.item_id)
+
+    // Calculate days overdue based on assignment date vs due date
+    const expectedDueDate = new Date(borrowRecord?.due_date)
+    const activeDate = new Date(f.date_assigned)
+    const daysOverdue = Math.max(
+      1,
+      Math.floor((activeDate - expectedDueDate) / (1000 * 60 * 60 * 24))
+    )
+
+    return {
+      id: f.fine_id,
+      book: book?.title || "Unknown",
+      daysOverdue,
+      amount: f.amount,
+      status: f.is_paid ? "paid" : "unpaid",
+    }
+  })
+
+const borrowHistory = userBorrows
+  .filter((b) => b.return_date !== null)
+  .map((b) => {
+    const book = books.find((bk) => bk.item_id === b.item_id)
+    return {
+      id: b.borrow_transaction_id,
+      title: book?.title || "Unknown",
+      author: book?.author || "Unknown",
+      returned: new Date(b.return_date).toISOString().split("T")[0],
+    }
+  })
 
 // Helpers
 function daysUntil(dateStr) {
@@ -253,9 +270,6 @@ function BorrowedBooks() {
                   </span>
                 </div>
               </div>
-              <Button variant="outline" size="sm" className="shrink-0 text-xs">
-                Renew
-              </Button>
             </div>
           )
         })}
@@ -325,40 +339,60 @@ function FinesPanel() {
           )}
         </div>
       </CardHeader>
-      <CardContent className="space-y-2">
+      <CardContent className="space-y-3">
         {fines.map((fine) => (
           <div
             key={fine.id}
-            className="flex items-center justify-between rounded-lg p-2.5 text-sm"
+            className="flex items-center justify-between rounded-xl border bg-muted/30 p-3"
           >
-            <div>
-              <p className="font-medium">{fine.book}</p>
-              <p className="text-xs text-muted-foreground">
-                {fine.daysOverdue} days overdue
-              </p>
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/40">
+                <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+              </div>
+              <div>
+                <p className="leading-tight font-semibold">{fine.book}</p>
+                <p className="text-xs text-muted-foreground">
+                  {fine.daysOverdue} days overdue
+                </p>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span
-                className={`font-semibold ${
-                  fine.status === "paid"
-                    ? "text-muted-foreground line-through"
-                    : "text-red-600"
-                }`}
-              >
-                ${fine.amount.toFixed(2)}
-              </span>
-              {fine.status === "unpaid" ? (
-                <Badge variant="destructive" className="text-xs">
-                  Unpaid
-                </Badge>
-              ) : (
-                <Badge variant="secondary" className="text-xs">
-                  Paid
-                </Badge>
-              )}
+            <div className="flex items-center gap-4">
+              <div className="text-right">
+                <span
+                  className={`font-bold ${
+                    fine.status === "paid"
+                      ? "text-muted-foreground line-through"
+                      : "text-red-600"
+                  }`}
+                >
+                  ${fine.amount.toFixed(2)}
+                </span>
+                <div className="mt-1">
+                  {fine.status === "unpaid" ? (
+                    <Badge
+                      variant="destructive"
+                      className="h-4 px-1.5 py-0 text-[10px] tracking-wider uppercase"
+                    >
+                      Unpaid
+                    </Badge>
+                  ) : (
+                    <Badge
+                      variant="secondary"
+                      className="h-4 px-1.5 py-0 text-[10px] tracking-wider uppercase"
+                    >
+                      Paid
+                    </Badge>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         ))}
+        {fines.length === 0 && (
+          <p className="py-4 text-center text-sm text-muted-foreground">
+            No fines found.
+          </p>
+        )}
       </CardContent>
       {total > 0 && (
         <CardFooter className="pt-0">
@@ -372,35 +406,63 @@ function FinesPanel() {
 }
 
 function BorrowHistory() {
+  const [isLoading, setIsLoading] = useState(false)
+  const [displayedItems, setDisplayedItems] = useState(5)
+
+  const handleLoadMore = () => {
+    setIsLoading(true)
+    setTimeout(() => {
+      setDisplayedItems((prev) => prev + 5)
+      setIsLoading(false)
+    }, 800)
+  }
+
+  const visibleHistory = borrowHistory.slice(0, displayedItems)
+
   return (
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-lg">Borrow History</CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="divide-y">
-          {borrowHistory.map((item) => (
-            <div
-              key={item.id}
-              className="flex items-center justify-between py-3"
-            >
+      <CardContent className="space-y-3">
+        {visibleHistory.map((item) => (
+          <div
+            key={item.id}
+            className="flex items-center justify-between rounded-xl border bg-muted/30 p-3"
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800">
+                <Clock className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+              </div>
               <div>
-                <p className="leading-tight font-medium">{item.title}</p>
+                <p className="leading-tight font-semibold">{item.title}</p>
                 <p className="text-xs text-muted-foreground">{item.author}</p>
               </div>
-              <div className="text-right">
-                <p className="text-xs text-muted-foreground">Returned</p>
-                <p className="text-xs font-medium">{item.returned}</p>
-              </div>
             </div>
-          ))}
-        </div>
+            <div className="text-right">
+              <p className="text-xs text-muted-foreground">Returned</p>
+              <p className="text-xs font-semibold">{item.returned}</p>
+            </div>
+          </div>
+        ))}
+        {borrowHistory.length === 0 && (
+          <p className="py-4 text-center text-sm text-muted-foreground">
+            No history found.
+          </p>
+        )}
       </CardContent>
-      <CardFooter>
-        <Button variant="outline" size="sm" className="w-full text-xs">
-          View Full History <ArrowUpRight className="ml-1 h-3 w-3" />
-        </Button>
-      </CardFooter>
+      {borrowHistory.length > visibleHistory.length && (
+        <CardFooter className="pt-0">
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={handleLoadMore}
+            disabled={isLoading}
+          >
+            {isLoading ? "Loading..." : "Load More"}
+          </Button>
+        </CardFooter>
+      )}
     </Card>
   )
 }
@@ -409,6 +471,12 @@ function BorrowHistory() {
 export default function UserDashboard() {
   const { theme, setTheme } = useTheme()
   const [activeTab, setActiveTab] = useState("overview")
+  const navigate = useNavigate()
+
+  const handleSignOut = () => {
+    localStorage.setItem("isLoggedIn", "false")
+    navigate("/")
+  }
 
   const tabs = [
     { id: "overview", label: "Overview", icon: Home },
@@ -425,18 +493,16 @@ export default function UserDashboard() {
         <div className="flex items-center gap-3">
           <Link
             to="/"
-            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+            className="flex items-center gap-2 transition-opacity hover:opacity-90"
+            aria-label="Back to home"
           >
-            <Home className="h-4 w-4" />
-            <span className="hidden sm:inline">Back to Catalog</span>
+            <div className="inline-flex h-8 min-w-[2.5rem] items-center justify-center rounded-md bg-primary px-2 text-[12px] font-bold whitespace-nowrap text-primary-foreground ring-1 ring-border">
+              LIBRARY LOGO HERE
+            </div>
           </Link>
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="h-4 w-4" />
-            <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-red-500" />
-          </Button>
           <Button
             variant="ghost"
             size="icon"
@@ -456,9 +522,31 @@ export default function UserDashboard() {
               <Moon className="h-4 w-4" />
             )}
           </Button>
-          <Button variant="ghost" size="icon">
-            <LogOut className="h-4 w-4" />
-          </Button>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="ml-1 flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-violet-600 shadow-md transition-opacity outline-none hover:opacity-90">
+                <Avatar className="h-9 w-9 bg-transparent">
+                  <AvatarFallback className="bg-transparent text-sm font-bold text-white">
+                    {user.avatarInitials}
+                  </AvatarFallback>
+                </Avatar>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem asChild>
+                <Link to="/user-dashboard" className="w-full cursor-pointer">
+                  Dashboard
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={handleSignOut}
+                className="w-full cursor-pointer"
+              >
+                Sign out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </header>
 
@@ -471,81 +559,66 @@ export default function UserDashboard() {
             </div>
             <div>
               <h1 className="text-2xl font-bold tracking-tight">
-                Welcome back, {user.name.split(" ")[0]}
+                Hello, {user.name.split(" ")[0]}
               </h1>
-              <p className="text-sm text-muted-foreground">
-                Member since {user.memberSince} · Card {user.cardNumber}
-              </p>
             </div>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2 self-start sm:self-auto"
-          >
-            <User className="h-4 w-4" />
-            Edit Profile
-          </Button>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="mb-6 flex gap-1 overflow-x-auto rounded-xl border bg-muted/40 p-1">
-          {tabs.map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              onClick={() => setActiveTab(id)}
-              className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
-                activeTab === id
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <Icon className="h-4 w-4 shrink-0" />
-              <span className="hidden sm:inline">{label}</span>
-            </button>
-          ))}
-        </div>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="mb-6 flex h-auto w-full justify-start gap-1 overflow-x-auto rounded-xl border bg-muted/40 p-1">
+            {tabs.map(({ id, label, icon: Icon }) => (
+              <TabsTrigger
+                key={id}
+                value={id}
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+                <span className="hidden sm:inline">{label}</span>
+              </TabsTrigger>
+            ))}
+          </TabsList>
 
-        {/* Tab Content */}
-        {activeTab === "overview" && (
-          <div className="space-y-6">
-            <OverviewCards />
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-              <BorrowedBooks />
-              <div className="space-y-6">
-                <HoldQueue />
-                <FinesPanel />
+          <TabsContent value="overview">
+            <div className="space-y-6">
+              <OverviewCards />
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                <BorrowedBooks />
+                <div className="space-y-6">
+                  <HoldQueue />
+                  <FinesPanel />
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          </TabsContent>
 
-        {activeTab === "borrowed" && (
-          <div className="space-y-4">
-            <BorrowedBooks />
-          </div>
-        )}
+          <TabsContent value="borrowed">
+            <div className="space-y-4">
+              <BorrowedBooks />
+            </div>
+          </TabsContent>
 
-        {activeTab === "holds" && (
-          <div className="space-y-4">
-            <HoldQueue />
-          </div>
-        )}
+          <TabsContent value="holds">
+            <div className="space-y-4">
+              <HoldQueue />
+            </div>
+          </TabsContent>
 
-        {activeTab === "fines" && (
-          <div className="max-w-lg space-y-4">
-            <FinesPanel />
-            <p className="text-center text-xs text-muted-foreground">
-              Fines accrue at $0.25/day per overdue item.
-            </p>
-          </div>
-        )}
+          <TabsContent value="fines">
+            <div className="space-y-4">
+              <FinesPanel />
+              <p className="text-center text-xs text-muted-foreground">
+                Fines accrue at $0.25/day per overdue item.
+              </p>
+            </div>
+          </TabsContent>
 
-        {activeTab === "history" && (
-          <div className="max-w-lg space-y-4">
-            <BorrowHistory />
-          </div>
-        )}
+          <TabsContent value="history">
+            <div className="space-y-4">
+              <BorrowHistory />
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   )

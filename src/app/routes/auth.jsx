@@ -1,10 +1,11 @@
 import { useMemo, useState } from "react"
 import { ArrowLeft } from "lucide-react"
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Field, FieldDescription, FieldLabel } from "@/components/ui/field"
+import { Field, FieldLabel } from "@/components/ui/field"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 const roles = [
   { id: "admin", label: "Admin / Staff" },
@@ -18,6 +19,7 @@ const emptyForm = {
 }
 
 export default function AuthPage() {
+  const navigate = useNavigate()
   const [selectedRole, setSelectedRole] = useState("admin")
   const [mode, setMode] = useState("signin")
   const [form, setForm] = useState(emptyForm)
@@ -69,10 +71,15 @@ export default function AuthPage() {
       }
     }
 
-    const roleLabel =
-      selectedRole === "admin" ? "Admin / Staff" : "Student & Faculty"
-    const action = isSignUp ? "Account created" : "Signed in"
-    setSuccess(`${action} for ${roleLabel}.`)
+    if (isSignUp) {
+      const roleLabel =
+        selectedRole === "admin" ? "Admin / Staff" : "Student & Faculty"
+      setSuccess(`Account created for ${roleLabel}.`)
+    } else {
+      // Redirect back to landing search page immediately on sign in
+      localStorage.setItem("isLoggedIn", "true")
+      navigate("/")
+    }
   }
 
   return (
@@ -94,25 +101,19 @@ export default function AuthPage() {
           </CardHeader>
 
           <CardContent className="space-y-6">
-            <div className="grid grid-cols-2 overflow-hidden rounded-md border">
-              {roles.map((role) => {
-                const isActive = selectedRole === role.id
-                return (
-                  <button
-                    key={role.id}
-                    type="button"
-                    onClick={() => setSelectedRole(role.id)}
-                    className={`h-10 text-sm font-medium transition ${
-                      isActive
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-background text-muted-foreground hover:bg-muted"
-                    }`}
-                  >
+            <Tabs
+              value={selectedRole}
+              onValueChange={setSelectedRole}
+              className="w-full"
+            >
+              <TabsList className="grid w-full grid-cols-2">
+                {roles.map((role) => (
+                  <TabsTrigger key={role.id} value={role.id}>
                     {role.label}
-                  </button>
-                )
-              })}
-            </div>
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
 
             <form className="space-y-4" onSubmit={handleSubmit}>
               <Field className="space-y-0">

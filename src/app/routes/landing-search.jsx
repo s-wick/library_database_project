@@ -21,7 +21,7 @@ import { Moon, Sun, LayoutDashboard } from "lucide-react"
 
 // Background image import
 import bgImage from "@/assets/library-hero.png"
-import { books, borrows, holds } from "@/data/dummy-data"
+import { books, borrows, holds, studentUsers } from "@/data/dummy-data"
 
 export default function LandingSearchPage() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -29,6 +29,8 @@ export default function LandingSearchPage() {
 
   // Simulate whether a user is logged in — swap to your real auth check
   const isLoggedIn = true
+  const activeUser = studentUsers[0]
+  const avatarInitials = `${activeUser.first_name[0]}${activeUser.last_name[0]}`
 
   // Compute availability dynamically from borrowing entities
   const libraryBooks = books.map((book) => {
@@ -64,21 +66,20 @@ export default function LandingSearchPage() {
   return (
     <div>
       {/* ── Top Navigation Bar ── */}
-      <div className="sticky top-0 z-20 flex h-16 items-center justify-end gap-2 border-b bg-background px-6">
-        {/* Dashboard button — shown when logged in */}
-        {isLoggedIn && (
-          <Button asChild variant="default" className="mr-1 gap-2">
-            <Link to="/user-dashboard">
-              <LayoutDashboard className="h-4 w-4" />
-              My Dashboard
-            </Link>
-          </Button>
-        )}
-
+      <div className="sticky top-0 z-20 flex h-16 items-center justify-end gap-3 border-b bg-background px-6">
         {/* Sign in / Sign out */}
         <Button asChild variant="outline">
           <Link to="/auth">{isLoggedIn ? "Sign out" : "Sign in"}</Link>
         </Button>
+
+        {/* Dashboard avatar — shown when logged in */}
+        {isLoggedIn && (
+          <Link to="/user-dashboard">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-violet-600 text-sm font-bold text-white shadow-md transition-opacity hover:opacity-90">
+              {avatarInitials}
+            </div>
+          </Link>
+        )}
 
         {/* Theme toggle */}
         <Button
@@ -116,10 +117,10 @@ export default function LandingSearchPage() {
 
         <div className="relative z-10 w-full max-w-2xl px-4 text-center">
           <h1 className="mb-6 text-4xl font-bold tracking-tight text-white md:text-5xl">
-            Browse Our Library Catalog
+            Browse the Catalog
           </h1>
           <p className="mb-8 text-lg text-slate-200">
-            Search books, audiobooks, and resources in our catalog.
+            Search books, audiobooks, and resources in our library.
           </p>
 
           <div className="relative mx-auto flex max-w-xl items-center overflow-hidden rounded-md bg-background shadow-lg">
@@ -138,67 +139,118 @@ export default function LandingSearchPage() {
       </div>
 
       {/* ── Main Content / Results ── */}
-      <main className="mx-auto w-full max-w-6xl flex-1 p-6 md:p-10">
-        <div className="mb-8">
-          <h2 className="text-2xl font-semibold tracking-tight">
-            {searchQuery
-              ? `Search Results for "${searchQuery}"`
-              : "Featured Titles"}
-          </h2>
-          <p className="mt-1 text-muted-foreground">
-            {filteredBooks.length}{" "}
-            {filteredBooks.length === 1 ? "book" : "books"} found
-          </p>
-        </div>
-
-        {filteredBooks.length > 0 ? (
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredBooks.map((book) => (
-              <Card key={book.id} className="flex flex-col">
-                <CardHeader>
-                  <div className="mb-2 flex items-start justify-between">
-                    <Badge
-                      variant={
-                        book.availability === "Available"
-                          ? "default"
-                          : "secondary"
-                      }
-                    >
-                      {book.availability}
-                    </Badge>
-                    <span className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                      {book.genre}
-                    </span>
-                  </div>
-                  <CardTitle className="mb-1 text-xl leading-tight">
-                    {book.title}
-                  </CardTitle>
-                  <CardDescription>by {book.author}</CardDescription>
-                </CardHeader>
-                <CardContent className="flex-1">
-                  <p className="text-sm text-slate-600 dark:text-slate-300">
-                    {book.description}
-                  </p>
-                </CardContent>
-                <CardFooter>
-                  <Button variant="outline" className="w-full">
-                    {book.availability === "Available"
-                      ? "Borrow"
-                      : "Place Hold"}
-                  </Button>
-                </CardFooter>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <div className="rounded-lg border border-dashed bg-slate-50 py-20 text-center dark:bg-slate-900">
-            <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100">
-              No books found
-            </h3>
-            <p className="mt-2 text-muted-foreground">
-              Try adjusting your search terms or browsing our categories.
+      <main className="mx-auto w-full max-w-6xl flex-1 space-y-16 p-6 md:p-10">
+        {/* Books Section */}
+        <section>
+          <div className="mb-8">
+            <h2 className="text-2xl font-semibold tracking-tight">
+              {searchQuery
+                ? `Search Results for "${searchQuery}"`
+                : "Featured Books"}
+            </h2>
+            <p className="mt-1 text-muted-foreground">
+              {filteredBooks.length}{" "}
+              {filteredBooks.length === 1 ? "book" : "books"} found
             </p>
           </div>
+
+          {filteredBooks.length > 0 ? (
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {filteredBooks.map((book) => (
+                <Card key={book.id} className="flex flex-col">
+                  <CardHeader>
+                    <div className="mb-2 flex items-start justify-between">
+                      <Badge
+                        variant={
+                          book.availability === "Available"
+                            ? "default"
+                            : "secondary"
+                        }
+                      >
+                        {book.availability}
+                      </Badge>
+                      <span className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
+                        {book.genre}
+                      </span>
+                    </div>
+                    <CardTitle className="mb-1 text-xl leading-tight">
+                      {book.title}
+                    </CardTitle>
+                    <CardDescription>by {book.author}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex-1">
+                    <p className="text-sm text-slate-600 dark:text-slate-300">
+                      {book.description}
+                    </p>
+                  </CardContent>
+                  <CardFooter>
+                    <Button variant="outline" className="w-full">
+                      {book.availability === "Available"
+                        ? "Borrow"
+                        : "Place Hold"}
+                    </Button>
+                  </CardFooter>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-lg border border-dashed bg-slate-50 py-20 text-center dark:bg-slate-900">
+              <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100">
+                No items found
+              </h3>
+              <p className="mt-2 text-muted-foreground">
+                Try adjusting your search terms or browsing our categories.
+              </p>
+            </div>
+          )}
+        </section>
+
+        {/* Audiobooks Section */}
+        {!searchQuery && (
+          <section>
+            <div className="mb-8 flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-semibold tracking-tight">
+                  Audiobooks
+                </h2>
+                <p className="mt-1 text-muted-foreground">Listen on the go</p>
+              </div>
+              <Button variant="ghost">View all</Button>
+            </div>
+            <div className="rounded-lg border border-dashed bg-slate-50 py-12 text-center dark:bg-slate-900">
+              <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100">
+                New Audiobooks Coming Soon
+              </h3>
+              <p className="mt-2 text-sm text-muted-foreground">
+                We are currently expanding our digital audio catalog.
+              </p>
+            </div>
+          </section>
+        )}
+
+        {/* Equipment & Devices Section */}
+        {!searchQuery && (
+          <section>
+            <div className="mb-8 flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-semibold tracking-tight">
+                  Equipment & Devices
+                </h2>
+                <p className="mt-1 text-muted-foreground">
+                  Tech rentals for students and faculty
+                </p>
+              </div>
+              <Button variant="ghost">View all</Button>
+            </div>
+            <div className="rounded-lg border border-dashed bg-slate-50 py-12 text-center dark:bg-slate-900">
+              <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100">
+                Laptops, Tablets & Accessories
+              </h3>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Check device availability at the front desk.
+              </p>
+            </div>
+          </section>
         )}
       </main>
     </div>

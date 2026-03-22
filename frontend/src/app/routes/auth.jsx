@@ -28,7 +28,8 @@ export default function AuthPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const isSignUp = mode === "signup"
-  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:4000"
+  const apiBaseUrl =
+    import.meta.env.VITE_API_BASE_URL || "http://localhost:4000"
 
   const submitLabel = useMemo(() => {
     if (isSignUp) return "Create account"
@@ -108,7 +109,8 @@ export default function AuthPage() {
         }
         setErrors({
           general:
-            data.message || (isSignUp ? "Failed to create account." : "Failed to sign in."),
+            data.message ||
+            (isSignUp ? "Failed to create account." : "Failed to sign in."),
         })
         return
       }

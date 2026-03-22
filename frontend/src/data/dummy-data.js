@@ -194,6 +194,115 @@ export const books = [
   },
 ]
 
+export const audios = [
+  {
+    audio_id: 1,
+    item_id: 201,
+    title: "The Silent Cosmos (Audiobook)",
+    author: "Elena Vance",
+    narrator: "Jim Dale",
+    duration: 540, // minutes
+    release_date: "2024-02-01",
+    thumbnail_image: null,
+    monetary_value: 35.0,
+    copies_in_stock: 5,
+    created_at: "2024-02-01",
+    created_by: "admin",
+    genre: "Science Fiction",
+    description:
+      "Experience the profound journey to the edge of the known universe in audio.",
+    coverColor: "#2D3A6B",
+  },
+  {
+    audio_id: 2,
+    item_id: 202,
+    title: "1984 - Unabridged",
+    author: "George Orwell",
+    narrator: "Simon Prebble",
+    duration: 680,
+    release_date: "2010-05-15",
+    thumbnail_image: null,
+    monetary_value: 40.0,
+    copies_in_stock: 10,
+    created_at: "2023-01-01",
+    created_by: "admin",
+    genre: "Dystopian",
+    description: "The classic dystopian novel brought to life.",
+    coverColor: "#6B2B2B",
+  },
+]
+
+export const videos = [
+  {
+    video_id: 1,
+    item_id: 301,
+    title: "Planet Earth II",
+    director: "Alastair Fothergill",
+    duration: 360,
+    release_date: "2016-11-06",
+    thumbnail_image: null,
+    monetary_value: 29.99,
+    copies_in_stock: 2,
+    created_at: "2023-01-01",
+    created_by: "admin",
+    genre: "Documentary",
+    description: "A breathtaking look at our planet's diverse ecosystems.",
+    coverColor: "#2B6B4B",
+  },
+  {
+    video_id: 2,
+    item_id: 302,
+    title: "Inception",
+    director: "Christopher Nolan",
+    duration: 148,
+    release_date: "2010-07-16",
+    thumbnail_image: null,
+    monetary_value: 19.99,
+    copies_in_stock: 4,
+    created_at: "2023-01-01",
+    created_by: "admin",
+    genre: "Sci-Fi",
+    description:
+      "A thief who steals corporate secrets through the use of dream-sharing technology.",
+    coverColor: "#1B1B1B",
+  },
+]
+
+export const equipments = [
+  {
+    equipment_id: 1,
+    item_id: 401,
+    title: "Dell XPS 15",
+    brand: "Dell",
+    model: "XPS 15 9500",
+    serial_number: "DXPS-9500-001",
+    thumbnail_image: null,
+    monetary_value: 1500.0,
+    copies_in_stock: 3,
+    created_at: "2023-01-01",
+    created_by: "admin",
+    category: "Laptop",
+    description: "High performance laptop for development and design.",
+    coverColor: "#C0C0C0",
+  },
+  {
+    equipment_id: 2,
+    item_id: 402,
+    title: "Sony a7 III",
+    brand: "Sony",
+    model: "ILCE-7M3",
+    serial_number: "SA7-3-102",
+    thumbnail_image: null,
+    monetary_value: 2000.0,
+    copies_in_stock: 1,
+    created_at: "2023-01-01",
+    created_by: "admin",
+    category: "Camera",
+    description: "Full-frame mirrorless interchangeable-lens camera.",
+    coverColor: "#303030",
+  },
+]
+
 export const borrows = [
   {
     borrow_transaction_id: 1,

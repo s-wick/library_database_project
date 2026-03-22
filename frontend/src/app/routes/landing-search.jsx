@@ -24,11 +24,20 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useTheme } from "@/components/theme-provider"
-import { Moon, Sun, LayoutDashboard } from "lucide-react"
+import { Moon, Sun, LayoutDashboard, Image as ImageIcon } from "lucide-react"
 
 // Background image import
 import bgImage from "@/assets/library-hero.png"
-import { books, borrows, holds, studentUsers } from "@/data/dummy-data"
+import {
+  books,
+  audios,
+  videos,
+  equipments,
+  borrows,
+  holds,
+  studentUsers,
+  itemType,
+} from "@/data/dummy-data"
 
 export default function LandingSearchPage() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -52,35 +61,80 @@ export default function LandingSearchPage() {
   }
 
   // Compute availability dynamically from borrowing entities
-  const libraryBooks = books.map((book) => {
+  const allLibraryItems = [
+    ...books.map((b) => ({
+      ...b,
+      id: b.book_id,
+      standard_type: "Book",
+      copies_total: b.books_in_stock,
+      creator: b.author,
+      tag: b.genre,
+    })),
+    ...audios.map((a) => ({
+      ...a,
+      id: a.audio_id,
+      standard_type: "Audiobook",
+      copies_total: a.copies_in_stock,
+      creator: a.author,
+      tag: a.genre,
+    })),
+    ...videos.map((v) => ({
+      ...v,
+      id: v.video_id,
+      standard_type: "Video",
+      copies_total: v.copies_in_stock,
+      creator: v.director,
+      tag: v.genre,
+    })),
+    ...equipments.map((e) => ({
+      ...e,
+      id: e.equipment_id,
+      standard_type: "Equipment",
+      copies_total: e.copies_in_stock,
+      creator: e.brand,
+      tag: e.category,
+    })),
+  ].map((item) => {
     const activeBorrowsCount = borrows.filter(
-      (b) => b.item_id === book.item_id && b.return_date === null
+      (b) => b.item_id === item.item_id && b.return_date === null
     ).length
     const activeHoldsCount = holds.filter(
-      (h) => h.item_id === book.item_id && h.hold_status === "active"
+      (h) => h.item_id === item.item_id && h.hold_status === "active"
     ).length
 
     // If fully borrowed and holds exist: Waitlist. If borrowed but no holds: Checked Out.
     let availability = "Available"
-    if (activeBorrowsCount >= book.books_in_stock) {
+    if (activeBorrowsCount >= item.copies_total) {
       availability = activeHoldsCount > 0 ? "Waitlist" : "Checked Out"
     }
 
     return {
-      ...book,
-      id: book.book_id,
+      ...item,
       availability,
     }
   })
 
-  const filteredBooks = libraryBooks.filter((book) => {
+  // Grouped filtered items
+  const filteredItems = allLibraryItems.filter((item) => {
     const lowerCaseQuery = searchQuery.toLowerCase()
     return (
-      book.title.toLowerCase().includes(lowerCaseQuery) ||
-      book.author.toLowerCase().includes(lowerCaseQuery) ||
-      book.genre.toLowerCase().includes(lowerCaseQuery)
+      item.title?.toLowerCase().includes(lowerCaseQuery) ||
+      item.creator?.toLowerCase().includes(lowerCaseQuery) ||
+      item.tag?.toLowerCase().includes(lowerCaseQuery) ||
+      item.standard_type.toLowerCase().includes(lowerCaseQuery)
     )
   })
+
+  const filteredBooks = filteredItems.filter((i) => i.standard_type === "Book")
+  const filteredAudios = filteredItems.filter(
+    (i) => i.standard_type === "Audiobook"
+  )
+  const filteredVideos = filteredItems.filter(
+    (i) => i.standard_type === "Video"
+  )
+  const filteredEquipments = filteredItems.filter(
+    (i) => i.standard_type === "Equipment"
+  )
 
   return (
     <div>
@@ -192,71 +246,36 @@ export default function LandingSearchPage() {
       <main className="mx-auto w-full max-w-6xl flex-1 space-y-16 p-6 md:p-10">
         {/* Books Section */}
         <section>
-          <div className="mb-8">
-            <h2 className="text-2xl font-semibold tracking-tight">
-              {searchQuery
-                ? `Search Results for "${searchQuery}"`
-                : "Featured Books"}
-            </h2>
-            <p className="mt-1 text-muted-foreground">
-              {filteredBooks.length}{" "}
-              {filteredBooks.length === 1 ? "book" : "books"} found
-            </p>
+          <div className="mb-8 flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-semibold tracking-tight">
+                {searchQuery ? `Books matching "${searchQuery}"` : "Books"}
+              </h2>
+              <p className="mt-1 text-muted-foreground">
+                {filteredBooks.length}{" "}
+                {filteredBooks.length === 1 ? "result" : "results"}
+              </p>
+            </div>
+            {!searchQuery && <Button variant="ghost">View all</Button>}
           </div>
 
           {filteredBooks.length > 0 ? (
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {filteredBooks.map((book) => (
-                <Card key={book.id} className="flex flex-col">
-                  <CardHeader>
-                    <div className="mb-2 flex items-start justify-between">
-                      <Badge
-                        variant={
-                          book.availability === "Available"
-                            ? "default"
-                            : "secondary"
-                        }
-                      >
-                        {book.availability}
-                      </Badge>
-                      <span className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                        {book.genre}
-                      </span>
-                    </div>
-                    <CardTitle className="mb-1 text-xl leading-tight">
-                      {book.title}
-                    </CardTitle>
-                    <CardDescription>by {book.author}</CardDescription>
-                  </CardHeader>
-                  <CardContent className="flex-1">
-                    <p className="text-sm text-slate-600 dark:text-slate-300">
-                      {book.description}
-                    </p>
-                  </CardContent>
-                  <CardFooter>
-                    <Button variant="outline" className="w-full">
-                      {book.availability === "Available"
-                        ? "Borrow"
-                        : "Place Hold"}
-                    </Button>
-                  </CardFooter>
-                </Card>
+            <div className="flex flex-col gap-4">
+              {filteredBooks.map((item) => (
+                <ItemCard key={item.item_id} item={item} />
               ))}
             </div>
           ) : (
-            <div className="rounded-lg border border-dashed bg-slate-50 py-20 text-center dark:bg-slate-900">
+            <div className="rounded-lg border border-dashed bg-slate-50 py-12 text-center dark:bg-slate-900">
               <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100">
-                No items found
+                No books found
               </h3>
-              <p className="mt-2 text-muted-foreground">
-                Try adjusting your search terms or browsing our categories.
-              </p>
             </div>
           )}
         </section>
 
         {/* Audiobooks Section */}
-        {!searchQuery && (
+        {(!searchQuery || filteredAudios.length > 0) && (
           <section>
             <div className="mb-8 flex items-center justify-between">
               <div>
@@ -265,21 +284,27 @@ export default function LandingSearchPage() {
                 </h2>
                 <p className="mt-1 text-muted-foreground">Listen on the go</p>
               </div>
-              <Button variant="ghost">View all</Button>
+              {!searchQuery && <Button variant="ghost">View all</Button>}
             </div>
-            <div className="rounded-lg border border-dashed bg-slate-50 py-12 text-center dark:bg-slate-900">
-              <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100">
-                New Audiobooks Coming Soon
-              </h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                We are currently expanding our digital audio catalog.
-              </p>
-            </div>
+
+            {filteredAudios.length > 0 ? (
+              <div className="flex flex-col gap-4">
+                {filteredAudios.map((item) => (
+                  <ItemCard key={item.item_id} item={item} />
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-lg border border-dashed bg-slate-50 py-12 text-center dark:bg-slate-900">
+                <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100">
+                  New Audiobooks Coming Soon
+                </h3>
+              </div>
+            )}
           </section>
         )}
 
         {/* Videos Section */}
-        {!searchQuery && (
+        {(!searchQuery || filteredVideos.length > 0) && (
           <section>
             <div className="mb-8 flex items-center justify-between">
               <div>
@@ -290,44 +315,122 @@ export default function LandingSearchPage() {
                   Watch movies, documentaries, and courses
                 </p>
               </div>
-              <Button variant="ghost">View all</Button>
+              {!searchQuery && <Button variant="ghost">View all</Button>}
             </div>
-            <div className="rounded-lg border border-dashed bg-slate-50 py-12 text-center dark:bg-slate-900">
-              <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100">
-                New Videos Coming Soon
-              </h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                We are currently expanding our digital video catalog.
-              </p>
-            </div>
+
+            {filteredVideos.length > 0 ? (
+              <div className="flex flex-col gap-4">
+                {filteredVideos.map((item) => (
+                  <ItemCard key={item.item_id} item={item} />
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-lg border border-dashed bg-slate-50 py-12 text-center dark:bg-slate-900">
+                <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100">
+                  New Videos Coming Soon
+                </h3>
+              </div>
+            )}
           </section>
         )}
 
-        {/* Equipment & Devices Section */}
-        {!searchQuery && (
+        {/* Equipment Section */}
+        {(!searchQuery || filteredEquipments.length > 0) && (
           <section>
             <div className="mb-8 flex items-center justify-between">
               <div>
                 <h2 className="text-2xl font-semibold tracking-tight">
-                  Equipment & Devices
+                  Equipment
                 </h2>
                 <p className="mt-1 text-muted-foreground">
                   Tech rentals for students and faculty
                 </p>
               </div>
-              <Button variant="ghost">View all</Button>
+              {!searchQuery && <Button variant="ghost">View all</Button>}
             </div>
-            <div className="rounded-lg border border-dashed bg-slate-50 py-12 text-center dark:bg-slate-900">
-              <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100">
-                Laptops, Tablets & Accessories
-              </h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Check device availability at the front desk.
-              </p>
-            </div>
+
+            {filteredEquipments.length > 0 ? (
+              <div className="flex flex-col gap-4">
+                {filteredEquipments.map((item) => (
+                  <ItemCard key={item.item_id} item={item} />
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-lg border border-dashed bg-slate-50 py-12 text-center dark:bg-slate-900">
+                <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100">
+                  No Equipment Found
+                </h3>
+              </div>
+            )}
           </section>
         )}
       </main>
     </div>
+  )
+}
+
+function ItemCard({ item }) {
+  // Use a generic id instead of only book.id so item.jsx can fetch properly based on params,
+  // however item.jsx only searches books right now. We map routing correctly using item_id.
+  return (
+    <Card className="flex flex-col overflow-hidden sm:flex-row">
+      <div className="flex-shrink-0 border-b border-border sm:w-48 sm:border-r sm:border-b-0">
+        {item.thumbnail_image ? (
+          <img
+            src={item.thumbnail_image}
+            alt={item.title}
+            className="aspect-square h-full w-full object-cover"
+          />
+        ) : (
+          <div
+            className="flex aspect-square h-full w-full items-center justify-center bg-muted"
+            style={{
+              backgroundColor: item.coverColor || "#e2e8f0",
+            }}
+          >
+            <div className="flex flex-col items-center justify-center text-white/70">
+              <ImageIcon className="mb-2 h-10 w-10" />
+              <span className="text-xs font-medium">No Image</span>
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="flex flex-1 flex-col">
+        <CardHeader>
+          <div className="mb-2 flex items-start justify-between">
+            <Badge
+              variant={
+                item.availability === "Available" ? "default" : "secondary"
+              }
+            >
+              {item.availability}
+            </Badge>
+            <span className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
+              {item.tag}
+            </span>
+          </div>
+          <CardTitle className="mb-1 text-xl leading-tight">
+            {item.title}
+          </CardTitle>
+          <CardDescription>
+            {item.creator ? `by ${item.creator}` : item.standard_type}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex-1">
+          <p className="text-sm text-slate-600 dark:text-slate-300">
+            {item.description}
+          </p>
+        </CardContent>
+        <CardFooter className="sm:justify-end">
+          <Button variant="outline" className="w-full sm:w-auto" asChild>
+            <Link
+              to={`/item/${item.id}?type=${item.standard_type.toLowerCase()}`}
+            >
+              {item.availability === "Available" ? "Borrow" : "Place Hold"}
+            </Link>
+          </Button>
+        </CardFooter>
+      </div>
+    </Card>
   )
 }

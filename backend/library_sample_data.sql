@@ -27,16 +27,16 @@ VALUES
 (2003, 'william.jackson@uni.edu', 'pass123', 'William', 'R.', 'Jackson', 0, 0, 2);
 
 INSERT INTO `librarian`
-(`librarian_id`, `email`, `password`, `phone_number`)
+(`librarian_id`, `email`, `password`, `first_name`, `middle_name`, `last_name`, `phone_number`)
 VALUES
-(3001, 'maria.garcia@library.com', 'admin123', '555-210-3001'),
-(3002, 'henry.martin@library.com', 'admin123', '555-210-3002');
+(3001, 'maria.garcia@library.com', 'admin123', 'Maria', 'Beth', 'Garcia', '555-210-3001'),
+(3002, 'henry.martin@library.com', 'admin123', 'Henry', 'John', 'Martin', '555-210-3002');
 
 INSERT INTO `system_administrator`
-(`administrator_id`, `email`, `password`, `phone_number`)
+(`administrator_id`, `email`, `password`, `first_name`, `middle_name`, `last_name`, `phone_number`)
 VALUES
-(4001, 'sysadmin1@library.com', 'admin123', '555-900-4001'),
-(4002, 'sysadmin2@library.com', 'admin123', '555-900-4002');
+(4001, 'sysadmin1@library.com', 'admin123', 'System', 'Admin', 'Admin1', '555-900-4001'),
+(4002, 'sysadmin2@library.com', 'admin123', 'System', 'Admin', 'Admin2', '555-900-4002');
 
 -- ==================================================
 -- ROOMS

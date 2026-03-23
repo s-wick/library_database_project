@@ -71,6 +71,9 @@ CREATE TABLE `librarian` (
   `email` varchar(64) NOT NULL,
   `password` varchar(128) NOT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `first_name` varchar(50) DEFAULT NULL,
+  `middle_name` varchar(50) DEFAULT NULL,
+  `last_name` varchar(50) DEFAULT NULL,
   `phone_number` char(15) DEFAULT NULL,
   PRIMARY KEY (`librarian_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
@@ -80,6 +83,9 @@ CREATE TABLE `system_administrator` (
   `email` varchar(64) NOT NULL,
   `password` varchar(128) NOT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `first_name` varchar(50) DEFAULT NULL,
+  `middle_name` varchar(50) DEFAULT NULL,
+  `last_name` varchar(50) DEFAULT NULL,
   `phone_number` char(15) DEFAULT NULL,
   PRIMARY KEY (`administrator_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;

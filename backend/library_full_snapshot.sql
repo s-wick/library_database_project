@@ -253,6 +253,9 @@ CREATE TABLE `librarian` (
   `email` varchar(64) NOT NULL,
   `password` varchar(128) NOT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `first_name` varchar(50) DEFAULT NULL,
+  `middle_name` varchar(50) DEFAULT NULL,
+  `last_name` varchar(50) DEFAULT NULL,
   `phone_number` char(15) DEFAULT NULL,
   PRIMARY KEY (`librarian_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
@@ -264,7 +267,7 @@ CREATE TABLE `librarian` (
 
 LOCK TABLES `librarian` WRITE;
 /*!40000 ALTER TABLE `librarian` DISABLE KEYS */;
-INSERT INTO `librarian` VALUES (3001,'maria.garcia@library.com','admin123','2026-03-23 00:34:41','555-210-3001'),(3002,'henry.martin@library.com','admin123','2026-03-23 00:34:41','555-210-3002');
+INSERT INTO `librarian` VALUES (3001,'maria.garcia@library.com','admin123','2026-03-23 00:34:41','Maria','Beth','Garcia','555-210-3001'),(3002,'henry.martin@library.com','admin123','2026-03-23 00:34:41','Henry','John','Martin','555-210-3002');
 /*!40000 ALTER TABLE `librarian` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -406,6 +409,9 @@ CREATE TABLE `system_administrator` (
   `email` varchar(64) NOT NULL,
   `password` varchar(128) NOT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `first_name` varchar(50) DEFAULT NULL,
+  `middle_name` varchar(50) DEFAULT NULL,
+  `last_name` varchar(50) DEFAULT NULL,
   `phone_number` char(15) DEFAULT NULL,
   PRIMARY KEY (`administrator_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
@@ -417,7 +423,7 @@ CREATE TABLE `system_administrator` (
 
 LOCK TABLES `system_administrator` WRITE;
 /*!40000 ALTER TABLE `system_administrator` DISABLE KEYS */;
-INSERT INTO `system_administrator` VALUES (4001,'sysadmin1@library.com','admin123','2026-03-23 00:34:41','555-900-4001'),(4002,'sysadmin2@library.com','admin123','2026-03-23 00:34:41','555-900-4002');
+INSERT INTO `system_administrator` VALUES (4001,'sysadmin1@library.com','admin123','2026-03-23 00:34:41','System','Admin','Admin1','555-900-4001'),(4002,'sysadmin2@library.com','admin123','2026-03-23 00:34:41','System','Admin','Admin2','555-900-4002');
 /*!40000 ALTER TABLE `system_administrator` ENABLE KEYS */;
 UNLOCK TABLES;
 

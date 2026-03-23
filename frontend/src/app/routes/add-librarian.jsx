@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input"
 import { Field, FieldLabel } from "@/components/ui/field"
 
 export default function AddLibrarianPage() {
-  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:4000"
+  const apiBaseUrl =
+    import.meta.env.VITE_API_BASE_URL || "http://localhost:4000"
   const [form, setForm] = useState({
     email: "",
     password: "",

@@ -14,7 +14,12 @@ const itemFields = {
     { name: "publication", label: "Publication" },
     { name: "publicationDate", label: "Publication date", type: "date" },
     { name: "thumbnailImage", label: "Thumbnail image", type: "file" },
-    { name: "monetaryValue", label: "Monetary value", type: "number", step: "0.01" },
+    {
+      name: "monetaryValue",
+      label: "Monetary value",
+      type: "number",
+      step: "0.01",
+    },
     { name: "booksInStock", label: "Books in stock", type: "number" },
     { name: "onlinePdfUrl", label: "Online PDF URL" },
     { name: "createdBy", label: "Created by" },
@@ -22,25 +27,48 @@ const itemFields = {
   VIDEO: [
     { name: "videoName", label: "Video name", required: true },
     { name: "thumbnailImage", label: "Thumbnail image", type: "file" },
-    { name: "videoLengthSeconds", label: "Video length seconds", type: "number" },
+    {
+      name: "videoLengthSeconds",
+      label: "Video length seconds",
+      type: "number",
+    },
     { name: "videoFile", label: "Video file", type: "file" },
-    { name: "monetaryValue", label: "Monetary value", type: "number", step: "0.01" },
+    {
+      name: "monetaryValue",
+      label: "Monetary value",
+      type: "number",
+      step: "0.01",
+    },
     { name: "videosInStock", label: "Videos in stock", type: "number" },
     { name: "createdBy", label: "Created by" },
   ],
   AUDIO: [
     { name: "audioName", label: "Audio name", required: true },
     { name: "thumbnailImage", label: "Thumbnail image", type: "file" },
-    { name: "audioLengthSeconds", label: "Audio length seconds", type: "number" },
+    {
+      name: "audioLengthSeconds",
+      label: "Audio length seconds",
+      type: "number",
+    },
     { name: "audioFile", label: "Audio file", type: "file" },
-    { name: "monetaryValue", label: "Monetary value", type: "number", step: "0.01" },
+    {
+      name: "monetaryValue",
+      label: "Monetary value",
+      type: "number",
+      step: "0.01",
+    },
     { name: "audiosInStock", label: "Audios in stock", type: "number" },
     { name: "createdBy", label: "Created by" },
   ],
   RENTAL_EQUIPMENT: [
     { name: "rentalName", label: "Rental name", required: true },
     { name: "thumbnailImage", label: "Thumbnail image", type: "file" },
-    { name: "monetaryValue", label: "Monetary value", type: "number", step: "0.01" },
+    {
+      name: "monetaryValue",
+      label: "Monetary value",
+      type: "number",
+      step: "0.01",
+    },
     { name: "equipmentInStock", label: "Equipment in stock", type: "number" },
     { name: "createdBy", label: "Created by" },
   ],
@@ -48,7 +76,12 @@ const itemFields = {
     { name: "imageName", label: "Image name", required: true },
     { name: "thumbnailImage", label: "Thumbnail image", type: "file" },
     { name: "imageFile", label: "Image file", type: "file" },
-    { name: "monetaryValue", label: "Monetary value", type: "number", step: "0.01" },
+    {
+      name: "monetaryValue",
+      label: "Monetary value",
+      type: "number",
+      step: "0.01",
+    },
     { name: "imagesInStock", label: "Images in stock", type: "number" },
     { name: "createdBy", label: "Created by" },
   ],
@@ -64,7 +97,8 @@ function defaultForm(type) {
 }
 
 export default function AddItemPage() {
-  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:4000"
+  const apiBaseUrl =
+    import.meta.env.VITE_API_BASE_URL || "http://localhost:4000"
   const [itemTypes, setItemTypes] = useState([])
   const [itemType, setItemType] = useState("")
   const [form, setForm] = useState({})

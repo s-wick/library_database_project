@@ -245,8 +245,8 @@ async function handleSignup(req, res) {
       )
     } else {
       await query(
-        `INSERT INTO ${roleConfig.table} (${roleConfig.idColumn}, email, password) VALUES (?, ?, ?)`,
-        [createdId, email, password]
+        `INSERT INTO ${roleConfig.table} (${roleConfig.idColumn}, email, password, first_name, middle_name, last_name) VALUES (?, ?, ?, ?, ?, ?)`,
+        [createdId, email, password, firstName, middleName, lastName]
       )
     }
 

@@ -5,21 +5,61 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Field, FieldLabel } from "@/components/ui/field"
+import { API_BASE_URL } from "@/lib/api-config"
+
+function formatUsPhone(value = "") {
+  const raw = String(value)
+  const rawDigits = raw.replace(/\D/g, "")
+  const digits = raw.trim().startsWith("+1") ? rawDigits.slice(1, 11) : rawDigits.slice(0, 10)
+  if (!digits) return "+1 "
+  if (digits.length <= 3) return `+1 (${digits}`
+  if (digits.length <= 6) return `+1 (${digits.slice(0, 3)}) ${digits.slice(3)}`
+  return `+1 (${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`
+}
 
 export default function AddLibrarianPage() {
-  const apiBaseUrl =
-    import.meta.env.VITE_API_BASE_URL || "http://localhost:4000"
+  const apiBaseUrl = API_BASE_URL
+  const authUser = JSON.parse(localStorage.getItem("authUser") || "{}")
   const [form, setForm] = useState({
     email: "",
     password: "",
-    phoneNumber: "",
+    phoneNumber: "+1 ",
   })
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  if (authUser.role !== "admin") {
+    return (
+      <div className="min-h-screen bg-background p-6">
+        <div className="mx-auto max-w-2xl space-y-6">
+          <Button asChild variant="outline">
+            <Link to="/management-dashboard">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to dashboard
+            </Link>
+          </Button>
+          <Card>
+            <CardHeader>
+              <CardTitle>Access denied</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Only system administrators can access this page.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    )
+  }
+
   function onChange(event) {
     const { name, value } = event.target
+    if (name === "phoneNumber") {
+      setForm((prev) => ({ ...prev, phoneNumber: formatUsPhone(value) }))
+      return
+    }
     setForm((prev) => ({ ...prev, [name]: value }))
   }
 
@@ -32,25 +72,41 @@ export default function AddLibrarianPage() {
       setError("Email and password are required.")
       return
     }
+    const phoneRawDigits = form.phoneNumber.replace(/\D/g, "")
+    const phoneDigits = form.phoneNumber.trim().startsWith("+1")
+      ? phoneRawDigits.slice(1, 11)
+      : phoneRawDigits.slice(0, 10)
+    if (phoneDigits.length !== 10) {
+      setError("Phone number must be a valid US number with 10 digits.")
+      return
+    }
 
     setIsSubmitting(true)
     try {
+      const authToken = localStorage.getItem("authToken") || ""
       const response = await fetch(`${apiBaseUrl}/api/management/librarians`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
         body: JSON.stringify({
           email: form.email.trim(),
           password: form.password,
-          phoneNumber: form.phoneNumber.trim(),
+          phoneNumber: `+1${phoneDigits}`,
         }),
       })
       const data = await response.json().catch(() => ({}))
       if (!response.ok) {
+        if (response.status === 401) {
+          setError("Session expired. Please sign in again.")
+          return
+        }
         setError(data.message || "Failed to add librarian.")
         return
       }
       setSuccess("Librarian added successfully.")
-      setForm({ email: "", password: "", phoneNumber: "" })
+      setForm({ email: "", password: "", phoneNumber: "+1 " })
     } catch {
       setError("Unable to connect to server.")
     } finally {
@@ -102,6 +158,8 @@ export default function AddLibrarianPage() {
                   type="text"
                   value={form.phoneNumber}
                   onChange={onChange}
+                  maxLength={17}
+                  placeholder="+1 (555) 123-4567"
                 />
               </Field>
 

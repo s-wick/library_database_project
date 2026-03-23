@@ -32,6 +32,11 @@ const actions = [
 
 export default function ManagementDashboardPage() {
   const navigate = useNavigate()
+  const authUser = JSON.parse(localStorage.getItem("authUser") || "{}")
+  const visibleActions =
+    authUser.role === "admin"
+      ? actions
+      : actions.filter((action) => action.to !== "/management-dashboard/add-librarian")
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -47,6 +52,8 @@ export default function ManagementDashboardPage() {
             variant="ghost"
             onClick={() => {
               localStorage.setItem("isLoggedIn", "false")
+              localStorage.removeItem("authToken")
+              localStorage.removeItem("authUser")
               navigate("/")
             }}
           >
@@ -61,7 +68,7 @@ export default function ManagementDashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-3">
-              {actions.map((action) => {
+              {visibleActions.map((action) => {
                 const Icon = action.icon
                 return (
                   <Link

@@ -1,6 +1,11 @@
 const http = require("node:http")
+const crypto = require("node:crypto")
 require("dotenv").config()
 const { query, testConnection } = require("./db")
+const { loadItemSchemasFromDatabase } = require("./item-schema")
+const { findAdminStaffUser } = require("./auth-signin")
+const { createAddLibrarianHandler } = require("./server/admin/add-librarian")
+const { createAddItemHandler } = require("./server/librarian/add-item")
 
 const port = Number(process.env.PORT || 4000)
 const envOrigins = process.env.ALLOWED_ORIGINS
@@ -8,6 +13,9 @@ const envOrigins = process.env.ALLOWED_ORIGINS
   : ["http://localhost:5173", "http://127.0.0.1:5173"]
 
 const allowedOrigins = new Set(envOrigins)
+let ITEM_SCHEMAS = {}
+const authTokenTtlMs = Number(process.env.AUTH_TOKEN_TTL_MS || 12 * 60 * 60 * 1000)
+const sessions = new Map()
 
 function normalizeRoleGroup(roleGroup = "") {
   const value = String(roleGroup).trim()
@@ -114,76 +122,6 @@ function generateStudentId() {
   return `S${randomPart}`.slice(0, 15)
 }
 
-const ITEM_TABLES = {
-  BOOK: {
-    table: "book",
-    idColumn: "book_id",
-    required: ["title", "author"],
-    fields: [
-      "title",
-      "author",
-      "edition",
-      "publication",
-      "publicationDate",
-      "monetaryValue",
-      "booksInStock",
-      "onlinePdfUrl",
-      "createdAt",
-      "createdBy",
-    ],
-  },
-  VIDEO: {
-    table: "video",
-    idColumn: "video_id",
-    required: ["videoName"],
-    fields: [
-      "videoName",
-      "videoLengthSeconds",
-      "monetaryValue",
-      "videosInStock",
-      "createdAt",
-      "createdBy",
-    ],
-  },
-  AUDIO: {
-    table: "audio",
-    idColumn: "audio_id",
-    required: ["audioName"],
-    fields: [
-      "audioName",
-      "audioLengthSeconds",
-      "monetaryValue",
-      "audiosInStock",
-      "createdAt",
-      "createdBy",
-    ],
-  },
-  RENTAL_EQUIPMENT: {
-    table: "rental_equipment",
-    idColumn: "equipment_id",
-    required: ["rentalName"],
-    fields: [
-      "rentalName",
-      "monetaryValue",
-      "equipmentInStock",
-      "createdAt",
-      "createdBy",
-    ],
-  },
-  IMAGE: {
-    table: "image",
-    idColumn: "image_id",
-    required: ["imageName"],
-    fields: [
-      "imageName",
-      "monetaryValue",
-      "imagesInStock",
-      "createdAt",
-      "createdBy",
-    ],
-  },
-}
-
 function normalizeItemType(value = "") {
   return String(value).trim().toUpperCase()
 }
@@ -214,13 +152,33 @@ function parseNullableBlob(value) {
   return Buffer.from(parsed)
 }
 
+const handleAddLibrarian = createAddLibrarianHandler({
+  parseJsonBody,
+  parseNullableString,
+  query,
+  getNextNumericId,
+  sendJson,
+})
+
+const handleAddItem = createAddItemHandler({
+  parseJsonBody,
+  normalizeItemType,
+  getItemSchemas: () => ITEM_SCHEMAS,
+  parseNullableString,
+  parseNullableNumber,
+  parseNullableBlob,
+  query,
+  getNextNumericId,
+  sendJson,
+})
+
 function writeCorsHeaders(req, res) {
   const origin = req.headers.origin
   if (origin && allowedOrigins.has(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin)
   }
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS")
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type")
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization")
 }
 
 function sendJson(res, statusCode, payload) {
@@ -254,6 +212,42 @@ function parseJsonBody(req) {
   })
 }
 
+function createSessionToken(user) {
+  const token = crypto.randomBytes(24).toString("hex")
+  sessions.set(token, {
+    user,
+    expiresAt: Date.now() + authTokenTtlMs,
+  })
+  return token
+}
+
+function getBearerToken(req) {
+  const authHeader = String(req.headers.authorization || "").trim()
+  if (!authHeader.toLowerCase().startsWith("bearer ")) return ""
+  return authHeader.slice(7).trim()
+}
+
+function getSessionUser(req) {
+  const token = getBearerToken(req)
+  if (!token) return null
+  const session = sessions.get(token)
+  if (!session) return null
+  if (Date.now() > session.expiresAt) {
+    sessions.delete(token)
+    return null
+  }
+  return session.user
+}
+
+function requireManagementUser(req, res) {
+  const user = getSessionUser(req)
+  if (!user || user.roleGroup !== "adminStaff") {
+    sendJson(res, 401, { ok: false, message: "Unauthorized." })
+    return null
+  }
+  return user
+}
+
 async function handleHealth(_req, res) {
   try {
     const isConnected = await testConnection()
@@ -280,27 +274,19 @@ async function handleSignup(req, res) {
   try {
     const body = await parseJsonBody(req)
     const roleContext = resolveRoleContext(body.roleGroup, body.role)
-    const email = String(body.email || "")
-      .trim()
-      .toLowerCase()
+    const email = String(body.email || "").trim().toLowerCase()
     const password = String(body.password || "")
     const firstName = String(body.firstName || "").trim() || null
     const middleName = String(body.middleName || "").trim() || null
     const lastName = String(body.lastName || "").trim() || null
 
     if (!email || !password) {
-      sendJson(res, 400, {
-        ok: false,
-        message: "Email and password are required.",
-      })
+      sendJson(res, 400, { ok: false, message: "Email and password are required." })
       return
     }
 
     if (!roleContext) {
-      sendJson(res, 400, {
-        ok: false,
-        message: "Invalid roleGroup/role combination.",
-      })
+      sendJson(res, 400, { ok: false, message: "Invalid roleGroup/role combination." })
       return
     }
 
@@ -333,15 +319,7 @@ async function handleSignup(req, res) {
     if (typeof roleConfig.userTypeCode === "number") {
       await query(
         `INSERT INTO ${roleConfig.table} (${roleConfig.idColumn}, email, password, user_type_code, first_name, middle_name, last_name) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [
-          createdId,
-          email,
-          password,
-          roleConfig.userTypeCode,
-          firstName,
-          middleName,
-          lastName,
-        ]
+        [createdId, email, password, roleConfig.userTypeCode, firstName, middleName, lastName]
       )
     } else {
       await query(
@@ -365,11 +343,7 @@ async function handleSignup(req, res) {
       },
     })
   } catch (error) {
-    sendJson(res, 500, {
-      ok: false,
-      message: "Signup failed.",
-      error: error.message,
-    })
+    sendJson(res, 500, { ok: false, message: "Signup failed.", error: error.message })
   }
 }
 
@@ -378,70 +352,33 @@ async function handleSignin(req, res) {
     const body = await parseJsonBody(req)
     const normalizedRoleGroup = normalizeRoleGroup(body.roleGroup)
     const roleContext = resolveRoleContext(body.roleGroup, body.role)
-    const email = String(body.email || "")
-      .trim()
-      .toLowerCase()
+    const email = String(body.email || "").trim().toLowerCase()
     const password = String(body.password || "")
 
     if (!email || !password) {
-      sendJson(res, 400, {
-        ok: false,
-        message: "Email and password are required.",
-      })
+      sendJson(res, 400, { ok: false, message: "Email and password are required." })
       return
     }
 
     if (normalizedRoleGroup === "adminStaff") {
-      const adminRows = await query(
-        "SELECT administrator_id AS id, email FROM system_administrator WHERE email = ? AND password = ? LIMIT 1",
-        [email, password]
-      )
-      if (adminRows.length) {
+      const user = await findAdminStaffUser(query, email, password)
+      if (user) {
+        const token = createSessionToken(user)
         sendJson(res, 200, {
           ok: true,
           message: "Sign in successful.",
-          user: {
-            roleGroup: "adminStaff",
-            role: "admin",
-            hierarchy: 2,
-            id: adminRows[0].id,
-            email: adminRows[0].email,
-          },
+          user,
+          token,
         })
         return
       }
 
-      const staffRows = await query(
-        "SELECT librarian_id AS id, email FROM librarian WHERE email = ? AND password = ? LIMIT 1",
-        [email, password]
-      )
-      if (staffRows.length) {
-        sendJson(res, 200, {
-          ok: true,
-          message: "Sign in successful.",
-          user: {
-            roleGroup: "adminStaff",
-            role: "staff",
-            hierarchy: 1,
-            id: staffRows[0].id,
-            email: staffRows[0].email,
-          },
-        })
-        return
-      }
-
-      sendJson(res, 401, {
-        ok: false,
-        message: "Invalid admin/staff credentials.",
-      })
+      sendJson(res, 401, { ok: false, message: "Invalid admin/staff credentials." })
       return
     }
 
     if (!roleContext) {
-      sendJson(res, 400, {
-        ok: false,
-        message: "Invalid roleGroup/role combination.",
-      })
+      sendJson(res, 400, { ok: false, message: "Invalid roleGroup/role combination." })
       return
     }
 
@@ -451,10 +388,7 @@ async function handleSignin(req, res) {
       [email, password]
     )
     if (!rows.length) {
-      sendJson(res, 401, {
-        ok: false,
-        message: roleConfig.invalidCredentialsMessage,
-      })
+      sendJson(res, 401, { ok: false, message: roleConfig.invalidCredentialsMessage })
       return
     }
 
@@ -468,13 +402,16 @@ async function handleSignin(req, res) {
         id: rows[0].id,
         email: rows[0].email,
       },
+      token: createSessionToken({
+        roleGroup,
+        role: roleConfig.responseRole,
+        hierarchy: roleConfig.hierarchy,
+        id: rows[0].id,
+        email: rows[0].email,
+      }),
     })
   } catch (error) {
-    sendJson(res, 500, {
-      ok: false,
-      message: "Signin failed.",
-      error: error.message,
-    })
+    sendJson(res, 500, { ok: false, message: "Signin failed.", error: error.message })
   }
 }
 
@@ -483,195 +420,12 @@ async function handleGetItemTypes(_req, res) {
     const rows = await query(
       "SELECT item_code AS itemCode, item_type AS itemType FROM item_type ORDER BY item_code ASC"
     )
-    sendJson(res, 200, { ok: true, itemTypes: rows })
-  } catch (error) {
-    sendJson(res, 500, {
-      ok: false,
-      message: "Failed to fetch item types.",
-      error: error.message,
-    })
-  }
-}
-
-async function handleAddLibrarian(req, res) {
-  try {
-    const body = await parseJsonBody(req)
-    const email = String(body.email || "")
-      .trim()
-      .toLowerCase()
-    const password = String(body.password || "")
-    const phoneNumber = parseNullableString(body.phoneNumber)
-
-    if (!email || !password) {
-      sendJson(res, 400, {
-        ok: false,
-        message: "Email and password are required.",
-      })
-      return
-    }
-
-    const existing = await query(
-      "SELECT librarian_id FROM librarian WHERE email = ? LIMIT 1",
-      [email]
-    )
-    if (existing.length) {
-      sendJson(res, 409, {
-        ok: false,
-        message: "Email already exists for staff.",
-      })
-      return
-    }
-
-    const librarianId = await getNextNumericId("librarian", "librarian_id")
-    await query(
-      "INSERT INTO librarian (librarian_id, email, password, phone_number) VALUES (?, ?, ?, ?)",
-      [librarianId, email, password, phoneNumber]
-    )
-
-    sendJson(res, 201, {
+    sendJson(res, 200, {
       ok: true,
-      message: "Librarian added successfully.",
-      librarian: { librarianId, email, phoneNumber },
+      itemTypes: rows.filter((row) => ITEM_SCHEMAS[row.itemType]),
     })
   } catch (error) {
-    sendJson(res, 500, {
-      ok: false,
-      message: "Failed to add librarian.",
-      error: error.message,
-    })
-  }
-}
-
-async function handleAddItem(req, res) {
-  try {
-    const body = await parseJsonBody(req)
-    const itemType = normalizeItemType(body.itemType)
-    const typeConfig = ITEM_TABLES[itemType]
-    const createdAt = new Date().toISOString().slice(0, 10)
-
-    if (!typeConfig) {
-      sendJson(res, 400, { ok: false, message: "Invalid item type." })
-      return
-    }
-
-    for (const field of typeConfig.required) {
-      if (!parseNullableString(body[field])) {
-        sendJson(res, 400, { ok: false, message: `${field} is required.` })
-        return
-      }
-    }
-
-    const itemTypeRow = await query(
-      "SELECT item_code AS itemCode FROM item_type WHERE item_type = ? LIMIT 1",
-      [itemType]
-    )
-    if (!itemTypeRow.length) {
-      sendJson(res, 400, {
-        ok: false,
-        message: "Selected item type not found in database.",
-      })
-      return
-    }
-
-    const itemTypeCode = itemTypeRow[0].itemCode
-    const createdId = await getNextNumericId(
-      typeConfig.table,
-      typeConfig.idColumn
-    )
-
-    if (itemType === "BOOK") {
-      await query(
-        "INSERT INTO book (book_id, title, author, edition, publication, publication_date, thumbnail_image, monetary_value, books_in_stock, online_pdf_url, created_at, created_by, item_type_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        [
-          createdId,
-          parseNullableString(body.title),
-          parseNullableString(body.author),
-          parseNullableString(body.edition),
-          parseNullableString(body.publication),
-          parseNullableString(body.publicationDate),
-          parseNullableBlob(body.thumbnailImage),
-          parseNullableNumber(body.monetaryValue),
-          parseNullableNumber(body.booksInStock),
-          parseNullableString(body.onlinePdfUrl),
-          createdAt,
-          parseNullableString(body.createdBy),
-          itemTypeCode,
-        ]
-      )
-    } else if (itemType === "VIDEO") {
-      await query(
-        "INSERT INTO video (video_id, video_name, thumbnail_image, video_length_seconds, video_file, monetary_value, videos_in_stock, created_at, created_by, item_type_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        [
-          createdId,
-          parseNullableString(body.videoName),
-          parseNullableBlob(body.thumbnailImage),
-          parseNullableNumber(body.videoLengthSeconds),
-          parseNullableBlob(body.videoFile),
-          parseNullableNumber(body.monetaryValue),
-          parseNullableNumber(body.videosInStock),
-          createdAt,
-          parseNullableString(body.createdBy),
-          itemTypeCode,
-        ]
-      )
-    } else if (itemType === "AUDIO") {
-      await query(
-        "INSERT INTO audio (audio_id, audio_name, thumbnail_image, audio_length_seconds, audio_file, monetary_value, audios_in_stock, created_at, created_by, item_type_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        [
-          createdId,
-          parseNullableString(body.audioName),
-          parseNullableBlob(body.thumbnailImage),
-          parseNullableNumber(body.audioLengthSeconds),
-          parseNullableBlob(body.audioFile),
-          parseNullableNumber(body.monetaryValue),
-          parseNullableNumber(body.audiosInStock),
-          createdAt,
-          parseNullableString(body.createdBy),
-          itemTypeCode,
-        ]
-      )
-    } else if (itemType === "RENTAL_EQUIPMENT") {
-      await query(
-        "INSERT INTO rental_equipment (equipment_id, rental_name, thumbnail_image, monetary_value, equipment_in_stock, created_at, created_by, item_type_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-        [
-          createdId,
-          parseNullableString(body.rentalName),
-          parseNullableBlob(body.thumbnailImage),
-          parseNullableNumber(body.monetaryValue),
-          parseNullableNumber(body.equipmentInStock),
-          createdAt,
-          parseNullableString(body.createdBy),
-          itemTypeCode,
-        ]
-      )
-    } else if (itemType === "IMAGE") {
-      await query(
-        "INSERT INTO image (image_id, image_name, thumbnail_image, image_file, monetary_value, images_in_stock, created_at, created_by, item_type_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        [
-          createdId,
-          parseNullableString(body.imageName),
-          parseNullableBlob(body.thumbnailImage),
-          parseNullableBlob(body.imageFile),
-          parseNullableNumber(body.monetaryValue),
-          parseNullableNumber(body.imagesInStock),
-          createdAt,
-          parseNullableString(body.createdBy),
-          itemTypeCode,
-        ]
-      )
-    }
-
-    sendJson(res, 201, {
-      ok: true,
-      message: "Item added successfully.",
-      item: { itemId: createdId, itemType, itemTypeCode },
-    })
-  } catch (error) {
-    sendJson(res, 500, {
-      ok: false,
-      message: "Failed to add item.",
-      error: error.message,
-    })
+    sendJson(res, 500, { ok: false, message: "Failed to fetch item types.", error: error.message })
   }
 }
 
@@ -708,11 +462,13 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.method === "POST" && pathname === "/api/management/librarians") {
+    if (!requireManagementUser(req, res)) return
     await handleAddLibrarian(req, res)
     return
   }
 
   if (req.method === "POST" && pathname === "/api/management/items") {
+    if (!requireManagementUser(req, res)) return
     await handleAddItem(req, res)
     return
   }
@@ -720,6 +476,14 @@ const server = http.createServer(async (req, res) => {
   sendJson(res, 404, { ok: false, message: "Route not found." })
 })
 
-server.listen(port, () => {
-  console.log(`Backend running on http://localhost:${port}`)
+async function startServer() {
+  ITEM_SCHEMAS = await loadItemSchemasFromDatabase(query, process.env.DB_NAME)
+  server.listen(port, () => {
+    console.log(`Backend running on http://localhost:${port}`)
+  })
+}
+
+startServer().catch((error) => {
+  console.error(error.message)
+  process.exit(1)
 })

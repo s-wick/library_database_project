@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Field, FieldLabel } from "@/components/ui/field"
+import { API_BASE_URL } from "@/lib/api-config"
 
 const itemFields = {
   BOOK: [
@@ -72,19 +73,6 @@ const itemFields = {
     { name: "equipmentInStock", label: "Equipment in stock", type: "number" },
     { name: "createdBy", label: "Created by" },
   ],
-  IMAGE: [
-    { name: "imageName", label: "Image name", required: true },
-    { name: "thumbnailImage", label: "Thumbnail image", type: "file" },
-    { name: "imageFile", label: "Image file", type: "file" },
-    {
-      name: "monetaryValue",
-      label: "Monetary value",
-      type: "number",
-      step: "0.01",
-    },
-    { name: "imagesInStock", label: "Images in stock", type: "number" },
-    { name: "createdBy", label: "Created by" },
-  ],
 }
 
 function defaultForm(type) {
@@ -97,8 +85,7 @@ function defaultForm(type) {
 }
 
 export default function AddItemPage() {
-  const apiBaseUrl =
-    import.meta.env.VITE_API_BASE_URL || "http://localhost:4000"
+  const apiBaseUrl = API_BASE_URL
   const [itemTypes, setItemTypes] = useState([])
   const [itemType, setItemType] = useState("")
   const [form, setForm] = useState({})
@@ -179,13 +166,21 @@ export default function AddItemPage() {
 
     setIsSubmitting(true)
     try {
+      const authToken = localStorage.getItem("authToken") || ""
       const response = await fetch(`${apiBaseUrl}/api/management/items`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
         body: JSON.stringify({ itemType, createdAt: todayDate, ...form }),
       })
       const data = await response.json().catch(() => ({}))
       if (!response.ok) {
+        if (response.status === 401) {
+          setError("Session expired. Please sign in again.")
+          return
+        }
         setError(data.message || "Failed to add item.")
         return
       }

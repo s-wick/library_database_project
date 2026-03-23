@@ -22,8 +22,7 @@ INSERT INTO `item_type` (`item_code`, `item_type`) VALUES
 (1, 'BOOK'),
 (2, 'VIDEO'),
 (3, 'AUDIO'),
-(4, 'RENTAL_EQUIPMENT'),
-(5, 'IMAGE');
+(4, 'RENTAL_EQUIPMENT');
 
 INSERT INTO `user_type` (`user_code`, `user_type`) VALUES
 (1, 'STUDENT'),
@@ -140,22 +139,6 @@ CREATE TABLE `video` (
   PRIMARY KEY (`video_id`),
   KEY `item_type_code` (`item_type_code`),
   CONSTRAINT `video_ibfk_1`
-    FOREIGN KEY (`item_type_code`) REFERENCES `item_type` (`item_code`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
-CREATE TABLE `image` (
-  `image_id` int unsigned NOT NULL,
-  `image_name` varchar(512) NOT NULL,
-  `thumbnail_image` blob,
-  `image_file` blob,
-  `monetary_value` decimal(5,2) DEFAULT NULL,
-  `images_in_stock` tinyint unsigned DEFAULT NULL,
-  `created_at` date DEFAULT NULL,
-  `created_by` varchar(64) DEFAULT NULL,
-  `item_type_code` tinyint unsigned DEFAULT NULL,
-  PRIMARY KEY (`image_id`),
-  KEY `item_type_code` (`item_type_code`),
-  CONSTRAINT `image_ibfk_1`
     FOREIGN KEY (`item_type_code`) REFERENCES `item_type` (`item_code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 

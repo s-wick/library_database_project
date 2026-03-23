@@ -1,6 +1,6 @@
 -- ==================================================
 -- Library Database Sample Data
--- Includes normal and edge-case records
+-- No image table / no image item type
 -- Requires: library_schema.sql
 -- ==================================================
 
@@ -10,7 +10,6 @@ USE `librarydatabase`;
 -- USERS
 -- ==================================================
 
--- Students (5)
 INSERT INTO `student_user`
 (`student_id`, `email`, `password`, `first_name`, `middle_name`, `last_name`, `borrowed_items`, `fines`, `user_type_code`)
 VALUES
@@ -20,7 +19,6 @@ VALUES
 (1004, 'noah.davis@uni.edu', 'pass123', 'Noah', NULL, 'Davis', 3, 0, 1),
 (1005, 'ava.miller@uni.edu', 'pass123', 'Ava', NULL, 'Miller', 1, 0, 1);
 
--- Faculty (3)
 INSERT INTO `faculty_user`
 (`faculty_id`, `email`, `password`, `first_name`, `middle_name`, `last_name`, `borrowed_items`, `fines`, `user_type_code`)
 VALUES
@@ -28,14 +26,12 @@ VALUES
 (2002, 'mia.thomas@uni.edu', 'pass123', 'Mia', NULL, 'Thomas', 1, 0, 2),
 (2003, 'william.jackson@uni.edu', 'pass123', 'William', 'R.', 'Jackson', 0, 0, 2);
 
--- Librarians (2)
 INSERT INTO `librarian`
 (`librarian_id`, `email`, `password`, `phone_number`)
 VALUES
 (3001, 'maria.garcia@library.com', 'admin123', '555-210-3001'),
 (3002, 'henry.martin@library.com', 'admin123', '555-210-3002');
 
--- System administrators (2)
 INSERT INTO `system_administrator`
 (`administrator_id`, `email`, `password`, `phone_number`)
 VALUES
@@ -58,7 +54,6 @@ VALUES
 
 -- ==================================================
 -- BOOKS (10)
--- item_type_code = 1
 -- ==================================================
 
 INSERT INTO `book`
@@ -77,7 +72,6 @@ VALUES
 
 -- ==================================================
 -- VIDEOS (10)
--- item_type_code = 2
 -- ==================================================
 
 INSERT INTO `video`
@@ -96,7 +90,6 @@ VALUES
 
 -- ==================================================
 -- AUDIO (10)
--- item_type_code = 3
 -- ==================================================
 
 INSERT INTO `audio`
@@ -115,49 +108,24 @@ VALUES
 
 -- ==================================================
 -- RENTAL EQUIPMENT (10)
--- item_type_code = 4
 -- ==================================================
 
 INSERT INTO `rental_equipment`
 (`equipment_id`, `rental_name`, `monetary_value`, `equipment_in_stock`, `created_at`, `created_by`, `item_type_code`)
 VALUES
-(301, 'Dell Latitude Laptop', 1150.00, 4, '2026-03-22', 'sysadmin1', 4),
+(301, 'Dell Latitude Laptop', 999.99, 4, '2026-03-22', 'sysadmin1', 4),
 (302, 'Canon DSLR Camera', 899.99, 2, '2026-03-22', 'sysadmin1', 4),
 (303, 'Portable Projector', 420.00, 3, '2026-03-22', 'sysadmin1', 4),
 (304, 'Audio Recorder Zoom H1n', 129.99, 5, '2026-03-22', 'sysadmin1', 4),
 (305, 'Tripod Stand', 45.00, 8, '2026-03-22', 'sysadmin1', 4),
 (306, 'Wireless Microphone Kit', 210.00, 3, '2026-03-22', 'sysadmin1', 4),
-(307, 'MacBook Air', 1299.00, 1, '2026-03-22', 'sysadmin1', 4),
+(307, 'MacBook Air', 999.99, 1, '2026-03-22', 'sysadmin1', 4),
 (308, 'HD Webcam', 79.99, 6, '2026-03-22', 'sysadmin1', 4),
 (309, 'USB-C Docking Station', 149.99, 0, '2026-03-22', 'sysadmin1', 4),
 (310, 'Graphing Calculator', 119.95, 7, '2026-03-22', 'sysadmin1', 4);
 
 -- ==================================================
--- IMAGES (10)
--- item_type_code = 5
--- ==================================================
-
-INSERT INTO `image`
-(`image_id`, `image_name`, `monetary_value`, `images_in_stock`, `created_at`, `created_by`, `item_type_code`)
-VALUES
-(401, 'Campus Map 2026 Edition', 5.00, 20, '2026-03-22', 'sysadmin1', 5),
-(402, 'Historic University Photograph Collection', 15.00, 10, '2026-03-22', 'sysadmin1', 5),
-(403, 'Architectural Reference Plates', 12.75, 8, '2026-03-22', 'sysadmin1', 5),
-(404, 'Local Flora Study Images', 7.25, 6, '2026-03-22', 'sysadmin1', 5),
-(405, 'Chemistry Lab Safety Posters', 3.99, 15, '2026-03-22', 'sysadmin1', 5),
-(406, 'Art History Slide Prints', 18.50, 4, '2026-03-22', 'sysadmin1', 5),
-(407, 'Engineering Diagram Sheets', 9.99, 9, '2026-03-22', 'sysadmin1', 5),
-(408, 'Library Floor Plan Set', 4.50, 12, '2026-03-22', 'sysadmin1', 5),
-(409, 'Astronomy Observation Plates', 13.40, 2, '2026-03-22', 'sysadmin1', 5),
-(410, 'Archived Event Photo Packet', 11.00, 0, '2026-03-22', 'sysadmin1', 5);
-
--- ==================================================
 -- BORROW TRANSACTIONS
--- Edge cases included:
--- - overdue and not returned
--- - returned late
--- - returned on time
--- - equipment and non-book borrows
 -- ==================================================
 
 INSERT INTO `borrow`
@@ -172,15 +140,11 @@ VALUES
 (7, 3, 201, 1, 1003, '2026-03-09 16:30:00', '2026-03-16 16:30:00', '2026-03-16 09:00:00'),
 (8, 1, 10, 1, 1001, '2026-03-10 10:25:00', '2026-03-24 10:25:00', NULL),
 (9, 4, 302, 2, 2003, '2026-03-11 12:00:00', '2026-03-14 12:00:00', NULL),
-(10, 5, 401, 1, 1002, '2026-03-12 08:40:00', '2026-03-26 08:40:00', NULL),
-(11, 2, 108, 1, 1004, '2026-03-13 09:30:00', '2026-03-20 09:30:00', NULL),
-(12, 4, 309, 2, 2001, '2026-03-14 10:00:00', '2026-03-17 10:00:00', NULL);
+(10, 2, 108, 1, 1004, '2026-03-13 09:30:00', '2026-03-20 09:30:00', NULL),
+(11, 4, 309, 2, 2001, '2026-03-14 10:00:00', '2026-03-17 10:00:00', NULL);
 
 -- ==================================================
 -- FINES
--- Edge cases:
--- - one paid
--- - multiple unpaid
 -- ==================================================
 
 INSERT INTO `fined_for`
@@ -188,13 +152,10 @@ INSERT INTO `fined_for`
 VALUES
 (1, 2, 5, 'Late return', '2026-03-18 12:00:00', 1),
 (2, 9, 25, 'Equipment returned late', '2026-03-15 09:00:00', 0),
-(3, 12, 40, 'High-value equipment overdue', '2026-03-18 10:30:00', 0);
+(3, 11, 40, 'High-value equipment overdue', '2026-03-18 10:30:00', 0);
 
 -- ==================================================
 -- HOLDS
--- Edge cases:
--- - active, fulfilled, cancelled
--- - queue positions 1, 2, 3
 -- ==================================================
 
 INSERT INTO `hold_item`
@@ -210,9 +171,6 @@ VALUES
 
 -- ==================================================
 -- ROOM RESERVATIONS
--- Edge cases:
--- - active, completed, cancelled
--- - short and long bookings
 -- ==================================================
 
 INSERT INTO `reserve_room`
@@ -229,7 +187,7 @@ VALUES
 -- AUTO-INCREMENT RESET
 -- ==================================================
 
-ALTER TABLE `borrow` AUTO_INCREMENT = 13;
+ALTER TABLE `borrow` AUTO_INCREMENT = 12;
 ALTER TABLE `fined_for` AUTO_INCREMENT = 4;
 ALTER TABLE `hold_item` AUTO_INCREMENT = 8;
 ALTER TABLE `reserve_room` AUTO_INCREMENT = 7;

@@ -110,6 +110,100 @@ function generateStudentId() {
   return `S${randomPart}`.slice(0, 15)
 }
 
+const ITEM_TABLES = {
+  BOOK: {
+    table: "book",
+    idColumn: "book_id",
+    required: ["title", "author"],
+    fields: [
+      "title",
+      "author",
+      "edition",
+      "publication",
+      "publicationDate",
+      "monetaryValue",
+      "booksInStock",
+      "onlinePdfUrl",
+      "createdAt",
+      "createdBy",
+    ],
+  },
+  VIDEO: {
+    table: "video",
+    idColumn: "video_id",
+    required: ["videoName"],
+    fields: [
+      "videoName",
+      "videoLengthSeconds",
+      "monetaryValue",
+      "videosInStock",
+      "createdAt",
+      "createdBy",
+    ],
+  },
+  AUDIO: {
+    table: "audio",
+    idColumn: "audio_id",
+    required: ["audioName"],
+    fields: [
+      "audioName",
+      "audioLengthSeconds",
+      "monetaryValue",
+      "audiosInStock",
+      "createdAt",
+      "createdBy",
+    ],
+  },
+  RENTAL_EQUIPMENT: {
+    table: "rental_equipment",
+    idColumn: "equipment_id",
+    required: ["rentalName"],
+    fields: [
+      "rentalName",
+      "monetaryValue",
+      "equipmentInStock",
+      "createdAt",
+      "createdBy",
+    ],
+  },
+  IMAGE: {
+    table: "image",
+    idColumn: "image_id",
+    required: ["imageName"],
+    fields: ["imageName", "monetaryValue", "imagesInStock", "createdAt", "createdBy"],
+  },
+}
+
+function normalizeItemType(value = "") {
+  return String(value).trim().toUpperCase()
+}
+
+function parseNullableString(value) {
+  const parsed = String(value ?? "").trim()
+  return parsed ? parsed : null
+}
+
+function parseNullableNumber(value) {
+  if (value === null || value === undefined || value === "") return null
+  const parsed = Number(value)
+  if (Number.isNaN(parsed)) return null
+  return parsed
+}
+
+function parseNullableBlob(value) {
+  const parsed = String(value ?? "").trim()
+  if (!parsed) return null
+  const parts = parsed.split(",")
+  if (parts.length === 2 && parts[0].includes("base64")) {
+    try {
+      return Buffer.from(parts[1], "base64")
+    } catch {
+      return null
+    }
+  }
+  return Buffer.from(parsed)
+}
+
 function writeCorsHeaders(req, res) {
   const origin = req.headers.origin
   if (origin && allowedOrigins.has(origin)) {
@@ -130,7 +224,7 @@ function parseJsonBody(req) {
     let body = ""
     req.on("data", (chunk) => {
       body += chunk.toString()
-      if (body.length > 1_000_000) {
+      if (body.length > 15_000_000) {
         reject(new Error("Payload too large"))
         req.destroy()
       }
@@ -252,12 +346,56 @@ async function handleSignup(req, res) {
 async function handleSignin(req, res) {
   try {
     const body = await parseJsonBody(req)
+    const normalizedRoleGroup = normalizeRoleGroup(body.roleGroup)
     const roleContext = resolveRoleContext(body.roleGroup, body.role)
     const email = String(body.email || "").trim().toLowerCase()
     const password = String(body.password || "")
 
     if (!email || !password) {
       sendJson(res, 400, { ok: false, message: "Email and password are required." })
+      return
+    }
+
+    if (normalizedRoleGroup === "adminStaff") {
+      const adminRows = await query(
+        "SELECT administrator_id AS id, email FROM system_administrator WHERE email = ? AND password = ? LIMIT 1",
+        [email, password]
+      )
+      if (adminRows.length) {
+        sendJson(res, 200, {
+          ok: true,
+          message: "Sign in successful.",
+          user: {
+            roleGroup: "adminStaff",
+            role: "admin",
+            hierarchy: 2,
+            id: adminRows[0].id,
+            email: adminRows[0].email,
+          },
+        })
+        return
+      }
+
+      const staffRows = await query(
+        "SELECT librarian_id AS id, email FROM librarian WHERE email = ? AND password = ? LIMIT 1",
+        [email, password]
+      )
+      if (staffRows.length) {
+        sendJson(res, 200, {
+          ok: true,
+          message: "Sign in successful.",
+          user: {
+            roleGroup: "adminStaff",
+            role: "staff",
+            hierarchy: 1,
+            id: staffRows[0].id,
+            email: staffRows[0].email,
+          },
+        })
+        return
+      }
+
+      sendJson(res, 401, { ok: false, message: "Invalid admin/staff credentials." })
       return
     }
 
@@ -292,6 +430,177 @@ async function handleSignin(req, res) {
   }
 }
 
+async function handleGetItemTypes(_req, res) {
+  try {
+    const rows = await query(
+      "SELECT item_code AS itemCode, item_type AS itemType FROM item_type ORDER BY item_code ASC"
+    )
+    sendJson(res, 200, { ok: true, itemTypes: rows })
+  } catch (error) {
+    sendJson(res, 500, { ok: false, message: "Failed to fetch item types.", error: error.message })
+  }
+}
+
+async function handleAddLibrarian(req, res) {
+  try {
+    const body = await parseJsonBody(req)
+    const email = String(body.email || "").trim().toLowerCase()
+    const password = String(body.password || "")
+    const phoneNumber = parseNullableString(body.phoneNumber)
+
+    if (!email || !password) {
+      sendJson(res, 400, { ok: false, message: "Email and password are required." })
+      return
+    }
+
+    const existing = await query(
+      "SELECT librarian_id FROM librarian WHERE email = ? LIMIT 1",
+      [email]
+    )
+    if (existing.length) {
+      sendJson(res, 409, { ok: false, message: "Email already exists for staff." })
+      return
+    }
+
+    const librarianId = await getNextNumericId("librarian", "librarian_id")
+    await query(
+      "INSERT INTO librarian (librarian_id, email, password, phone_number) VALUES (?, ?, ?, ?)",
+      [librarianId, email, password, phoneNumber]
+    )
+
+    sendJson(res, 201, {
+      ok: true,
+      message: "Librarian added successfully.",
+      librarian: { librarianId, email, phoneNumber },
+    })
+  } catch (error) {
+    sendJson(res, 500, { ok: false, message: "Failed to add librarian.", error: error.message })
+  }
+}
+
+async function handleAddItem(req, res) {
+  try {
+    const body = await parseJsonBody(req)
+    const itemType = normalizeItemType(body.itemType)
+    const typeConfig = ITEM_TABLES[itemType]
+    const createdAt = new Date().toISOString().slice(0, 10)
+
+    if (!typeConfig) {
+      sendJson(res, 400, { ok: false, message: "Invalid item type." })
+      return
+    }
+
+    for (const field of typeConfig.required) {
+      if (!parseNullableString(body[field])) {
+        sendJson(res, 400, { ok: false, message: `${field} is required.` })
+        return
+      }
+    }
+
+    const itemTypeRow = await query(
+      "SELECT item_code AS itemCode FROM item_type WHERE item_type = ? LIMIT 1",
+      [itemType]
+    )
+    if (!itemTypeRow.length) {
+      sendJson(res, 400, { ok: false, message: "Selected item type not found in database." })
+      return
+    }
+
+    const itemTypeCode = itemTypeRow[0].itemCode
+    const createdId = await getNextNumericId(typeConfig.table, typeConfig.idColumn)
+
+    if (itemType === "BOOK") {
+      await query(
+        "INSERT INTO book (book_id, title, author, edition, publication, publication_date, thumbnail_image, monetary_value, books_in_stock, online_pdf_url, created_at, created_by, item_type_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [
+          createdId,
+          parseNullableString(body.title),
+          parseNullableString(body.author),
+          parseNullableString(body.edition),
+          parseNullableString(body.publication),
+          parseNullableString(body.publicationDate),
+          parseNullableBlob(body.thumbnailImage),
+          parseNullableNumber(body.monetaryValue),
+          parseNullableNumber(body.booksInStock),
+          parseNullableString(body.onlinePdfUrl),
+          createdAt,
+          parseNullableString(body.createdBy),
+          itemTypeCode,
+        ]
+      )
+    } else if (itemType === "VIDEO") {
+      await query(
+        "INSERT INTO video (video_id, video_name, thumbnail_image, video_length_seconds, video_file, monetary_value, videos_in_stock, created_at, created_by, item_type_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [
+          createdId,
+          parseNullableString(body.videoName),
+          parseNullableBlob(body.thumbnailImage),
+          parseNullableNumber(body.videoLengthSeconds),
+          parseNullableBlob(body.videoFile),
+          parseNullableNumber(body.monetaryValue),
+          parseNullableNumber(body.videosInStock),
+          createdAt,
+          parseNullableString(body.createdBy),
+          itemTypeCode,
+        ]
+      )
+    } else if (itemType === "AUDIO") {
+      await query(
+        "INSERT INTO audio (audio_id, audio_name, thumbnail_image, audio_length_seconds, audio_file, monetary_value, audios_in_stock, created_at, created_by, item_type_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [
+          createdId,
+          parseNullableString(body.audioName),
+          parseNullableBlob(body.thumbnailImage),
+          parseNullableNumber(body.audioLengthSeconds),
+          parseNullableBlob(body.audioFile),
+          parseNullableNumber(body.monetaryValue),
+          parseNullableNumber(body.audiosInStock),
+          createdAt,
+          parseNullableString(body.createdBy),
+          itemTypeCode,
+        ]
+      )
+    } else if (itemType === "RENTAL_EQUIPMENT") {
+      await query(
+        "INSERT INTO rental_equipment (equipment_id, rental_name, thumbnail_image, monetary_value, equipment_in_stock, created_at, created_by, item_type_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        [
+          createdId,
+          parseNullableString(body.rentalName),
+          parseNullableBlob(body.thumbnailImage),
+          parseNullableNumber(body.monetaryValue),
+          parseNullableNumber(body.equipmentInStock),
+          createdAt,
+          parseNullableString(body.createdBy),
+          itemTypeCode,
+        ]
+      )
+    } else if (itemType === "IMAGE") {
+      await query(
+        "INSERT INTO image (image_id, image_name, thumbnail_image, image_file, monetary_value, images_in_stock, created_at, created_by, item_type_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [
+          createdId,
+          parseNullableString(body.imageName),
+          parseNullableBlob(body.thumbnailImage),
+          parseNullableBlob(body.imageFile),
+          parseNullableNumber(body.monetaryValue),
+          parseNullableNumber(body.imagesInStock),
+          createdAt,
+          parseNullableString(body.createdBy),
+          itemTypeCode,
+        ]
+      )
+    }
+
+    sendJson(res, 201, {
+      ok: true,
+      message: "Item added successfully.",
+      item: { itemId: createdId, itemType, itemTypeCode },
+    })
+  } catch (error) {
+    sendJson(res, 500, { ok: false, message: "Failed to add item.", error: error.message })
+  }
+}
+
 const server = http.createServer(async (req, res) => {
   writeCorsHeaders(req, res)
 
@@ -316,6 +625,21 @@ const server = http.createServer(async (req, res) => {
 
   if (req.method === "POST" && pathname === "/api/auth/signin") {
     await handleSignin(req, res)
+    return
+  }
+
+  if (req.method === "GET" && pathname === "/api/item-types") {
+    await handleGetItemTypes(req, res)
+    return
+  }
+
+  if (req.method === "POST" && pathname === "/api/management/librarians") {
+    await handleAddLibrarian(req, res)
+    return
+  }
+
+  if (req.method === "POST" && pathname === "/api/management/items") {
+    await handleAddItem(req, res)
     return
   }
 

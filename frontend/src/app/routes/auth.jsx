@@ -134,7 +134,11 @@ export default function AuthPage() {
         setSuccess("Account created successfully.")
       } else {
         localStorage.setItem("isLoggedIn", "true")
-        navigate("/")
+        if (data?.user?.roleGroup === "adminStaff") {
+          navigate("/management-dashboard")
+        } else {
+          navigate("/user-dashboard")
+        }
       }
     } catch {
       setErrors({

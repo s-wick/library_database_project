@@ -10,7 +10,9 @@ import { API_BASE_URL } from "@/lib/api-config"
 function formatUsPhone(value = "") {
   const raw = String(value)
   const rawDigits = raw.replace(/\D/g, "")
-  const digits = raw.trim().startsWith("+1") ? rawDigits.slice(1, 11) : rawDigits.slice(0, 10)
+  const digits = raw.trim().startsWith("+1")
+    ? rawDigits.slice(1, 11)
+    : rawDigits.slice(0, 10)
   if (!digits) return "+1 "
   if (digits.length <= 3) return `+1 (${digits}`
   if (digits.length <= 6) return `+1 (${digits.slice(0, 3)}) ${digits.slice(3)}`

@@ -36,7 +36,9 @@ export default function ManagementDashboardPage() {
   const visibleActions =
     authUser.role === "admin"
       ? actions
-      : actions.filter((action) => action.to !== "/management-dashboard/add-librarian")
+      : actions.filter(
+          (action) => action.to !== "/management-dashboard/add-librarian"
+        )
 
   return (
     <div className="min-h-screen bg-background p-6">

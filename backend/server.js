@@ -3,7 +3,11 @@ require("dotenv").config()
 const { query, testConnection } = require("./db")
 
 const port = Number(process.env.PORT || 4000)
-const allowedOrigins = new Set(["http://localhost:5173", "http://127.0.0.1:5173"])
+const envOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(",")
+  : ["http://localhost:5173", "http://127.0.0.1:5173"]
+
+const allowedOrigins = new Set(envOrigins)
 
 function normalizeRoleGroup(roleGroup = "") {
   const value = String(roleGroup).trim()
@@ -170,7 +174,13 @@ const ITEM_TABLES = {
     table: "image",
     idColumn: "image_id",
     required: ["imageName"],
-    fields: ["imageName", "monetaryValue", "imagesInStock", "createdAt", "createdBy"],
+    fields: [
+      "imageName",
+      "monetaryValue",
+      "imagesInStock",
+      "createdAt",
+      "createdBy",
+    ],
   },
 }
 
@@ -270,19 +280,27 @@ async function handleSignup(req, res) {
   try {
     const body = await parseJsonBody(req)
     const roleContext = resolveRoleContext(body.roleGroup, body.role)
-    const email = String(body.email || "").trim().toLowerCase()
+    const email = String(body.email || "")
+      .trim()
+      .toLowerCase()
     const password = String(body.password || "")
     const firstName = String(body.firstName || "").trim() || null
     const middleName = String(body.middleName || "").trim() || null
     const lastName = String(body.lastName || "").trim() || null
 
     if (!email || !password) {
-      sendJson(res, 400, { ok: false, message: "Email and password are required." })
+      sendJson(res, 400, {
+        ok: false,
+        message: "Email and password are required.",
+      })
       return
     }
 
     if (!roleContext) {
-      sendJson(res, 400, { ok: false, message: "Invalid roleGroup/role combination." })
+      sendJson(res, 400, {
+        ok: false,
+        message: "Invalid roleGroup/role combination.",
+      })
       return
     }
 
@@ -315,7 +333,15 @@ async function handleSignup(req, res) {
     if (typeof roleConfig.userTypeCode === "number") {
       await query(
         `INSERT INTO ${roleConfig.table} (${roleConfig.idColumn}, email, password, user_type_code, first_name, middle_name, last_name) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [createdId, email, password, roleConfig.userTypeCode, firstName, middleName, lastName]
+        [
+          createdId,
+          email,
+          password,
+          roleConfig.userTypeCode,
+          firstName,
+          middleName,
+          lastName,
+        ]
       )
     } else {
       await query(
@@ -339,7 +365,11 @@ async function handleSignup(req, res) {
       },
     })
   } catch (error) {
-    sendJson(res, 500, { ok: false, message: "Signup failed.", error: error.message })
+    sendJson(res, 500, {
+      ok: false,
+      message: "Signup failed.",
+      error: error.message,
+    })
   }
 }
 
@@ -348,11 +378,16 @@ async function handleSignin(req, res) {
     const body = await parseJsonBody(req)
     const normalizedRoleGroup = normalizeRoleGroup(body.roleGroup)
     const roleContext = resolveRoleContext(body.roleGroup, body.role)
-    const email = String(body.email || "").trim().toLowerCase()
+    const email = String(body.email || "")
+      .trim()
+      .toLowerCase()
     const password = String(body.password || "")
 
     if (!email || !password) {
-      sendJson(res, 400, { ok: false, message: "Email and password are required." })
+      sendJson(res, 400, {
+        ok: false,
+        message: "Email and password are required.",
+      })
       return
     }
 
@@ -395,12 +430,18 @@ async function handleSignin(req, res) {
         return
       }
 
-      sendJson(res, 401, { ok: false, message: "Invalid admin/staff credentials." })
+      sendJson(res, 401, {
+        ok: false,
+        message: "Invalid admin/staff credentials.",
+      })
       return
     }
 
     if (!roleContext) {
-      sendJson(res, 400, { ok: false, message: "Invalid roleGroup/role combination." })
+      sendJson(res, 400, {
+        ok: false,
+        message: "Invalid roleGroup/role combination.",
+      })
       return
     }
 
@@ -410,7 +451,10 @@ async function handleSignin(req, res) {
       [email, password]
     )
     if (!rows.length) {
-      sendJson(res, 401, { ok: false, message: roleConfig.invalidCredentialsMessage })
+      sendJson(res, 401, {
+        ok: false,
+        message: roleConfig.invalidCredentialsMessage,
+      })
       return
     }
 
@@ -426,7 +470,11 @@ async function handleSignin(req, res) {
       },
     })
   } catch (error) {
-    sendJson(res, 500, { ok: false, message: "Signin failed.", error: error.message })
+    sendJson(res, 500, {
+      ok: false,
+      message: "Signin failed.",
+      error: error.message,
+    })
   }
 }
 
@@ -437,19 +485,28 @@ async function handleGetItemTypes(_req, res) {
     )
     sendJson(res, 200, { ok: true, itemTypes: rows })
   } catch (error) {
-    sendJson(res, 500, { ok: false, message: "Failed to fetch item types.", error: error.message })
+    sendJson(res, 500, {
+      ok: false,
+      message: "Failed to fetch item types.",
+      error: error.message,
+    })
   }
 }
 
 async function handleAddLibrarian(req, res) {
   try {
     const body = await parseJsonBody(req)
-    const email = String(body.email || "").trim().toLowerCase()
+    const email = String(body.email || "")
+      .trim()
+      .toLowerCase()
     const password = String(body.password || "")
     const phoneNumber = parseNullableString(body.phoneNumber)
 
     if (!email || !password) {
-      sendJson(res, 400, { ok: false, message: "Email and password are required." })
+      sendJson(res, 400, {
+        ok: false,
+        message: "Email and password are required.",
+      })
       return
     }
 
@@ -458,7 +515,10 @@ async function handleAddLibrarian(req, res) {
       [email]
     )
     if (existing.length) {
-      sendJson(res, 409, { ok: false, message: "Email already exists for staff." })
+      sendJson(res, 409, {
+        ok: false,
+        message: "Email already exists for staff.",
+      })
       return
     }
 
@@ -474,7 +534,11 @@ async function handleAddLibrarian(req, res) {
       librarian: { librarianId, email, phoneNumber },
     })
   } catch (error) {
-    sendJson(res, 500, { ok: false, message: "Failed to add librarian.", error: error.message })
+    sendJson(res, 500, {
+      ok: false,
+      message: "Failed to add librarian.",
+      error: error.message,
+    })
   }
 }
 
@@ -502,12 +566,18 @@ async function handleAddItem(req, res) {
       [itemType]
     )
     if (!itemTypeRow.length) {
-      sendJson(res, 400, { ok: false, message: "Selected item type not found in database." })
+      sendJson(res, 400, {
+        ok: false,
+        message: "Selected item type not found in database.",
+      })
       return
     }
 
     const itemTypeCode = itemTypeRow[0].itemCode
-    const createdId = await getNextNumericId(typeConfig.table, typeConfig.idColumn)
+    const createdId = await getNextNumericId(
+      typeConfig.table,
+      typeConfig.idColumn
+    )
 
     if (itemType === "BOOK") {
       await query(
@@ -597,7 +667,11 @@ async function handleAddItem(req, res) {
       item: { itemId: createdId, itemType, itemTypeCode },
     })
   } catch (error) {
-    sendJson(res, 500, { ok: false, message: "Failed to add item.", error: error.message })
+    sendJson(res, 500, {
+      ok: false,
+      message: "Failed to add item.",
+      error: error.message,
+    })
   }
 }
 

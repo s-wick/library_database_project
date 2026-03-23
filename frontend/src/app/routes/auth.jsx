@@ -13,6 +13,9 @@ const roles = [
 ]
 
 const emptyForm = {
+  firstName: "",
+  middleName: "",
+  lastName: "",
   email: "",
   password: "",
   confirmPassword: "",
@@ -43,6 +46,9 @@ export default function AuthPage() {
 
   function switchMode(nextMode) {
     setMode(nextMode)
+    if (nextMode === "signup") {
+      setSelectedRole("student")
+    }
     setErrors({})
     setSuccess("")
     setForm(emptyForm)
@@ -77,8 +83,17 @@ export default function AuthPage() {
       return
     }
 
-    const payload =
-      selectedRole === "admin"
+    const payload = isSignUp
+      ? {
+          roleGroup: "studentFaculty",
+          role: "student",
+          firstName: form.firstName.trim(),
+          middleName: form.middleName.trim(),
+          lastName: form.lastName.trim(),
+          email: form.email.trim(),
+          password: form.password,
+        }
+      : selectedRole === "admin"
         ? {
             roleGroup: "adminStaff",
             role: "admin",
@@ -156,7 +171,11 @@ export default function AuthPage() {
             >
               <TabsList className="grid w-full grid-cols-2">
                 {roles.map((role) => (
-                  <TabsTrigger key={role.id} value={role.id}>
+                  <TabsTrigger
+                    key={role.id}
+                    value={role.id}
+                    disabled={isSignUp && role.id === "admin"}
+                  >
                     {role.label}
                   </TabsTrigger>
                 ))}
@@ -164,6 +183,46 @@ export default function AuthPage() {
             </Tabs>
 
             <form className="space-y-4" onSubmit={handleSubmit}>
+              {isSignUp && (
+                <>
+                  <Field className="space-y-0">
+                    <FieldLabel htmlFor="firstName">First name</FieldLabel>
+                    <Input
+                      id="firstName"
+                      name="firstName"
+                      type="text"
+                      placeholder="First name"
+                      value={form.firstName}
+                      onChange={handleChange}
+                    />
+                  </Field>
+
+                  <Field className="space-y-0">
+                    <FieldLabel htmlFor="middleName">Middle name</FieldLabel>
+                    <Input
+                      id="middleName"
+                      name="middleName"
+                      type="text"
+                      placeholder="Middle name"
+                      value={form.middleName}
+                      onChange={handleChange}
+                    />
+                  </Field>
+
+                  <Field className="space-y-0">
+                    <FieldLabel htmlFor="lastName">Last name</FieldLabel>
+                    <Input
+                      id="lastName"
+                      name="lastName"
+                      type="text"
+                      placeholder="Last name"
+                      value={form.lastName}
+                      onChange={handleChange}
+                    />
+                  </Field>
+                </>
+              )}
+
               <Field className="space-y-0">
                 <FieldLabel htmlFor={errors.email ? "input-invalid" : "email"}>
                   Email
@@ -269,16 +328,18 @@ export default function AuthPage() {
               </Button>
             </form>
 
-            <div className="text-center text-sm text-muted-foreground">
-              {isSignUp ? "Already have an account?" : "Need an account?"}{" "}
-              <button
-                type="button"
-                onClick={() => switchMode(isSignUp ? "signin" : "signup")}
-                className="font-semibold text-primary underline-offset-4 hover:underline"
-              >
-                {isSignUp ? "Sign in" : "Create an account"}
-              </button>
-            </div>
+            {(isSignUp || selectedRole !== "admin") && (
+              <div className="text-center text-sm text-muted-foreground">
+                {isSignUp ? "Already have an account?" : "Need an account?"}{" "}
+                <button
+                  type="button"
+                  onClick={() => switchMode(isSignUp ? "signin" : "signup")}
+                  className="font-semibold text-primary underline-offset-4 hover:underline"
+                >
+                  {isSignUp ? "Sign in" : "Create an account"}
+                </button>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

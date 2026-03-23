@@ -178,6 +178,9 @@ async function handleSignup(req, res) {
     const roleContext = resolveRoleContext(body.roleGroup, body.role)
     const email = String(body.email || "").trim().toLowerCase()
     const password = String(body.password || "")
+    const firstName = String(body.firstName || "").trim() || null
+    const middleName = String(body.middleName || "").trim() || null
+    const lastName = String(body.lastName || "").trim() || null
 
     if (!email || !password) {
       sendJson(res, 400, { ok: false, message: "Email and password are required." })
@@ -186,6 +189,14 @@ async function handleSignup(req, res) {
 
     if (!roleContext) {
       sendJson(res, 400, { ok: false, message: "Invalid roleGroup/role combination." })
+      return
+    }
+
+    if (roleContext.roleGroup === "adminStaff") {
+      sendJson(res, 403, {
+        ok: false,
+        message: "Admin and staff accounts cannot be created from this page.",
+      })
       return
     }
 
@@ -209,8 +220,8 @@ async function handleSignup(req, res) {
 
     if (typeof roleConfig.userTypeCode === "number") {
       await query(
-        `INSERT INTO ${roleConfig.table} (${roleConfig.idColumn}, email, password, user_type_code) VALUES (?, ?, ?, ?)`,
-        [createdId, email, password, roleConfig.userTypeCode]
+        `INSERT INTO ${roleConfig.table} (${roleConfig.idColumn}, email, password, user_type_code, first_name, middle_name, last_name) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [createdId, email, password, roleConfig.userTypeCode, firstName, middleName, lastName]
       )
     } else {
       await query(
@@ -228,6 +239,9 @@ async function handleSignup(req, res) {
         hierarchy: roleConfig.hierarchy,
         id: createdId,
         email,
+        firstName,
+        middleName,
+        lastName,
       },
     })
   } catch (error) {

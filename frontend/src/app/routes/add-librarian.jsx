@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Field, FieldLabel } from "@/components/ui/field"
+import { Field, FieldError, FieldLabel } from "@/components/ui/field"
 import { API_BASE_URL } from "@/lib/api-config"
 
 function formatUsPhone(value = "") {
@@ -30,6 +30,7 @@ export default function AddLibrarianPage() {
     password: "",
     phoneNumber: "+1 ",
   })
+  const [fieldErrors, setFieldErrors] = useState({})
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -59,8 +60,27 @@ export default function AddLibrarianPage() {
     )
   }
 
+  function getFieldError(name, value, currentForm) {
+    if (name === "firstName" && !String(value || "").trim()) return "First name is required."
+    if (name === "middleName" && !String(value || "").trim()) return "Middle name is required."
+    if (name === "lastName" && !String(value || "").trim()) return "Last name is required."
+    if (name === "email" && !String(value || "").trim()) return "Email is required."
+    if (name === "password" && !String(value || "").trim()) return "Password is required."
+    if (name === "phoneNumber") {
+      const phoneRawDigits = String(currentForm.phoneNumber || "").replace(/\D/g, "")
+      const phoneDigits = String(currentForm.phoneNumber || "")
+        .trim()
+        .startsWith("+1")
+        ? phoneRawDigits.slice(1, 11)
+        : phoneRawDigits.slice(0, 10)
+      if (phoneDigits.length < 10) return "Phone number must have 10 digits."
+    }
+    return ""
+  }
+
   function onChange(event) {
     const { name, value } = event.target
+    setFieldErrors((prev) => ({ ...prev, [name]: "" }))
     if (name === "phoneNumber") {
       setForm((prev) => ({ ...prev, phoneNumber: formatUsPhone(value) }))
       return
@@ -68,21 +88,34 @@ export default function AddLibrarianPage() {
     setForm((prev) => ({ ...prev, [name]: value }))
   }
 
+  function onBlur(event) {
+    const { name, value } = event.target
+    const message = getFieldError(name, value, form)
+    if (!message) return
+    setFieldErrors((prev) => ({ ...prev, [name]: message }))
+  }
+
   async function onSubmit(event) {
     event.preventDefault()
+    setFieldErrors({})
     setError("")
     setSuccess("")
 
-    if (!form.email.trim() || !form.password.trim()) {
-      setError("Email and password are required.")
-      return
+    const nextErrors = {
+      firstName: getFieldError("firstName", form.firstName, form),
+      middleName: getFieldError("middleName", form.middleName, form),
+      lastName: getFieldError("lastName", form.lastName, form),
+      email: getFieldError("email", form.email, form),
+      password: getFieldError("password", form.password, form),
+      phoneNumber: getFieldError("phoneNumber", form.phoneNumber, form),
     }
     const phoneRawDigits = form.phoneNumber.replace(/\D/g, "")
     const phoneDigits = form.phoneNumber.trim().startsWith("+1")
       ? phoneRawDigits.slice(1, 11)
       : phoneRawDigits.slice(0, 10)
-    if (phoneDigits.length !== 10) {
-      setError("Phone number must be a valid US number with 10 digits.")
+    const hasErrors = Object.values(nextErrors).some(Boolean)
+    if (hasErrors) {
+      setFieldErrors(nextErrors)
       return
     }
 
@@ -145,7 +178,7 @@ export default function AddLibrarianPage() {
           </CardHeader>
           <CardContent>
             <form className="space-y-4" onSubmit={onSubmit}>
-              <Field>
+              <Field data-invalid={!!fieldErrors.firstName}>
                 <FieldLabel htmlFor="firstName">First name</FieldLabel>
                 <Input
                   id="firstName"
@@ -153,9 +186,13 @@ export default function AddLibrarianPage() {
                   type="text"
                   value={form.firstName}
                   onChange={onChange}
+                  onBlur={onBlur}
+                  aria-invalid={!!fieldErrors.firstName}
+                  required
                 />
+                <FieldError>{fieldErrors.firstName}</FieldError>
               </Field>
-              <Field>
+              <Field data-invalid={!!fieldErrors.middleName}>
                 <FieldLabel htmlFor="middleName">Middle name</FieldLabel>
                 <Input
                   id="middleName"
@@ -163,9 +200,13 @@ export default function AddLibrarianPage() {
                   type="text"
                   value={form.middleName}
                   onChange={onChange}
+                  onBlur={onBlur}
+                  aria-invalid={!!fieldErrors.middleName}
+                  required
                 />
+                <FieldError>{fieldErrors.middleName}</FieldError>
               </Field>
-              <Field>
+              <Field data-invalid={!!fieldErrors.lastName}>
                 <FieldLabel htmlFor="lastName">Last name</FieldLabel>
                 <Input
                   id="lastName"
@@ -173,9 +214,13 @@ export default function AddLibrarianPage() {
                   type="text"
                   value={form.lastName}
                   onChange={onChange}
+                  onBlur={onBlur}
+                  aria-invalid={!!fieldErrors.lastName}
+                  required
                 />
+                <FieldError>{fieldErrors.lastName}</FieldError>
               </Field>
-              <Field>
+              <Field data-invalid={!!fieldErrors.email}>
                 <FieldLabel htmlFor="email">Email</FieldLabel>
                 <Input
                   id="email"
@@ -183,9 +228,13 @@ export default function AddLibrarianPage() {
                   type="email"
                   value={form.email}
                   onChange={onChange}
+                  onBlur={onBlur}
+                  aria-invalid={!!fieldErrors.email}
+                  required
                 />
+                <FieldError>{fieldErrors.email}</FieldError>
               </Field>
-              <Field>
+              <Field data-invalid={!!fieldErrors.password}>
                 <FieldLabel htmlFor="password">Password</FieldLabel>
                 <Input
                   id="password"
@@ -193,9 +242,13 @@ export default function AddLibrarianPage() {
                   type="password"
                   value={form.password}
                   onChange={onChange}
+                  onBlur={onBlur}
+                  aria-invalid={!!fieldErrors.password}
+                  required
                 />
+                <FieldError>{fieldErrors.password}</FieldError>
               </Field>
-              <Field>
+              <Field data-invalid={!!fieldErrors.phoneNumber}>
                 <FieldLabel htmlFor="phoneNumber">Phone number</FieldLabel>
                 <Input
                   id="phoneNumber"
@@ -203,9 +256,13 @@ export default function AddLibrarianPage() {
                   type="text"
                   value={form.phoneNumber}
                   onChange={onChange}
+                  onBlur={onBlur}
                   maxLength={17}
                   placeholder="+1 (555) 123-4567"
+                  aria-invalid={!!fieldErrors.phoneNumber}
+                  required
                 />
+                <FieldError>{fieldErrors.phoneNumber}</FieldError>
               </Field>
 
               {error && (

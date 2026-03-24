@@ -27,6 +27,8 @@ export default function ItemPage() {
 
   const isFaculty = false // Change according to user type logic if needed
   const borrowDuration = isFaculty ? 14 : 7 // days
+  const apiBaseUrl =
+    import.meta.env.VITE_API_BASE_URL || "http://localhost:4000"
 
   useEffect(() => {
     // In a real app this would fetch from your backend (e.g., /api/items/:type/:id)
@@ -35,7 +37,7 @@ export default function ItemPage() {
       try {
         setLoading(true)
         const res = await fetch(
-          `http://localhost:4000/api/items/${itemTypeParam}/${id}`
+          `${apiBaseUrl}/api/items/${itemTypeParam}/${id}`
         )
         if (res.ok) {
           const data = await res.json()
@@ -62,7 +64,7 @@ export default function ItemPage() {
   const handleAction = async () => {
     try {
       if (availability === "Available") {
-        await fetch(`http://localhost:4000/api/borrow`, {
+        await fetch(`${apiBaseUrl}/api/borrow`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -72,7 +74,7 @@ export default function ItemPage() {
         })
         alert("Item successfully borrowed!")
       } else {
-        await fetch(`http://localhost:4000/api/hold`, {
+        await fetch(`${apiBaseUrl}/api/hold`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

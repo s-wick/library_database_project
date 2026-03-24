@@ -391,6 +391,9 @@ export default function UserDashboard() {
   const [borrowHistory, setBorrowHistory] = useState([])
   const [loading, setLoading] = useState(true)
 
+  const apiBaseUrl =
+    import.meta.env.VITE_API_BASE_URL || "http://localhost:4000"
+
   useEffect(() => {
     // Attempt to load user from local storage
     try {
@@ -417,7 +420,7 @@ export default function UserDashboard() {
       try {
         setLoading(true)
         // Simulate API call to fetch full dashboard data
-        const res = await fetch("http://localhost:4000/api/dashboard")
+        const res = await fetch(`${apiBaseUrl}/api/dashboard`)
         if (res.ok) {
           const data = await res.json()
           setBorrowedBooks(data.borrowedBooks || [])

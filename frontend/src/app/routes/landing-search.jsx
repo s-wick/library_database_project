@@ -44,12 +44,15 @@ export default function LandingSearchPage() {
   })
   const [dropdownOpen, setDropdownOpen] = useState(false)
 
+  const apiBaseUrl =
+    import.meta.env.VITE_API_BASE_URL || "http://localhost:4000"
+
   // Fetch all items from the API to keep state synchronized without dummy data
   useEffect(() => {
     const fetchAllItems = async () => {
       try {
         setLoading(true)
-        const res = await fetch("http://localhost:4000/api/items/all")
+        const res = await fetch(`${apiBaseUrl}/api/items/all`)
         if (res.ok) {
           const data = await res.json()
           setAllLibraryItems(data.items || [])

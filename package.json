@@ -1,0 +1,21 @@
+{
+  "name": "library-database-root",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "dev:frontend": "npm run dev --prefix frontend",
+    "dev:backend": "npm run dev --prefix backend",
+    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "format": "prettier --write ."
+  },
+  "simple-git-hooks": {
+    "pre-commit": "npm run lint --prefix frontend && npm run format --prefix frontend"
+  },
+  "devDependencies": {
+    "concurrently": "^8.0.0",
+    "simple-git-hooks": "^2.13.1"
+  }
+}

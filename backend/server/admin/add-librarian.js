@@ -8,6 +8,9 @@ function createAddLibrarianHandler({
   return async function handleAddLibrarian(req, res) {
     try {
       const body = await parseJsonBody(req)
+      const firstName = parseNullableString(body.firstName)
+      const middleName = parseNullableString(body.middleName)
+      const lastName = parseNullableString(body.lastName)
       const email = String(body.email || "").trim().toLowerCase()
       const password = String(body.password || "")
       const phoneNumber = parseNullableString(body.phoneNumber)
@@ -28,14 +31,14 @@ function createAddLibrarianHandler({
 
       const librarianId = await getNextNumericId("librarian", "librarian_id")
       await query(
-        "INSERT INTO librarian (librarian_id, email, password, phone_number) VALUES (?, ?, ?, ?)",
-        [librarianId, email, password, phoneNumber]
+        "INSERT INTO librarian (librarian_id, first_name, middle_name, last_name, email, password, phone_number) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        [librarianId, firstName, middleName, lastName, email, password, phoneNumber]
       )
 
       sendJson(res, 201, {
         ok: true,
         message: "Librarian added successfully.",
-        librarian: { librarianId, email, phoneNumber },
+        librarian: { librarianId, firstName, middleName, lastName, email, phoneNumber },
       })
     } catch (error) {
       sendJson(res, 500, { ok: false, message: "Failed to add librarian.", error: error.message })

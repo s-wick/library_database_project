@@ -23,6 +23,9 @@ export default function AddLibrarianPage() {
   const apiBaseUrl = API_BASE_URL
   const authUser = JSON.parse(localStorage.getItem("authUser") || "{}")
   const [form, setForm] = useState({
+    firstName: "",
+    middleName: "",
+    lastName: "",
     email: "",
     password: "",
     phoneNumber: "+1 ",
@@ -93,6 +96,9 @@ export default function AddLibrarianPage() {
           Authorization: `Bearer ${authToken}`,
         },
         body: JSON.stringify({
+          firstName: form.firstName.trim(),
+          middleName: form.middleName.trim(),
+          lastName: form.lastName.trim(),
           email: form.email.trim(),
           password: form.password,
           phoneNumber: `+1${phoneDigits}`,
@@ -108,7 +114,14 @@ export default function AddLibrarianPage() {
         return
       }
       setSuccess("Librarian added successfully.")
-      setForm({ email: "", password: "", phoneNumber: "+1 " })
+      setForm({
+        firstName: "",
+        middleName: "",
+        lastName: "",
+        email: "",
+        password: "",
+        phoneNumber: "+1 ",
+      })
     } catch {
       setError("Unable to connect to server.")
     } finally {
@@ -132,6 +145,36 @@ export default function AddLibrarianPage() {
           </CardHeader>
           <CardContent>
             <form className="space-y-4" onSubmit={onSubmit}>
+              <Field>
+                <FieldLabel htmlFor="firstName">First name</FieldLabel>
+                <Input
+                  id="firstName"
+                  name="firstName"
+                  type="text"
+                  value={form.firstName}
+                  onChange={onChange}
+                />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="middleName">Middle name</FieldLabel>
+                <Input
+                  id="middleName"
+                  name="middleName"
+                  type="text"
+                  value={form.middleName}
+                  onChange={onChange}
+                />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="lastName">Last name</FieldLabel>
+                <Input
+                  id="lastName"
+                  name="lastName"
+                  type="text"
+                  value={form.lastName}
+                  onChange={onChange}
+                />
+              </Field>
               <Field>
                 <FieldLabel htmlFor="email">Email</FieldLabel>
                 <Input

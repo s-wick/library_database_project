@@ -4,16 +4,16 @@ const { sendJson } = require("../utils")
 async function handleGetItemsAll(req, res) {
   try {
     const books = await query(
-      `SELECT book_id as item_id, title, author as creator, 'Book' as standard_type, thumbnail_image FROM book`
+      `SELECT book_id as item_id, title, author as creator, 'Book' as standard_type, thumbnail_image, books_in_stock as in_stock FROM book`
     )
     const audios = await query(
-      `SELECT audio_id as item_id, audio_name as title, '' as creator, 'Audiobook' as standard_type, thumbnail_image FROM audio`
+      `SELECT audio_id as item_id, audio_name as title, '' as creator, 'Audiobook' as standard_type, thumbnail_image, audios_in_stock as in_stock FROM audio`
     )
     const videos = await query(
-      `SELECT video_id as item_id, video_name as title, '' as creator, 'Video' as standard_type, thumbnail_image FROM video`
+      `SELECT video_id as item_id, video_name as title, '' as creator, 'Video' as standard_type, thumbnail_image, videos_in_stock as in_stock FROM video`
     )
     const equipment = await query(
-      `SELECT equipment_id as item_id, rental_name as title, '' as creator, 'Equipment' as standard_type, thumbnail_image FROM rental_equipment`
+      `SELECT equipment_id as item_id, rental_name as title, '' as creator, 'Equipment' as standard_type, thumbnail_image, equipment_in_stock as in_stock FROM rental_equipment`
     )
 
     // Combine all
@@ -32,6 +32,7 @@ async function handleGetItemsAll(req, res) {
         ...item,
         thumbnail_image: thumb,
         tag: "Library Item", // default tag
+        availability: item.in_stock > 0 ? "Available" : "Not Available",
       }
     })
 
@@ -56,6 +57,7 @@ async function handleGetItemById(req, res, type, id) {
         item = rows[0]
         item.item_id = item.book_id
         item.standard_type = "Book"
+        item.in_stock = item.books_in_stock
       }
     } else if (type === "audiobook" || type === "audio") {
       const rows = await query(`SELECT * FROM audio WHERE audio_id = ?`, [id])
@@ -65,6 +67,7 @@ async function handleGetItemById(req, res, type, id) {
         item.title = item.audio_name
         item.standard_type = "Audiobook"
         item.duration = item.audio_length_seconds / 60
+        item.in_stock = item.audios_in_stock
       }
     } else if (type === "video") {
       const rows = await query(`SELECT * FROM video WHERE video_id = ?`, [id])
@@ -74,6 +77,7 @@ async function handleGetItemById(req, res, type, id) {
         item.title = item.video_name
         item.standard_type = "Video"
         item.duration = item.video_length_seconds / 60
+        item.in_stock = item.videos_in_stock
       }
     } else if (type === "equipment") {
       const rows = await query(
@@ -85,6 +89,7 @@ async function handleGetItemById(req, res, type, id) {
         item.item_id = item.equipment_id
         item.title = item.rental_name
         item.standard_type = "Equipment"
+        item.in_stock = item.equipment_in_stock
       }
     }
 
@@ -111,7 +116,7 @@ async function handleGetItemById(req, res, type, id) {
     sendJson(res, 200, {
       ok: true,
       item,
-      availability: "Available",
+      availability: item.in_stock > 0 ? "Available" : "Not Available",
       activeHoldsCount,
     })
   } catch (error) {

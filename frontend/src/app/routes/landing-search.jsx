@@ -403,7 +403,7 @@ function ItemCard({ item }) {
         <CardFooter className="mt-auto px-4 pt-0 pb-3">
           <Button variant="outline" className="w-full" asChild>
             <Link
-              to={`/item/${item.id}?type=${item.standard_type.toLowerCase()}`}
+              to={`/item/${item.item_id}?type=${item.standard_type?.toLowerCase() || ""}`}
             >
               {item.availability === "Available" ? "Borrow" : "Place Hold"}
             </Link>

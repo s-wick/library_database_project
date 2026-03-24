@@ -6,8 +6,8 @@ on:
   pull_request:
     branches: [main, master]
     paths:
-      - 'frontend/**'
-      - '.github/workflows/frontend-ci.yml'
+      - "frontend/**"
+      - ".github/workflows/frontend-ci.yml"
 
 jobs:
   build-lint-format:

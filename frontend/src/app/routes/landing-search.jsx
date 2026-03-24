@@ -350,7 +350,7 @@ function ItemCard({ item }) {
   // Use a generic id instead of only book.id so item.jsx can fetch properly based on params,
   // however item.jsx only searches books right now. We map routing correctly using item_id.
   return (
-    <Card className="flex h-full flex-col overflow-hidden">
+    <Card className="flex h-full flex-col gap-0 overflow-hidden p-0">
       <div className="p-3 pb-0">
         <div className="aspect-[4/3] w-full overflow-hidden rounded-md bg-muted">
           {item.thumbnail_image ? (

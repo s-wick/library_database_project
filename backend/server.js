@@ -1,6 +1,11 @@
 const http = require("node:http")
 require("dotenv").config()
 const { query, testConnection } = require("./db")
+const { sendJson, parseJsonBody } = require("./utils")
+
+const { handleGetItemsAll, handleGetItemById } = require("./api/items")
+const { handleGetDashboard } = require("./api/dashboard")
+const { handleBorrow, handleHold } = require("./api/transactions")
 
 const port = Number(process.env.PORT || 4000)
 const envOrigins = process.env.ALLOWED_ORIGINS
@@ -121,37 +126,6 @@ function writeCorsHeaders(req, res) {
   }
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS")
   res.setHeader("Access-Control-Allow-Headers", "Content-Type")
-}
-
-function sendJson(res, statusCode, payload) {
-  res.statusCode = statusCode
-  res.setHeader("Content-Type", "application/json")
-  res.end(JSON.stringify(payload))
-}
-
-function parseJsonBody(req) {
-  return new Promise((resolve, reject) => {
-    let body = ""
-    req.on("data", (chunk) => {
-      body += chunk.toString()
-      if (body.length > 1_000_000) {
-        reject(new Error("Payload too large"))
-        req.destroy()
-      }
-    })
-    req.on("end", () => {
-      if (!body) {
-        resolve({})
-        return
-      }
-      try {
-        resolve(JSON.parse(body))
-      } catch {
-        reject(new Error("Invalid JSON body"))
-      }
-    })
-    req.on("error", reject)
-  })
 }
 
 async function handleHealth(_req, res) {
@@ -355,6 +329,37 @@ const server = http.createServer(async (req, res) => {
 
   if (req.method === "POST" && pathname === "/api/auth/signin") {
     await handleSignin(req, res)
+    return
+  }
+
+  if (req.method === "GET" && pathname === "/api/dashboard") {
+    await handleGetDashboard(req, res)
+    return
+  }
+
+  if (req.method === "GET" && pathname === "/api/items/all") {
+    await handleGetItemsAll(req, res)
+    return
+  }
+
+  if (req.method === "GET" && pathname.startsWith("/api/items/")) {
+    const parts = pathname.split("/")
+    // /api/items/:type/:id
+    if (parts.length === 5) {
+      const type = parts[3]
+      const id = parts[4]
+      await handleGetItemById(req, res, type, id)
+      return
+    }
+  }
+
+  if (req.method === "POST" && pathname === "/api/borrow") {
+    await handleBorrow(req, res)
+    return
+  }
+
+  if (req.method === "POST" && pathname === "/api/hold") {
+    await handleHold(req, res)
     return
   }
 

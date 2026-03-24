@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { Search } from "lucide-react"
 import { Link } from "react-router-dom"
 import {
@@ -28,20 +28,13 @@ import { Moon, Sun, LayoutDashboard, Image as ImageIcon } from "lucide-react"
 
 // Background image import
 import bgImage from "@/assets/library-hero.png"
-import {
-  books,
-  audios,
-  videos,
-  equipments,
-  borrows,
-  holds,
-  studentUsers,
-  itemType,
-} from "@/data/dummy-data"
 
 export default function LandingSearchPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const { theme, setTheme } = useTheme()
+
+  const [allLibraryItems, setAllLibraryItems] = useState([])
+  const [loading, setLoading] = useState(true)
 
   // Track login state in local storage to simulate authentication
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
@@ -51,77 +44,58 @@ export default function LandingSearchPage() {
   })
   const [dropdownOpen, setDropdownOpen] = useState(false)
 
-  const activeUser = studentUsers[0]
-  const avatarInitials = `${activeUser.first_name[0]}${activeUser.last_name[0]}`
+  // Fetch all items from the API to keep state synchronized without dummy data
+  useEffect(() => {
+    const fetchAllItems = async () => {
+      try {
+        setLoading(true)
+        const res = await fetch("http://localhost:4000/api/items/all")
+        if (res.ok) {
+          const data = await res.json()
+          setAllLibraryItems(data.items || [])
+        } else {
+          setAllLibraryItems([])
+        }
+      } catch (err) {
+        console.error("Failed to fetch library items", err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchAllItems()
+  }, [])
+
+  let avatarInitials = "U"
+  try {
+    const storedUser = localStorage.getItem("user")
+    if (storedUser) {
+      const parsed = JSON.parse(storedUser)
+      if (parsed.firstName && parsed.lastName) {
+        avatarInitials =
+          `${parsed.firstName[0]}${parsed.lastName[0]}`.toUpperCase()
+      } else if (parsed.email) {
+        avatarInitials = parsed.email[0].toUpperCase()
+      }
+    }
+  } catch (err) {
+    // Ignore error
+  }
 
   const handleSignOut = () => {
     localStorage.setItem("isLoggedIn", "false")
+    localStorage.removeItem("user")
     setIsLoggedIn(false)
     setDropdownOpen(false)
   }
 
-  // Compute availability dynamically from borrowing entities
-  const allLibraryItems = [
-    ...books.map((b) => ({
-      ...b,
-      id: b.book_id,
-      standard_type: "Book",
-      copies_total: b.books_in_stock,
-      creator: b.author,
-      tag: b.genre,
-    })),
-    ...audios.map((a) => ({
-      ...a,
-      id: a.audio_id,
-      standard_type: "Audiobook",
-      copies_total: a.copies_in_stock,
-      creator: a.author,
-      tag: a.genre,
-    })),
-    ...videos.map((v) => ({
-      ...v,
-      id: v.video_id,
-      standard_type: "Video",
-      copies_total: v.copies_in_stock,
-      creator: v.director,
-      tag: v.genre,
-    })),
-    ...equipments.map((e) => ({
-      ...e,
-      id: e.equipment_id,
-      standard_type: "Equipment",
-      copies_total: e.copies_in_stock,
-      creator: e.brand,
-      tag: e.category,
-    })),
-  ].map((item) => {
-    const activeBorrowsCount = borrows.filter(
-      (b) => b.item_id === item.item_id && b.return_date === null
-    ).length
-    const activeHoldsCount = holds.filter(
-      (h) => h.item_id === item.item_id && h.hold_status === "active"
-    ).length
-
-    // If fully borrowed and holds exist: Waitlist. If borrowed but no holds: Checked Out.
-    let availability = "Available"
-    if (activeBorrowsCount >= item.copies_total) {
-      availability = activeHoldsCount > 0 ? "Waitlist" : "Checked Out"
-    }
-
-    return {
-      ...item,
-      availability,
-    }
-  })
-
   // Grouped filtered items
-  const filteredItems = allLibraryItems.filter((item) => {
+  const filteredItems = (allLibraryItems || []).filter((item) => {
     const lowerCaseQuery = searchQuery.toLowerCase()
     return (
       item.title?.toLowerCase().includes(lowerCaseQuery) ||
       item.creator?.toLowerCase().includes(lowerCaseQuery) ||
       item.tag?.toLowerCase().includes(lowerCaseQuery) ||
-      item.standard_type.toLowerCase().includes(lowerCaseQuery)
+      item.standard_type?.toLowerCase().includes(lowerCaseQuery)
     )
   })
 

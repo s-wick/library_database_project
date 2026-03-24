@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import {
   BookOpen,
@@ -39,108 +39,9 @@ import {
   CardFooter,
 } from "@/components/ui/card"
 
-import {
-  studentUsers,
-  books,
-  borrows,
-  holds,
-  fined_for,
-} from "@/data/dummy-data"
+// Application Data Helpers
 
-// Computed Data Based on Entities
-const activeUser = studentUsers[0]
-const user = {
-  name: `${activeUser.first_name} ${activeUser.last_name}`,
-  email: activeUser.email,
-  memberSince: new Date(activeUser.created_at).toLocaleDateString("default", {
-    month: "long",
-    year: "numeric",
-  }),
-  avatarInitials: `${activeUser.first_name[0]}${activeUser.last_name[0]}`,
-  cardNumber: activeUser.student_id,
-}
-
-const userBorrows = borrows.filter(
-  (b) => b.borrower_id === activeUser.user_id && b.borrower_type === 1
-)
-
-const borrowedBooks = userBorrows
-  .filter((b) => b.return_date === null)
-  .map((b) => {
-    const book = books.find((bk) => bk.item_id === b.item_id)
-    const dueDate = new Date(b.due_date).toISOString().split("T")[0]
-    const diff = new Date(b.due_date) - new Date()
-    const days = Math.ceil(diff / (1000 * 60 * 60 * 24))
-
-    let status = "on_time"
-    if (days < 0) status = "overdue"
-    else if (days <= 3) status = "due_soon"
-
-    return {
-      id: b.borrow_transaction_id,
-      title: book?.title || "Unknown",
-      author: book?.author || "Unknown",
-      genre: book?.genre || "Unknown",
-      dueDate,
-      status,
-      coverColor: book?.coverColor || "#333",
-    }
-  })
-
-const holdQueue = holds
-  .filter((h) => h.user_id === activeUser.user_id && h.hold_status === "active")
-  .map((h) => {
-    const book = books.find((bk) => bk.item_id === h.item_id)
-    return {
-      id: h.hold_id,
-      title: book?.title || "Unknown",
-      author: book?.author || "Unknown",
-      queuePosition: h.queue_position,
-      estimatedWait: h.queue_position === 1 ? "Ready soon" : "~1 week",
-    }
-  })
-
-const fines = fined_for
-  .filter((f) => {
-    const borrowRecord = borrows.find(
-      (b) => b.borrow_transaction_id === f.borrow_transaction_id
-    )
-    return borrowRecord?.borrower_id === activeUser.user_id
-  })
-  .map((f) => {
-    const borrowRecord = borrows.find(
-      (b) => b.borrow_transaction_id === f.borrow_transaction_id
-    )
-    const book = books.find((bk) => bk.item_id === borrowRecord?.item_id)
-
-    // Calculate days overdue based on assignment date vs due date
-    const expectedDueDate = new Date(borrowRecord?.due_date)
-    const activeDate = new Date(f.date_assigned)
-    const daysOverdue = Math.max(
-      1,
-      Math.floor((activeDate - expectedDueDate) / (1000 * 60 * 60 * 24))
-    )
-
-    return {
-      id: f.fine_id,
-      book: book?.title || "Unknown",
-      daysOverdue,
-      amount: f.amount,
-      status: f.is_paid ? "paid" : "unpaid",
-    }
-  })
-
-const borrowHistory = userBorrows
-  .filter((b) => b.return_date !== null)
-  .map((b) => {
-    const book = books.find((bk) => bk.item_id === b.item_id)
-    return {
-      id: b.borrow_transaction_id,
-      title: book?.title || "Unknown",
-      author: book?.author || "Unknown",
-      returned: new Date(b.return_date).toISOString().split("T")[0],
-    }
-  })
+// Utility to format data inside rendering if needed.
 
 // Helpers
 function daysUntil(dateStr) {
@@ -169,7 +70,12 @@ function StatusBadge({ status }) {
 }
 
 // Sections
-function OverviewCards() {
+function OverviewCards({
+  borrowedBooks = [],
+  holdQueue = [],
+  fines = [],
+  borrowHistory = [],
+}) {
   const totalFines = fines
     .filter((f) => f.status === "unpaid")
     .reduce((s, f) => s + f.amount, 0)
@@ -194,7 +100,7 @@ function OverviewCards() {
       accent: "#F87171",
     },
     {
-      label: "Books Read (2026)",
+      label: "Books Read",
       value: borrowHistory.length,
       icon: RotateCcw,
       accent: "#34D399",
@@ -226,7 +132,7 @@ function OverviewCards() {
   )
 }
 
-function BorrowedBooks() {
+function BorrowedBooks({ borrowedBooks = [] }) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-3">
@@ -278,7 +184,7 @@ function BorrowedBooks() {
   )
 }
 
-function HoldQueue() {
+function HoldQueue({ holdQueue = [] }) {
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -323,7 +229,7 @@ function HoldQueue() {
   )
 }
 
-function FinesPanel() {
+function FinesPanel({ fines = [] }) {
   const unpaid = fines.filter((f) => f.status === "unpaid")
   const total = unpaid.reduce((s, f) => s + f.amount, 0)
 
@@ -405,7 +311,7 @@ function FinesPanel() {
   )
 }
 
-function BorrowHistory() {
+function BorrowHistory({ borrowHistory = [] }) {
   const [isLoading, setIsLoading] = useState(false)
   const [displayedItems, setDisplayedItems] = useState(5)
 
@@ -473,8 +379,70 @@ export default function UserDashboard() {
   const [activeTab, setActiveTab] = useState("overview")
   const navigate = useNavigate()
 
+  const [userData, setUserData] = useState({
+    name: "User",
+    email: "",
+    avatarInitials: "U",
+  })
+
+  const [borrowedBooks, setBorrowedBooks] = useState([])
+  const [holdQueue, setHoldQueue] = useState([])
+  const [fines, setFines] = useState([])
+  const [borrowHistory, setBorrowHistory] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    // Attempt to load user from local storage
+    try {
+      const storedUser = localStorage.getItem("user")
+      if (storedUser) {
+        const parsed = JSON.parse(storedUser)
+        let name = "User"
+        let initials = "U"
+        if (parsed.firstName && parsed.lastName) {
+          name = `${parsed.firstName} ${parsed.lastName}`
+          initials = `${parsed.firstName[0]}${parsed.lastName[0]}`.toUpperCase()
+        } else if (parsed.email) {
+          name = parsed.email.split("@")[0]
+          initials = name[0].toUpperCase()
+        }
+        setUserData({ name, email: parsed.email, avatarInitials: initials })
+      }
+    } catch (err) {
+      // Ignore
+    }
+
+    // Fetch dashboard data
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true)
+        // Simulate API call to fetch full dashboard data
+        const res = await fetch("http://localhost:4000/api/dashboard")
+        if (res.ok) {
+          const data = await res.json()
+          setBorrowedBooks(data.borrowedBooks || [])
+          setHoldQueue(data.holdQueue || [])
+          setFines(data.fines || [])
+          setBorrowHistory(data.borrowHistory || [])
+        } else {
+          // Fallback empty states
+          setBorrowedBooks([])
+          setHoldQueue([])
+          setFines([])
+          setBorrowHistory([])
+        }
+      } catch (err) {
+        console.error("Failed to fetch dashboard data", err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchDashboardData()
+  }, [])
+
   const handleSignOut = () => {
     localStorage.setItem("isLoggedIn", "false")
+    localStorage.removeItem("user")
     navigate("/")
   }
 
@@ -528,7 +496,7 @@ export default function UserDashboard() {
               <button className="ml-1 flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-violet-600 shadow-md transition-opacity outline-none hover:opacity-90">
                 <Avatar className="h-9 w-9 bg-transparent">
                   <AvatarFallback className="bg-transparent text-sm font-bold text-white">
-                    {user.avatarInitials}
+                    {userData.avatarInitials}
                   </AvatarFallback>
                 </Avatar>
               </button>
@@ -555,70 +523,85 @@ export default function UserDashboard() {
         <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
             <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-violet-600 text-lg font-bold text-white shadow-md">
-              {user.avatarInitials}
+              {userData.avatarInitials}
             </div>
             <div>
               <h1 className="text-2xl font-bold tracking-tight">
-                Hello, {user.name.split(" ")[0]}
+                Hello, {userData.name.split(" ")[0]}
               </h1>
             </div>
           </div>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="mb-6 flex h-auto w-full justify-start gap-1 overflow-x-auto rounded-xl border bg-muted/40 p-1">
-            {tabs.map(({ id, label, icon: Icon }) => (
-              <TabsTrigger
-                key={id}
-                value={id}
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
-              >
-                <Icon className="h-4 w-4 shrink-0" />
-                <span className="hidden sm:inline">{label}</span>
-              </TabsTrigger>
-            ))}
-          </TabsList>
+        {loading ? (
+          <div className="py-20 text-center text-muted-foreground">
+            Loading dashboard...
+          </div>
+        ) : (
+          <Tabs
+            value={activeTab}
+            onValueChange={setActiveTab}
+            className="w-full"
+          >
+            <TabsList className="mb-6 flex h-auto w-full justify-start gap-1 overflow-x-auto rounded-xl border bg-muted/40 p-1">
+              {tabs.map(({ id, label, icon: Icon }) => (
+                <TabsTrigger
+                  key={id}
+                  value={id}
+                  className="flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+                >
+                  <Icon className="h-4 w-4 shrink-0" />
+                  <span className="hidden sm:inline">{label}</span>
+                </TabsTrigger>
+              ))}
+            </TabsList>
 
-          <TabsContent value="overview">
-            <div className="space-y-6">
-              <OverviewCards />
-              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                <BorrowedBooks />
-                <div className="space-y-6">
-                  <HoldQueue />
-                  <FinesPanel />
+            <TabsContent value="overview">
+              <div className="space-y-6">
+                <OverviewCards
+                  borrowedBooks={borrowedBooks}
+                  holdQueue={holdQueue}
+                  fines={fines}
+                  borrowHistory={borrowHistory}
+                />
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                  <BorrowedBooks borrowedBooks={borrowedBooks} />
+                  <div className="space-y-6">
+                    <HoldQueue holdQueue={holdQueue} />
+                    <FinesPanel fines={fines} />
+                  </div>
                 </div>
               </div>
-            </div>
-          </TabsContent>
+            </TabsContent>
 
-          <TabsContent value="borrowed">
-            <div className="space-y-4">
-              <BorrowedBooks />
-            </div>
-          </TabsContent>
+            <TabsContent value="borrowed">
+              <div className="space-y-4">
+                <BorrowedBooks borrowedBooks={borrowedBooks} />
+              </div>
+            </TabsContent>
 
-          <TabsContent value="holds">
-            <div className="space-y-4">
-              <HoldQueue />
-            </div>
-          </TabsContent>
+            <TabsContent value="holds">
+              <div className="space-y-4">
+                <HoldQueue holdQueue={holdQueue} />
+              </div>
+            </TabsContent>
 
-          <TabsContent value="fines">
-            <div className="space-y-4">
-              <FinesPanel />
-              <p className="text-center text-xs text-muted-foreground">
-                Fines accrue at $0.25/day per overdue item.
-              </p>
-            </div>
-          </TabsContent>
+            <TabsContent value="fines">
+              <div className="space-y-4">
+                <FinesPanel fines={fines} />
+                <p className="text-center text-xs text-muted-foreground">
+                  Fines accrue at $0.25/day per overdue item.
+                </p>
+              </div>
+            </TabsContent>
 
-          <TabsContent value="history">
-            <div className="space-y-4">
-              <BorrowHistory />
-            </div>
-          </TabsContent>
-        </Tabs>
+            <TabsContent value="history">
+              <div className="space-y-4">
+                <BorrowHistory borrowHistory={borrowHistory} />
+              </div>
+            </TabsContent>
+          </Tabs>
+        )}
       </div>
     </div>
   )

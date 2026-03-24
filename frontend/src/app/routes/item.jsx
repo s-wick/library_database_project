@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { ArrowLeft, Image as ImageIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -10,17 +10,6 @@ import {
   CardContent,
 } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import {
-  books,
-  audios,
-  videos,
-  equipments,
-  borrows,
-  holds,
-  studentUsers,
-  itemType,
-  userType,
-} from "@/data/dummy-data"
 
 export default function ItemPage() {
   const { id } = useParams()
@@ -29,81 +18,79 @@ export default function ItemPage() {
   // Extract item type from query param if available or default to search all
   // to find matching item by its specific ID since they share different scopes.
   const searchParams = new URLSearchParams(window.location.search)
-  const itemTypeParam = searchParams.get("type")
+  const itemTypeParam = searchParams.get("type") || "book"
 
-  let book = null
-  if (itemTypeParam === "audiobook") {
-    book = audios.find((a) => a.audio_id === parseInt(id, 10))
-  } else if (itemTypeParam === "video") {
-    book = videos.find((v) => v.video_id === parseInt(id, 10))
-  } else if (itemTypeParam === "equipment") {
-    book = equipments.find((e) => e.equipment_id === parseInt(id, 10))
-  } else {
-    book = books.find((b) => b.book_id === parseInt(id, 10))
-  }
+  const [book, setBook] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [availability, setAvailability] = useState("Available")
+  const [activeHoldsCount, setActiveHoldsCount] = useState(0)
+
+  const isFaculty = false // Change according to user type logic if needed
+  const borrowDuration = isFaculty ? 14 : 7 // days
+
+  useEffect(() => {
+    // In a real app this would fetch from your backend (e.g., /api/items/:type/:id)
+    // and also fetch current borrow/hold status to compute availability.
+    const fetchItem = async () => {
+      try {
+        setLoading(true)
+        const res = await fetch(
+          `http://localhost:4000/api/items/${itemTypeParam}/${id}`
+        )
+        if (res.ok) {
+          const data = await res.json()
+          setBook(data.item)
+          setAvailability(data.availability || "Available")
+          setActiveHoldsCount(data.activeHoldsCount || 0)
+        } else {
+          setBook(null)
+        }
+      } catch (err) {
+        console.error("Failed to fetch item", err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchItem()
+  }, [id, itemTypeParam])
 
   // Formatting helpers based on missing standard field keys
   const getCreator = () =>
     book?.author || book?.director || book?.brand || "Unknown"
   const getTag = () => book?.genre || book?.category || "Misc"
-  const getCopies = () => book?.books_in_stock ?? book?.copies_in_stock ?? 0
 
-  // For demo, assume active user is the first student
-  const activeUser = studentUsers[0]
-  const isFaculty = false // Change according to user type logic if needed
-  const borrowDuration = isFaculty ? 14 : 7 // days
-
-  // Compute availability dynamically
-  const activeBorrowsCount = borrows.filter(
-    (b) => b.item_id === book?.item_id && b.return_date === null
-  ).length
-  const activeHoldsCount = holds.filter(
-    (h) => h.item_id === book?.item_id && h.hold_status === "active"
-  ).length
-
-  let availability = "Available"
-  if (book && activeBorrowsCount >= getCopies()) {
-    availability = activeHoldsCount > 0 ? "Waitlist" : "Checked Out"
+  const handleAction = async () => {
+    try {
+      if (availability === "Available") {
+        await fetch(`http://localhost:4000/api/borrow`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            itemId: book.item_id,
+            itemType: itemTypeParam,
+          }),
+        })
+        alert("Item successfully borrowed!")
+      } else {
+        await fetch(`http://localhost:4000/api/hold`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            itemId: book.item_id,
+            itemType: itemTypeParam,
+          }),
+        })
+        alert("Hold placed successfully!")
+      }
+      navigate("/user-dashboard")
+    } catch (err) {
+      console.error("Action failed", err)
+      alert("An error occurred.")
+    }
   }
 
-  const handleAction = () => {
-    if (availability === "Available") {
-      // Simulate Borrow
-      let typeCode = itemType.BOOK
-      if (itemTypeParam === "audiobook") typeCode = itemType.AUDIO
-      else if (itemTypeParam === "video") typeCode = itemType.VIDEO
-      else if (itemTypeParam === "equipment")
-        typeCode = itemType.RENTAL_EQUIPMENT
-
-      const newBorrow = {
-        borrow_transaction_id: borrows.length + 1,
-        item_type_code: typeCode,
-        item_id: book.item_id,
-        borrower_type: isFaculty ? userType.FACULTY : userType.STUDENT,
-        borrower_id: activeUser.user_id,
-        checkout_date: new Date().toISOString(),
-        due_date: new Date(
-          Date.now() + borrowDuration * 24 * 60 * 60 * 1000
-        ).toISOString(),
-        return_date: null,
-      }
-      borrows.push(newBorrow)
-      alert("Item successfully borrowed!")
-    } else {
-      // Simulate Hold
-      const newHold = {
-        hold_id: holds.length + 1,
-        item_id: book.item_id,
-        user_type: isFaculty ? userType.FACULTY : userType.STUDENT,
-        user_id: activeUser.user_id,
-        request_date: new Date().toISOString(),
-        hold_status: "active",
-        queue_position: activeHoldsCount + 1,
-      }
-      holds.push(newHold)
-      alert("Hold placed successfully!")
-    }
-    navigate("/user-dashboard")
+  if (loading) {
+    return <div className="p-20 text-center">Loading...</div>
   }
 
   if (!book) {

@@ -200,7 +200,7 @@ export default function LandingSearchPage() {
           <h1 className="mb-6 text-4xl font-bold tracking-tight text-white md:text-5xl">
             Browse the Catalog
           </h1>
-          <p className="mb-8 text-lg text-slate-200">
+          <p className="mb-4 text-lg text-slate-200">
             Search books, audiobooks, and resources in our library.
           </p>
 
@@ -223,7 +223,7 @@ export default function LandingSearchPage() {
       <main className="mx-auto w-full max-w-6xl flex-1 space-y-16 p-6 md:p-10">
         {/* Books Section */}
         <section>
-          <div className="mb-8 flex items-center justify-between">
+          <div className="mb-4 flex items-center justify-between">
             <div>
               <h2 className="text-2xl font-semibold tracking-tight">
                 {searchQuery ? `Books matching "${searchQuery}"` : "Books"}
@@ -237,7 +237,7 @@ export default function LandingSearchPage() {
           </div>
 
           {filteredBooks.length > 0 ? (
-            <div className="flex flex-col gap-4">
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {filteredBooks.map((item) => (
                 <ItemCard key={item.item_id} item={item} />
               ))}
@@ -254,7 +254,7 @@ export default function LandingSearchPage() {
         {/* Audiobooks Section */}
         {(!searchQuery || filteredAudios.length > 0) && (
           <section>
-            <div className="mb-8 flex items-center justify-between">
+            <div className="mb-4 flex items-center justify-between">
               <div>
                 <h2 className="text-2xl font-semibold tracking-tight">
                   Audiobooks
@@ -265,7 +265,7 @@ export default function LandingSearchPage() {
             </div>
 
             {filteredAudios.length > 0 ? (
-              <div className="flex flex-col gap-4">
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {filteredAudios.map((item) => (
                   <ItemCard key={item.item_id} item={item} />
                 ))}
@@ -283,7 +283,7 @@ export default function LandingSearchPage() {
         {/* Videos Section */}
         {(!searchQuery || filteredVideos.length > 0) && (
           <section>
-            <div className="mb-8 flex items-center justify-between">
+            <div className="mb-4 flex items-center justify-between">
               <div>
                 <h2 className="text-2xl font-semibold tracking-tight">
                   Videos
@@ -296,7 +296,7 @@ export default function LandingSearchPage() {
             </div>
 
             {filteredVideos.length > 0 ? (
-              <div className="flex flex-col gap-4">
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {filteredVideos.map((item) => (
                   <ItemCard key={item.item_id} item={item} />
                 ))}
@@ -314,7 +314,7 @@ export default function LandingSearchPage() {
         {/* Equipment Section */}
         {(!searchQuery || filteredEquipments.length > 0) && (
           <section>
-            <div className="mb-8 flex items-center justify-between">
+            <div className="mb-4 flex items-center justify-between">
               <div>
                 <h2 className="text-2xl font-semibold tracking-tight">
                   Equipment
@@ -327,7 +327,7 @@ export default function LandingSearchPage() {
             </div>
 
             {filteredEquipments.length > 0 ? (
-              <div className="flex flex-col gap-4">
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {filteredEquipments.map((item) => (
                   <ItemCard key={item.item_id} item={item} />
                 ))}
@@ -350,31 +350,33 @@ function ItemCard({ item }) {
   // Use a generic id instead of only book.id so item.jsx can fetch properly based on params,
   // however item.jsx only searches books right now. We map routing correctly using item_id.
   return (
-    <Card className="flex flex-col overflow-hidden sm:flex-row">
-      <div className="flex-shrink-0 border-b border-border sm:w-48 sm:border-r sm:border-b-0">
-        {item.thumbnail_image ? (
-          <img
-            src={item.thumbnail_image}
-            alt={item.title}
-            className="aspect-square h-full w-full object-cover"
-          />
-        ) : (
-          <div
-            className="flex aspect-square h-full w-full items-center justify-center bg-muted"
-            style={{
-              backgroundColor: item.coverColor || "#e2e8f0",
-            }}
-          >
-            <div className="flex flex-col items-center justify-center text-white/70">
-              <ImageIcon className="mb-2 h-10 w-10" />
-              <span className="text-xs font-medium">No Image</span>
+    <Card className="flex h-full flex-col overflow-hidden">
+      <div className="p-3 pb-0">
+        <div className="aspect-[4/3] w-full overflow-hidden rounded-md bg-muted">
+          {item.thumbnail_image ? (
+            <img
+              src={item.thumbnail_image}
+              alt={item.title}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <div
+              className="flex h-full w-full items-center justify-center"
+              style={{
+                backgroundColor: item.coverColor || "#e2e8f0",
+              }}
+            >
+              <div className="flex flex-col items-center justify-center text-slate-500 dark:text-slate-400">
+                <ImageIcon className="mb-2 h-10 w-10" />
+                <span className="text-xs font-medium">No Image</span>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
       <div className="flex flex-1 flex-col">
-        <CardHeader>
-          <div className="mb-2 flex items-start justify-between">
+        <CardHeader className="p-3 pb-2">
+          <div className="mb-2 flex items-start justify-between gap-2">
             <Badge
               variant={
                 item.availability === "Available" ? "default" : "secondary"
@@ -386,20 +388,20 @@ function ItemCard({ item }) {
               {item.tag}
             </span>
           </div>
-          <CardTitle className="mb-1 text-xl leading-tight">
+          <CardTitle className="line-clamp-2 text-lg leading-tight">
             {item.title}
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="line-clamp-1">
             {item.creator ? `by ${item.creator}` : item.standard_type}
           </CardDescription>
         </CardHeader>
-        <CardContent className="flex-1">
-          <p className="text-sm text-slate-600 dark:text-slate-300">
+        <CardContent className="flex flex-1 flex-col p-4 pt-2">
+          <p className="line-clamp-3 text-sm text-slate-600 dark:text-slate-300">
             {item.description}
           </p>
         </CardContent>
-        <CardFooter className="sm:justify-end">
-          <Button variant="outline" className="w-full sm:w-auto" asChild>
+        <CardFooter className="mt-auto px-4 pt-0 pb-3">
+          <Button variant="outline" className="w-full" asChild>
             <Link
               to={`/item/${item.id}?type=${item.standard_type.toLowerCase()}`}
             >

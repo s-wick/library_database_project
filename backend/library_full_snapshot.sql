@@ -1,8 +1,6 @@
-CREATE DATABASE  IF NOT EXISTS `librarydatabase` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
-USE `librarydatabase`;
 -- MySQL dump 10.13  Distrib 8.0.45, for Win64 (x86_64)
 --
--- Host: localhost    Database: librarydatabase
+-- Host: 127.0.0.1    Database: librarydatabase
 -- ------------------------------------------------------
 -- Server version	8.0.45
 
@@ -109,7 +107,7 @@ CREATE TABLE `borrow` (
   KEY `borrower_type` (`borrower_type`),
   CONSTRAINT `borrow_ibfk_1` FOREIGN KEY (`item_type_code`) REFERENCES `item_type` (`item_code`),
   CONSTRAINT `borrow_ibfk_2` FOREIGN KEY (`borrower_type`) REFERENCES `user_type` (`user_code`)
-) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -118,8 +116,35 @@ CREATE TABLE `borrow` (
 
 LOCK TABLES `borrow` WRITE;
 /*!40000 ALTER TABLE `borrow` DISABLE KEYS */;
-INSERT INTO `borrow` VALUES (1,1,1,1,1001,'2026-03-01 10:00:00','2026-03-15 10:00:00','2026-03-14 16:30:00'),(2,1,2,1,1002,'2026-03-03 11:15:00','2026-03-17 11:15:00','2026-03-18 09:00:00'),(3,1,6,1,1004,'2026-03-05 09:20:00','2026-03-19 09:20:00',NULL),(4,2,101,2,2001,'2026-03-06 14:00:00','2026-03-20 14:00:00','2026-03-18 10:10:00'),(5,4,301,1,1005,'2026-03-07 13:45:00','2026-03-10 13:45:00','2026-03-10 12:00:00'),(6,1,8,2,2002,'2026-03-08 15:10:00','2026-03-22 15:10:00',NULL),(7,3,201,1,1003,'2026-03-09 16:30:00','2026-03-16 16:30:00','2026-03-16 09:00:00'),(8,1,10,1,1001,'2026-03-10 10:25:00','2026-03-24 10:25:00',NULL),(9,4,302,2,2003,'2026-03-11 12:00:00','2026-03-14 12:00:00',NULL),(10,2,108,1,1004,'2026-03-13 09:30:00','2026-03-20 09:30:00',NULL),(11,4,309,2,2001,'2026-03-14 10:00:00','2026-03-17 10:00:00',NULL);
+INSERT INTO `borrow` VALUES (1,1,1,1,1001,'2026-03-01 10:00:00','2026-03-15 10:00:00','2026-03-14 16:30:00'),(2,1,2,1,1002,'2026-03-03 11:15:00','2026-03-17 11:15:00','2026-03-18 09:00:00'),(3,1,6,1,1004,'2026-03-05 09:20:00','2026-03-19 09:20:00',NULL),(4,2,101,2,2001,'2026-03-06 14:00:00','2026-03-20 14:00:00','2026-03-18 10:10:00'),(5,4,301,1,1005,'2026-03-07 13:45:00','2026-03-10 13:45:00','2026-03-10 12:00:00'),(6,1,8,2,2002,'2026-03-08 15:10:00','2026-03-22 15:10:00',NULL),(7,3,201,1,1003,'2026-03-09 16:30:00','2026-03-16 16:30:00','2026-03-16 09:00:00'),(8,1,10,1,1001,'2026-03-10 10:25:00','2026-03-24 10:25:00',NULL),(9,4,302,2,2003,'2026-03-11 12:00:00','2026-03-14 12:00:00',NULL),(10,2,108,1,1004,'2026-03-13 09:30:00','2026-03-20 09:30:00',NULL),(11,4,309,2,2001,'2026-03-14 10:00:00','2026-03-17 10:00:00',NULL),(12,1,2,1,1001,'2026-03-25 12:30:26','2026-04-01 12:30:26',NULL),(13,1,3,1,1001,'2026-03-25 12:30:26','2026-04-01 12:30:26',NULL),(14,1,4,1,1001,'2026-03-25 12:30:26','2026-04-01 12:30:26',NULL);
 /*!40000 ALTER TABLE `borrow` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `cart_items`
+--
+
+DROP TABLE IF EXISTS `cart_items`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `cart_items` (
+  `cart_id` int unsigned NOT NULL AUTO_INCREMENT,
+  `user_id` int unsigned NOT NULL,
+  `item_type` tinyint unsigned NOT NULL,
+  `item_id` int unsigned NOT NULL,
+  `added_to_cart` datetime NOT NULL,
+  PRIMARY KEY (`cart_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `cart_items`
+--
+
+LOCK TABLES `cart_items` WRITE;
+/*!40000 ALTER TABLE `cart_items` DISABLE KEYS */;
+INSERT INTO `cart_items` VALUES (4,1001,3,202,'2026-03-25 12:30:33'),(5,1001,3,203,'2026-03-25 12:30:34');
+/*!40000 ALTER TABLE `cart_items` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -215,6 +240,38 @@ LOCK TABLES `hold_item` WRITE;
 /*!40000 ALTER TABLE `hold_item` DISABLE KEYS */;
 INSERT INTO `hold_item` VALUES (1,4,1,1003,'2026-03-10 09:00:00','active',1),(2,6,1,1005,'2026-03-11 10:15:00','active',1),(3,6,2,2001,'2026-03-11 10:45:00','active',2),(4,6,1,1002,'2026-03-11 11:10:00','active',3),(5,301,1,1001,'2026-03-12 14:00:00','fulfilled',1),(6,10,2,2002,'2026-03-13 08:20:00','cancelled',1),(7,108,1,1004,'2026-03-15 13:30:00','active',1);
 /*!40000 ALTER TABLE `hold_item` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `image`
+--
+
+DROP TABLE IF EXISTS `image`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `image` (
+  `image_id` int unsigned NOT NULL,
+  `image_name` varchar(512) NOT NULL,
+  `thumbnail_image` blob,
+  `image_file` blob,
+  `monetary_value` decimal(5,2) DEFAULT NULL,
+  `images_in_stock` tinyint unsigned DEFAULT NULL,
+  `created_at` date DEFAULT NULL,
+  `created_by` varchar(64) DEFAULT NULL,
+  `item_type_code` tinyint unsigned DEFAULT NULL,
+  PRIMARY KEY (`image_id`),
+  KEY `item_type_code` (`item_type_code`),
+  CONSTRAINT `image_ibfk_1` FOREIGN KEY (`item_type_code`) REFERENCES `item_type` (`Item_code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `image`
+--
+
+LOCK TABLES `image` WRITE;
+/*!40000 ALTER TABLE `image` DISABLE KEYS */;
+/*!40000 ALTER TABLE `image` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -484,14 +541,6 @@ LOCK TABLES `video` WRITE;
 INSERT INTO `video` VALUES (101,'Intro to Relational Databases',NULL,3600,NULL,29.99,3,'2026-03-22','sysadmin1',2),(102,'Advanced SQL Workshop',NULL,5400,NULL,34.99,2,'2026-03-22','sysadmin1',2),(103,'Networking Fundamentals Lecture Series',NULL,4200,NULL,24.50,4,'2026-03-22','sysadmin1',2),(104,'Software Engineering Best Practices',NULL,3900,NULL,27.75,2,'2026-03-22','sysadmin1',2),(105,'Discrete Math Review',NULL,3000,NULL,19.99,5,'2026-03-22','sysadmin1',2),(106,'Computer Architecture Seminar',NULL,4800,NULL,31.25,1,'2026-03-22','sysadmin1',2),(107,'Research Methods for Students',NULL,2700,NULL,18.50,6,'2026-03-22','sysadmin1',2),(108,'Cybersecurity Basics',NULL,3600,NULL,26.00,0,'2026-03-22','sysadmin1',2),(109,'Version Control with Git',NULL,2500,NULL,17.95,4,'2026-03-22','sysadmin1',2),(110,'Data Structures Crash Review',NULL,4100,NULL,28.40,3,'2026-03-22','sysadmin1',2);
 /*!40000 ALTER TABLE `video` ENABLE KEYS */;
 UNLOCK TABLES;
-
---
--- Dumping events for database 'librarydatabase'
---
-
---
--- Dumping routines for database 'librarydatabase'
---
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -502,4 +551,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-03-22 19:36:03
+-- Dump completed on 2026-03-25 12:46:25

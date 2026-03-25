@@ -134,6 +134,7 @@ export default function AuthPage() {
         setSuccess("Account created successfully.")
       } else {
         localStorage.setItem("isLoggedIn", "true")
+        localStorage.setItem("user", JSON.stringify(data.user))
         navigate("/")
       }
     } catch {

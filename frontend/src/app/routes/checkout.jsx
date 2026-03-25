@@ -30,10 +30,20 @@ export default function CheckoutPage() {
       const apiBaseUrl =
         import.meta.env.VITE_API_BASE_URL || "http://localhost:4000"
 
+      const userStr = localStorage.getItem("user")
+      if (!userStr) {
+        alert("You must be logged in to checkout.")
+        setIsCheckingOut(false)
+        return
+      }
+      const user = JSON.parse(userStr)
+
       const res = await fetch(`${apiBaseUrl}/api/checkout`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          userId: user.id,
+          userType: user.role,
           items: cartItems.map((i) => ({
             itemId: i.item_id,
             itemType: i.standard_type || "book",

@@ -6,7 +6,11 @@ function createGetGenresHandler({ query, sendJson }) {
       )
       sendJson(res, 200, { ok: true, genres: rows })
     } catch (error) {
-      sendJson(res, 500, { ok: false, message: "Failed to fetch genres.", error: error.message })
+      sendJson(res, 500, {
+        ok: false,
+        message: "Failed to fetch genres.",
+        error: error.message,
+      })
     }
   }
 }

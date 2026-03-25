@@ -122,7 +122,10 @@ export default function ReportsPage() {
             <CardTitle>Reports</CardTitle>
           </CardHeader>
           <CardContent>
-            <form className="grid gap-4 md:grid-cols-2 lg:grid-cols-4" onSubmit={onSubmit}>
+            <form
+              className="grid gap-4 md:grid-cols-2 lg:grid-cols-4"
+              onSubmit={onSubmit}
+            >
               <Field>
                 <FieldLabel htmlFor="reportType">Report type</FieldLabel>
                 <select
@@ -248,17 +251,27 @@ export default function ReportsPage() {
               <div className="grid gap-4 md:grid-cols-3">
                 <div className="rounded-md border p-3">
                   <p className="text-xs text-muted-foreground">Total records</p>
-                  <p className="text-lg font-semibold">{summary.totalRecords ?? 0}</p>
+                  <p className="text-lg font-semibold">
+                    {summary.totalRecords ?? 0}
+                  </p>
                 </div>
                 {filters.reportType === "itemsCheckedOut" ? (
                   <div className="rounded-md border p-3">
-                    <p className="text-xs text-muted-foreground">Overdue count</p>
-                    <p className="text-lg font-semibold">{summary.overdueCount ?? 0}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Overdue count
+                    </p>
+                    <p className="text-lg font-semibold">
+                      {summary.overdueCount ?? 0}
+                    </p>
                   </div>
                 ) : (
                   <div className="rounded-md border p-3">
-                    <p className="text-xs text-muted-foreground">Total amount</p>
-                    <p className="text-lg font-semibold">${Number(summary.totalAmount || 0)}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Total amount
+                    </p>
+                    <p className="text-lg font-semibold">
+                      ${Number(summary.totalAmount || 0)}
+                    </p>
                   </div>
                 )}
               </div>
@@ -295,7 +308,9 @@ export default function ReportsPage() {
                     <tr>
                       <td
                         className="px-3 py-4 text-muted-foreground"
-                        colSpan={filters.reportType === "itemsCheckedOut" ? 7 : 8}
+                        colSpan={
+                          filters.reportType === "itemsCheckedOut" ? 7 : 8
+                        }
                       >
                         No report data.
                       </td>
@@ -306,10 +321,16 @@ export default function ReportsPage() {
                         <td className="px-3 py-2">{row.itemName || "-"}</td>
                         <td className="px-3 py-2">{row.itemType || "-"}</td>
                         <td className="px-3 py-2">{row.userType || "-"}</td>
-                        <td className="px-3 py-2">{row.borrowerName || row.borrowerId || "-"}</td>
-                        <td className="px-3 py-2">{formatDate(row.checkoutDate)}</td>
+                        <td className="px-3 py-2">
+                          {row.borrowerName || row.borrowerId || "-"}
+                        </td>
+                        <td className="px-3 py-2">
+                          {formatDate(row.checkoutDate)}
+                        </td>
                         <td className="px-3 py-2">{formatDate(row.dueDate)}</td>
-                        <td className="px-3 py-2">{Number(row.isOverdue) === 1 ? "Yes" : "No"}</td>
+                        <td className="px-3 py-2">
+                          {Number(row.isOverdue) === 1 ? "Yes" : "No"}
+                        </td>
                       </tr>
                     ))
                   ) : (
@@ -318,11 +339,19 @@ export default function ReportsPage() {
                         <td className="px-3 py-2">{row.fineId}</td>
                         <td className="px-3 py-2">{row.itemName || "-"}</td>
                         <td className="px-3 py-2">{row.userType || "-"}</td>
-                        <td className="px-3 py-2">{row.borrowerName || row.borrowerId || "-"}</td>
-                        <td className="px-3 py-2">${Number(row.amount || 0)}</td>
+                        <td className="px-3 py-2">
+                          {row.borrowerName || row.borrowerId || "-"}
+                        </td>
+                        <td className="px-3 py-2">
+                          ${Number(row.amount || 0)}
+                        </td>
                         <td className="px-3 py-2">{row.fineReason || "-"}</td>
-                        <td className="px-3 py-2">{formatDate(row.dateAssigned)}</td>
-                        <td className="px-3 py-2">{Number(row.isOverdue) === 1 ? "Yes" : "No"}</td>
+                        <td className="px-3 py-2">
+                          {formatDate(row.dateAssigned)}
+                        </td>
+                        <td className="px-3 py-2">
+                          {Number(row.isOverdue) === 1 ? "Yes" : "No"}
+                        </td>
                       </tr>
                     ))
                   )}

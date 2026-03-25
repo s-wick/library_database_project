@@ -62,7 +62,9 @@ const ITEM_ENTITY_CONFIG = {
 }
 
 async function loadItemSchemasFromDatabase(queryFn, dbName) {
-  const tableNames = Object.values(ITEM_ENTITY_CONFIG).map((config) => config.table)
+  const tableNames = Object.values(ITEM_ENTITY_CONFIG).map(
+    (config) => config.table
+  )
   const placeholders = tableNames.map(() => "?").join(", ")
   const rows = await queryFn(
     `SELECT table_name AS tableName, column_name AS columnName
@@ -83,7 +85,9 @@ async function loadItemSchemasFromDatabase(queryFn, dbName) {
   for (const [itemType, config] of Object.entries(ITEM_ENTITY_CONFIG)) {
     const columns = tableColumns[config.table]
     if (!columns || columns.length === 0) {
-      throw new Error(`Schema sync failed: table '${config.table}' missing for '${itemType}'.`)
+      throw new Error(
+        `Schema sync failed: table '${config.table}' missing for '${itemType}'.`
+      )
     }
 
     const expected = new Set([

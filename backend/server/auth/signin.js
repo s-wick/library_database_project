@@ -12,11 +12,16 @@ function createSigninHandler({
       const body = await parseJsonBody(req)
       const normalizedRoleGroup = normalizeRoleGroup(body.roleGroup)
       const roleContext = resolveRoleContext(body.roleGroup, body.role)
-      const email = String(body.email || "").trim().toLowerCase()
+      const email = String(body.email || "")
+        .trim()
+        .toLowerCase()
       const password = String(body.password || "")
 
       if (!email || !password) {
-        sendJson(res, 400, { ok: false, message: "Email and password are required." })
+        sendJson(res, 400, {
+          ok: false,
+          message: "Email and password are required.",
+        })
         return
       }
 
@@ -33,12 +38,18 @@ function createSigninHandler({
           return
         }
 
-        sendJson(res, 401, { ok: false, message: "Invalid admin/staff credentials." })
+        sendJson(res, 401, {
+          ok: false,
+          message: "Invalid admin/staff credentials.",
+        })
         return
       }
 
       if (!roleContext) {
-        sendJson(res, 400, { ok: false, message: "Invalid roleGroup/role combination." })
+        sendJson(res, 400, {
+          ok: false,
+          message: "Invalid roleGroup/role combination.",
+        })
         return
       }
 
@@ -48,7 +59,10 @@ function createSigninHandler({
         [email, password]
       )
       if (!rows.length) {
-        sendJson(res, 401, { ok: false, message: roleConfig.invalidCredentialsMessage })
+        sendJson(res, 401, {
+          ok: false,
+          message: roleConfig.invalidCredentialsMessage,
+        })
         return
       }
 
@@ -71,7 +85,11 @@ function createSigninHandler({
         }),
       })
     } catch (error) {
-      sendJson(res, 500, { ok: false, message: "Signin failed.", error: error.message })
+      sendJson(res, 500, {
+        ok: false,
+        message: "Signin failed.",
+        error: error.message,
+      })
     }
   }
 }

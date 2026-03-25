@@ -10,19 +10,27 @@ function createSignupHandler({
     try {
       const body = await parseJsonBody(req)
       const roleContext = resolveRoleContext(body.roleGroup, body.role)
-      const email = String(body.email || "").trim().toLowerCase()
+      const email = String(body.email || "")
+        .trim()
+        .toLowerCase()
       const password = String(body.password || "")
       const firstName = String(body.firstName || "").trim() || null
       const middleName = String(body.middleName || "").trim() || null
       const lastName = String(body.lastName || "").trim() || null
 
       if (!email || !password) {
-        sendJson(res, 400, { ok: false, message: "Email and password are required." })
+        sendJson(res, 400, {
+          ok: false,
+          message: "Email and password are required.",
+        })
         return
       }
 
       if (!roleContext) {
-        sendJson(res, 400, { ok: false, message: "Invalid roleGroup/role combination." })
+        sendJson(res, 400, {
+          ok: false,
+          message: "Invalid roleGroup/role combination.",
+        })
         return
       }
 
@@ -48,13 +56,24 @@ function createSignupHandler({
       if (roleConfig.idStrategy === "student") {
         createdId = generateStudentId()
       } else {
-        createdId = await getNextNumericId(roleConfig.table, roleConfig.idColumn)
+        createdId = await getNextNumericId(
+          roleConfig.table,
+          roleConfig.idColumn
+        )
       }
 
       if (typeof roleConfig.userTypeCode === "number") {
         await query(
           `INSERT INTO ${roleConfig.table} (${roleConfig.idColumn}, email, password, user_type_code, first_name, middle_name, last_name) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          [createdId, email, password, roleConfig.userTypeCode, firstName, middleName, lastName]
+          [
+            createdId,
+            email,
+            password,
+            roleConfig.userTypeCode,
+            firstName,
+            middleName,
+            lastName,
+          ]
         )
       } else {
         await query(
@@ -78,7 +97,11 @@ function createSignupHandler({
         },
       })
     } catch (error) {
-      sendJson(res, 500, { ok: false, message: "Signup failed.", error: error.message })
+      sendJson(res, 500, {
+        ok: false,
+        message: "Signup failed.",
+        error: error.message,
+      })
     }
   }
 }

@@ -33,24 +33,40 @@ function createAddItemHandler({
         [itemType]
       )
       if (!itemTypeRow.length) {
-        sendJson(res, 400, { ok: false, message: "Selected item type not found in database." })
+        sendJson(res, 400, {
+          ok: false,
+          message: "Selected item type not found in database.",
+        })
         return
       }
 
       const itemTypeCode = itemTypeRow[0].itemCode
-      const createdId = await getNextNumericId(typeSchema.table, typeSchema.idColumn)
+      const createdId = await getNextNumericId(
+        typeSchema.table,
+        typeSchema.idColumn
+      )
       const parsedGenreId = parseNullableNumber(body.genreId)
       const genreId =
-        itemType === "RENTAL_EQUIPMENT" ? null : Number.isInteger(parsedGenreId) ? parsedGenreId : null
+        itemType === "RENTAL_EQUIPMENT"
+          ? null
+          : Number.isInteger(parsedGenreId)
+            ? parsedGenreId
+            : null
 
       if (itemType !== "RENTAL_EQUIPMENT" && !genreId) {
         sendJson(res, 400, { ok: false, message: "genreId is required." })
         return
       }
       if (genreId) {
-        const genreRows = await query("SELECT genre_id FROM genre WHERE genre_id = ? LIMIT 1", [genreId])
+        const genreRows = await query(
+          "SELECT genre_id FROM genre WHERE genre_id = ? LIMIT 1",
+          [genreId]
+        )
         if (!genreRows.length) {
-          sendJson(res, 400, { ok: false, message: "Selected genre not found." })
+          sendJson(res, 400, {
+            ok: false,
+            message: "Selected genre not found.",
+          })
           return
         }
       }
@@ -130,7 +146,11 @@ function createAddItemHandler({
         item: { itemId: createdId, itemType, itemTypeCode },
       })
     } catch (error) {
-      sendJson(res, 500, { ok: false, message: "Failed to add item.", error: error.message })
+      sendJson(res, 500, {
+        ok: false,
+        message: "Failed to add item.",
+        error: error.message,
+      })
     }
   }
 }

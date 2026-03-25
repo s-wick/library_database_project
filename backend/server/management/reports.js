@@ -1,6 +1,7 @@
 function normalizeReportType(value = "") {
   const reportType = String(value).trim()
-  if (reportType === "itemsCheckedOut" || reportType === "finesOwed") return reportType
+  if (reportType === "itemsCheckedOut" || reportType === "finesOwed")
+    return reportType
   return ""
 }
 
@@ -86,8 +87,13 @@ function createManagementReportsHandler({
       }
 
       if (reportType === "itemsCheckedOut") {
-        const { whereClauses, params } = buildReportFilters(body, "b.checkout_date")
-        const whereSql = ["b.return_date IS NULL", ...whereClauses].join(" AND ")
+        const { whereClauses, params } = buildReportFilters(
+          body,
+          "b.checkout_date"
+        )
+        const whereSql = ["b.return_date IS NULL", ...whereClauses].join(
+          " AND "
+        )
         const rows = await query(
           `SELECT
              b.borrow_transaction_id AS borrowTransactionId,
@@ -123,14 +129,18 @@ function createManagementReportsHandler({
           reportType,
           summary: {
             totalRecords: rows.length,
-            overdueCount: rows.filter((row) => Number(row.isOverdue) === 1).length,
+            overdueCount: rows.filter((row) => Number(row.isOverdue) === 1)
+              .length,
           },
           rows,
         })
         return
       }
 
-      const { whereClauses, params } = buildReportFilters(body, "f.date_assigned")
+      const { whereClauses, params } = buildReportFilters(
+        body,
+        "f.date_assigned"
+      )
       const whereSql = ["f.is_paid = 0", ...whereClauses].join(" AND ")
       const rows = await query(
         `SELECT
@@ -170,7 +180,10 @@ function createManagementReportsHandler({
         reportType,
         summary: {
           totalRecords: rows.length,
-          totalAmount: rows.reduce((sum, row) => sum + Number(row.amount || 0), 0),
+          totalAmount: rows.reduce(
+            (sum, row) => sum + Number(row.amount || 0),
+            0
+          ),
         },
         rows,
       })

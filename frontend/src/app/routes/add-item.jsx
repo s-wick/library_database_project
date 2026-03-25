@@ -118,7 +118,8 @@ export default function AddItemPage() {
           setItemType(types[0].itemType)
           setForm({
             ...defaultForm(types[0].itemType),
-            genreId: types[0].itemType === "RENTAL_EQUIPMENT" ? "NOT_APPLICABLE" : "",
+            genreId:
+              types[0].itemType === "RENTAL_EQUIPMENT" ? "NOT_APPLICABLE" : "",
           })
         }
       } catch {}
@@ -259,7 +260,9 @@ export default function AddItemPage() {
                 <select
                   id="genreId"
                   name="genreId"
-                  value={form.genreId ?? (isRentalEquipment ? "NOT_APPLICABLE" : "")}
+                  value={
+                    form.genreId ?? (isRentalEquipment ? "NOT_APPLICABLE" : "")
+                  }
                   onChange={onChange}
                   disabled={isRentalEquipment}
                   className="h-9 w-full rounded-md border border-input bg-transparent px-2.5 py-1 text-sm"

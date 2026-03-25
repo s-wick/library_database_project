@@ -1,6 +1,6 @@
 import { createBrowserRouter } from "react-router-dom"
 import LandingSearchPage from "./routes/landing-search"
-import SearchPage from "./routes/search"
+import SearchPage from "./routes/search-results"
 import AuthPage from "./routes/auth"
 import UserDashboardPage from "./routes/user-dashboard"
 import ItemPage from "./routes/item"

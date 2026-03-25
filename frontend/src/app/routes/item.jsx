@@ -62,6 +62,12 @@ export default function ItemPage() {
   const getTag = () => book?.genre || book?.category || "Misc"
 
   const handleAction = async () => {
+    const isLoggedIn = localStorage.getItem("isLoggedIn") === "true"
+    if (!isLoggedIn) {
+      navigate("/auth")
+      return
+    }
+
     try {
       if (availability === "Available") {
         await fetch(`${apiBaseUrl}/api/borrow`, {

@@ -14,6 +14,11 @@ const {
   handleHold,
   handleCheckout,
 } = require("./api/transactions")
+const {
+  handleGetCart,
+  handleAddToCart,
+  handleRemoveFromCart
+} = require("./api/cart")
 
 const port = Number(process.env.PORT || 4000)
 const envOrigins = process.env.ALLOWED_ORIGINS
@@ -378,6 +383,21 @@ const server = http.createServer(async (req, res) => {
 
   if (req.method === "POST" && pathname === "/api/checkout") {
     await handleCheckout(req, res)
+    return
+  }
+
+  if (req.method === "GET" && pathname === "/api/cart") {
+    await handleGetCart(req, res, url)
+    return
+  }
+
+  if (req.method === "POST" && pathname === "/api/cart") {
+    await handleAddToCart(req, res)
+    return
+  }
+
+  if (req.method === "DELETE" && pathname === "/api/cart") {
+    await handleRemoveFromCart(req, res)
     return
   }
 

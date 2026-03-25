@@ -16,7 +16,7 @@ import { useCart } from "@/app/cart-provider"
 export function Navbar({ showBack = false }) {
   const navigate = useNavigate()
   const { theme, setTheme } = useTheme()
-  const { cartItems } = useCart()
+  const { cartItems, clearFrontendCart } = useCart()
 
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
     const stored = localStorage.getItem("isLoggedIn")
@@ -43,6 +43,10 @@ export function Navbar({ showBack = false }) {
     localStorage.setItem("isLoggedIn", "false")
     localStorage.removeItem("user")
     setIsLoggedIn(false)
+    clearFrontendCart()
+    if (window.location.pathname === "/checkout") {
+      navigate("/")
+    }
   }
 
   return (
@@ -65,19 +69,21 @@ export function Navbar({ showBack = false }) {
       </div>
 
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" className="relative mr-2" asChild>
-          <Link to="/checkout" aria-label="Cart">
-            <ShoppingCart className="h-5 w-5" />
-            {cartItems.length > 0 && (
-              <Badge
-                variant="destructive"
-                className="absolute -top-1 -right-1 flex h-4 min-w-[1rem] items-center justify-center rounded-full p-0 text-[10px]"
-              >
-                {cartItems.length}
-              </Badge>
-            )}
-          </Link>
-        </Button>
+        {isLoggedIn && (
+          <Button variant="ghost" size="icon" className="relative mr-2" asChild>
+            <Link to="/checkout" aria-label="Cart">
+              <ShoppingCart className="h-5 w-5" />
+              {cartItems.length > 0 && (
+                <Badge
+                  variant="destructive"
+                  className="absolute -top-1 -right-1 flex h-4 min-w-[1rem] items-center justify-center rounded-full p-0 text-[10px]"
+                >
+                  {cartItems.length}
+                </Badge>
+              )}
+            </Link>
+          </Button>
+        )}
 
         <Button
           variant="ghost"

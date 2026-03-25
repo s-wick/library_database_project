@@ -117,6 +117,11 @@ async function handleCheckout(req, res) {
         `,
         [typeCode, item.itemId, borrowerTypeCode, userId]
       )
+
+      await query(
+        `DELETE FROM cart_items WHERE user_id = ? AND item_type = ? AND item_id = ?`,
+        [userId, typeCode, item.itemId]
+      )
     }
 
     sendJson(res, 200, { ok: true, message: "Successfully checked out items" })

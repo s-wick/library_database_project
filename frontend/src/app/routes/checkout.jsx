@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { ArrowLeft, Trash2, CheckCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -14,6 +14,14 @@ import { useCart } from "@/app/cart-provider"
 
 export default function CheckoutPage() {
   const navigate = useNavigate()
+
+  useEffect(() => {
+    const isLoggedIn = localStorage.getItem("isLoggedIn") === "true"
+    if (!isLoggedIn) {
+      navigate("/")
+    }
+  }, [navigate])
+
   const { cartItems, removeFromCart, clearCart } = useCart()
   const [isCheckingOut, setIsCheckingOut] = useState(false)
   const maxItems = 5 // Imposing standard limit scaffold

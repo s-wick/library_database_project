@@ -1,5 +1,5 @@
 import React, { useState } from "react"
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { Image as ImageIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -23,6 +23,7 @@ import {
 import { useCart } from "@/app/cart-provider"
 
 export function ItemCard({ item }) {
+  const navigate = useNavigate()
   const { cartItems, addToCart } = useCart()
   const [open, setOpen] = useState(false)
 
@@ -32,6 +33,11 @@ export function ItemCard({ item }) {
   )
 
   const handleAddToCart = () => {
+    const isLoggedIn = localStorage.getItem("isLoggedIn") === "true"
+    if (!isLoggedIn) {
+      navigate("/auth")
+      return
+    }
     addToCart(item)
     setOpen(false)
   }

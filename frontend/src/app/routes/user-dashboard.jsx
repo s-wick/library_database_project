@@ -46,11 +46,6 @@ const API_BASE_URL =
   (typeof process !== "undefined" && process.env?.REACT_APP_API_URL) ||
   "http://localhost:4000/api"
 
-// Temporary testing override: force dashboard to load a faculty user.
-const FORCE_TEST_FACULTY_SESSION = true
-const TEST_FACULTY_USER_ID = "2001"
-const TEST_FACULTY_USER_TYPE_CODE = 2
-
 const FETCH_TIMEOUT_MS = 10000  // 10 second timeout
 
 // Helper Functions (defined before main component)
@@ -79,16 +74,15 @@ function calculateDueStatus(dueDate) {
 }
 
 function getDashboardSessionContext() {
-  if (FORCE_TEST_FACULTY_SESSION) {
-    return {
-      currentUserId: TEST_FACULTY_USER_ID,
-      currentUserRole: "faculty",
-      currentUserTypeCode: TEST_FACULTY_USER_TYPE_CODE,
-    }
-  }
+  const isLoggedIn = localStorage.getItem("isLoggedIn") === "true"
 
   const currentUserId = localStorage.getItem("userId")
   const currentUserRole = String(localStorage.getItem("userRole") || "")
+    .trim()
+    .toLowerCase()
+  const currentUserRoleGroup = String(
+    localStorage.getItem("userRoleGroup") || ""
+  )
     .trim()
     .toLowerCase()
   const storedUserTypeCode = Number.parseInt(
@@ -96,16 +90,26 @@ function getDashboardSessionContext() {
     10
   )
 
+  const isStudentOrFaculty =
+    currentUserRole === "student" || currentUserRole === "faculty"
+  const isStudentFacultyGroup = currentUserRoleGroup === "studentfaculty"
+
   const currentUserTypeCode =
     storedUserTypeCode === 1 || storedUserTypeCode === 2
       ? storedUserTypeCode
       : currentUserRole === "faculty"
         ? 2
-        : 1
+        : currentUserRole === "student"
+          ? 1
+          : null
 
   return {
+    isLoggedIn,
     currentUserId,
     currentUserRole,
+    currentUserRoleGroup,
+    isStudentOrFaculty,
+    isStudentFacultyGroup,
     currentUserTypeCode,
   }
 }
@@ -485,13 +489,32 @@ export default function UserDashboard() {
       setError(null)
 
       const {
+        isLoggedIn,
         currentUserId,
         currentUserRole,
+        isStudentOrFaculty,
+        isStudentFacultyGroup,
         currentUserTypeCode,
       } = getDashboardSessionContext()
 
+      if (!isLoggedIn) {
+        throw new Error("No active user session found. Please sign in again.")
+      }
+
       if (!currentUserId) {
         throw new Error("No active user session found. Please sign in again.")
+      }
+
+      if (!isStudentOrFaculty && !isStudentFacultyGroup) {
+        throw new Error(
+          "This dashboard is only available for Student/Faculty accounts."
+        )
+      }
+
+      if (currentUserTypeCode !== 1 && currentUserTypeCode !== 2) {
+        throw new Error(
+          "User type could not be determined from your session. Please sign in again."
+        )
       }
 
       // Test backend connection first

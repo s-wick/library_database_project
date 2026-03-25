@@ -12,7 +12,6 @@ const ITEM_ENTITY_CONFIG = {
       thumbnailImage: "thumbnail_image",
       monetaryValue: "monetary_value",
       booksInStock: "books_in_stock",
-      onlinePdfUrl: "online_pdf_url",
       createdAt: "created_at",
       createdBy: "created_by",
     },

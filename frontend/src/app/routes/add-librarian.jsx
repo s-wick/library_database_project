@@ -61,13 +61,21 @@ export default function AddLibrarianPage() {
   }
 
   function getFieldError(name, value, currentForm) {
-    if (name === "firstName" && !String(value || "").trim()) return "First name is required."
-    if (name === "middleName" && !String(value || "").trim()) return "Middle name is required."
-    if (name === "lastName" && !String(value || "").trim()) return "Last name is required."
-    if (name === "email" && !String(value || "").trim()) return "Email is required."
-    if (name === "password" && !String(value || "").trim()) return "Password is required."
+    if (name === "firstName" && !String(value || "").trim())
+      return "First name is required."
+    if (name === "middleName" && !String(value || "").trim())
+      return "Middle name is required."
+    if (name === "lastName" && !String(value || "").trim())
+      return "Last name is required."
+    if (name === "email" && !String(value || "").trim())
+      return "Email is required."
+    if (name === "password" && !String(value || "").trim())
+      return "Password is required."
     if (name === "phoneNumber") {
-      const phoneRawDigits = String(currentForm.phoneNumber || "").replace(/\D/g, "")
+      const phoneRawDigits = String(currentForm.phoneNumber || "").replace(
+        /\D/g,
+        ""
+      )
       const phoneDigits = String(currentForm.phoneNumber || "")
         .trim()
         .startsWith("+1")

@@ -6,6 +6,11 @@ const { loadItemSchemasFromDatabase } = require("./item-schema")
 const { findAdminStaffUser } = require("./auth-signin")
 const { createAddLibrarianHandler } = require("./server/admin/add-librarian")
 const { createAddItemHandler } = require("./server/librarian/add-item")
+const { createSignupHandler } = require("./server/auth/signup")
+const { createSigninHandler } = require("./server/auth/signin")
+const { createGetItemTypesHandler } = require("./server/catalog/item-types")
+const { createGetGenresHandler } = require("./server/catalog/genres")
+const { createManagementReportsHandler } = require("./server/management/reports")
 
 const port = Number(process.env.PORT || 4000)
 const envOrigins = process.env.ALLOWED_ORIGINS
@@ -172,6 +177,44 @@ const handleAddItem = createAddItemHandler({
   sendJson,
 })
 
+const handleSignup = createSignupHandler({
+  parseJsonBody,
+  resolveRoleContext,
+  query,
+  generateStudentId,
+  getNextNumericId,
+  sendJson,
+})
+
+const handleSignin = createSigninHandler({
+  parseJsonBody,
+  normalizeRoleGroup,
+  resolveRoleContext,
+  query,
+  findAdminStaffUser,
+  createSessionToken,
+  sendJson,
+})
+
+const handleGetItemTypes = createGetItemTypesHandler({
+  query,
+  getItemSchemas: () => ITEM_SCHEMAS,
+  sendJson,
+})
+
+const handleGetGenres = createGetGenresHandler({
+  query,
+  sendJson,
+})
+
+const handleManagementReports = createManagementReportsHandler({
+  parseJsonBody,
+  parseNullableString,
+  normalizeItemType,
+  query,
+  sendJson,
+})
+
 function writeCorsHeaders(req, res) {
   const origin = req.headers.origin
   if (origin && allowedOrigins.has(origin)) {
@@ -270,164 +313,6 @@ async function handleHealth(_req, res) {
   }
 }
 
-async function handleSignup(req, res) {
-  try {
-    const body = await parseJsonBody(req)
-    const roleContext = resolveRoleContext(body.roleGroup, body.role)
-    const email = String(body.email || "").trim().toLowerCase()
-    const password = String(body.password || "")
-    const firstName = String(body.firstName || "").trim() || null
-    const middleName = String(body.middleName || "").trim() || null
-    const lastName = String(body.lastName || "").trim() || null
-
-    if (!email || !password) {
-      sendJson(res, 400, { ok: false, message: "Email and password are required." })
-      return
-    }
-
-    if (!roleContext) {
-      sendJson(res, 400, { ok: false, message: "Invalid roleGroup/role combination." })
-      return
-    }
-
-    if (roleContext.roleGroup === "adminStaff") {
-      sendJson(res, 403, {
-        ok: false,
-        message: "Admin and staff accounts cannot be created from this page.",
-      })
-      return
-    }
-
-    const { roleGroup, roleConfig } = roleContext
-
-    const existing = await query(
-      `SELECT ${roleConfig.idColumn} FROM ${roleConfig.table} WHERE email = ? LIMIT 1`,
-      [email]
-    )
-    if (existing.length) {
-      sendJson(res, 409, { ok: false, message: roleConfig.duplicateMessage })
-      return
-    }
-
-    let createdId
-    if (roleConfig.idStrategy === "student") {
-      createdId = generateStudentId()
-    } else {
-      createdId = await getNextNumericId(roleConfig.table, roleConfig.idColumn)
-    }
-
-    if (typeof roleConfig.userTypeCode === "number") {
-      await query(
-        `INSERT INTO ${roleConfig.table} (${roleConfig.idColumn}, email, password, user_type_code, first_name, middle_name, last_name) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [createdId, email, password, roleConfig.userTypeCode, firstName, middleName, lastName]
-      )
-    } else {
-      await query(
-        `INSERT INTO ${roleConfig.table} (${roleConfig.idColumn}, email, password) VALUES (?, ?, ?)`,
-        [createdId, email, password]
-      )
-    }
-
-    sendJson(res, 201, {
-      ok: true,
-      message: roleConfig.createdMessage,
-      user: {
-        roleGroup,
-        role: roleConfig.responseRole,
-        hierarchy: roleConfig.hierarchy,
-        id: createdId,
-        email,
-        firstName,
-        middleName,
-        lastName,
-      },
-    })
-  } catch (error) {
-    sendJson(res, 500, { ok: false, message: "Signup failed.", error: error.message })
-  }
-}
-
-async function handleSignin(req, res) {
-  try {
-    const body = await parseJsonBody(req)
-    const normalizedRoleGroup = normalizeRoleGroup(body.roleGroup)
-    const roleContext = resolveRoleContext(body.roleGroup, body.role)
-    const email = String(body.email || "").trim().toLowerCase()
-    const password = String(body.password || "")
-
-    if (!email || !password) {
-      sendJson(res, 400, { ok: false, message: "Email and password are required." })
-      return
-    }
-
-    if (normalizedRoleGroup === "adminStaff") {
-      const user = await findAdminStaffUser(query, email, password)
-      if (user) {
-        const token = createSessionToken(user)
-        sendJson(res, 200, {
-          ok: true,
-          message: "Sign in successful.",
-          user,
-          token,
-        })
-        return
-      }
-
-      sendJson(res, 401, { ok: false, message: "Invalid admin/staff credentials." })
-      return
-    }
-
-    if (!roleContext) {
-      sendJson(res, 400, { ok: false, message: "Invalid roleGroup/role combination." })
-      return
-    }
-
-    const { roleGroup, roleConfig } = roleContext
-    const rows = await query(
-      `SELECT ${roleConfig.idColumn} AS id, email FROM ${roleConfig.table} WHERE email = ? AND password = ? LIMIT 1`,
-      [email, password]
-    )
-    if (!rows.length) {
-      sendJson(res, 401, { ok: false, message: roleConfig.invalidCredentialsMessage })
-      return
-    }
-
-    sendJson(res, 200, {
-      ok: true,
-      message: "Sign in successful.",
-      user: {
-        roleGroup,
-        role: roleConfig.responseRole,
-        hierarchy: roleConfig.hierarchy,
-        id: rows[0].id,
-        email: rows[0].email,
-      },
-      token: createSessionToken({
-        roleGroup,
-        role: roleConfig.responseRole,
-        hierarchy: roleConfig.hierarchy,
-        id: rows[0].id,
-        email: rows[0].email,
-      }),
-    })
-  } catch (error) {
-    sendJson(res, 500, { ok: false, message: "Signin failed.", error: error.message })
-  }
-}
-
-async function handleGetItemTypes(_req, res) {
-  try {
-    const rows = await query(
-      "SELECT item_code AS itemCode, item_type AS itemType FROM item_type ORDER BY item_code ASC"
-    )
-    sendJson(res, 200, {
-      ok: true,
-      itemTypes: rows.filter((row) => ITEM_SCHEMAS[row.itemType]),
-    })
-  } catch (error) {
-    sendJson(res, 500, { ok: false, message: "Failed to fetch item types.", error: error.message })
-  }
-}
 
 const server = http.createServer(async (req, res) => {
   writeCorsHeaders(req, res)
@@ -461,6 +346,11 @@ const server = http.createServer(async (req, res) => {
     return
   }
 
+  if (req.method === "GET" && pathname === "/api/genres") {
+    await handleGetGenres(req, res)
+    return
+  }
+
   if (req.method === "POST" && pathname === "/api/management/librarians") {
     if (!requireManagementUser(req, res)) return
     await handleAddLibrarian(req, res)
@@ -470,6 +360,12 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "POST" && pathname === "/api/management/items") {
     if (!requireManagementUser(req, res)) return
     await handleAddItem(req, res)
+    return
+  }
+
+  if (req.method === "POST" && pathname === "/api/management/reports") {
+    if (!requireManagementUser(req, res)) return
+    await handleManagementReports(req, res)
     return
   }
 

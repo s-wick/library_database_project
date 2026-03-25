@@ -22,7 +22,6 @@ const itemFields = {
       step: "0.01",
     },
     { name: "booksInStock", label: "Books in stock", type: "number" },
-    { name: "onlinePdfUrl", label: "Online PDF URL" },
     { name: "createdBy", label: "Created by" },
   ],
   VIDEO: [
@@ -87,6 +86,7 @@ function defaultForm(type) {
 export default function AddItemPage() {
   const apiBaseUrl = API_BASE_URL
   const [itemTypes, setItemTypes] = useState([])
+  const [genres, setGenres] = useState([])
   const [itemType, setItemType] = useState("")
   const [form, setForm] = useState({})
   const [fileNames, setFileNames] = useState({})
@@ -97,24 +97,33 @@ export default function AddItemPage() {
   const todayDate = useMemo(() => new Date().toISOString().slice(0, 10), [])
 
   const fields = useMemo(() => itemFields[itemType] || [], [itemType])
+  const isRentalEquipment = itemType === "RENTAL_EQUIPMENT"
 
   useEffect(() => {
     let mounted = true
-    async function loadTypes() {
+    async function loadLookups() {
       try {
-        const response = await fetch(`${apiBaseUrl}/api/item-types`)
-        const data = await response.json().catch(() => ({}))
-        if (!response.ok) return
+        const [typesResponse, genresResponse] = await Promise.all([
+          fetch(`${apiBaseUrl}/api/item-types`),
+          fetch(`${apiBaseUrl}/api/genres`),
+        ])
+        const data = await typesResponse.json().catch(() => ({}))
+        const genreData = await genresResponse.json().catch(() => ({}))
+        if (!typesResponse.ok) return
         if (!mounted) return
         const types = data.itemTypes || []
         setItemTypes(types)
+        setGenres(genresResponse.ok ? genreData.genres || [] : [])
         if (types.length > 0) {
           setItemType(types[0].itemType)
-          setForm(defaultForm(types[0].itemType))
+          setForm({
+            ...defaultForm(types[0].itemType),
+            genreId: types[0].itemType === "RENTAL_EQUIPMENT" ? "NOT_APPLICABLE" : "",
+          })
         }
       } catch {}
     }
-    loadTypes()
+    loadLookups()
     return () => {
       mounted = false
     }
@@ -123,7 +132,10 @@ export default function AddItemPage() {
   function onTypeChange(event) {
     const nextType = event.target.value
     setItemType(nextType)
-    setForm(defaultForm(nextType))
+    setForm({
+      ...defaultForm(nextType),
+      genreId: nextType === "RENTAL_EQUIPMENT" ? "NOT_APPLICABLE" : "",
+    })
     setFileNames({})
     setFileResetKey((prev) => prev + 1)
     setError("")
@@ -163,6 +175,10 @@ export default function AddItemPage() {
         return
       }
     }
+    if (!isRentalEquipment && !String(form.genreId || "").trim()) {
+      setError("Genre is required.")
+      return
+    }
 
     setIsSubmitting(true)
     try {
@@ -173,7 +189,12 @@ export default function AddItemPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${authToken}`,
         },
-        body: JSON.stringify({ itemType, createdAt: todayDate, ...form }),
+        body: JSON.stringify({
+          itemType,
+          createdAt: todayDate,
+          ...form,
+          genreId: isRentalEquipment ? null : Number(form.genreId),
+        }),
       })
       const data = await response.json().catch(() => ({}))
       if (!response.ok) {
@@ -185,7 +206,10 @@ export default function AddItemPage() {
         return
       }
       setSuccess("Item added successfully.")
-      setForm(defaultForm(itemType))
+      setForm({
+        ...defaultForm(itemType),
+        genreId: isRentalEquipment ? "NOT_APPLICABLE" : "",
+      })
       setFileNames({})
       setFileResetKey((prev) => prev + 1)
     } catch {
@@ -229,6 +253,30 @@ export default function AddItemPage() {
               <Field>
                 <FieldLabel htmlFor="createdAt">Created at</FieldLabel>
                 <Input id="createdAt" type="date" value={todayDate} readOnly />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="genreId">Genre</FieldLabel>
+                <select
+                  id="genreId"
+                  name="genreId"
+                  value={form.genreId ?? (isRentalEquipment ? "NOT_APPLICABLE" : "")}
+                  onChange={onChange}
+                  disabled={isRentalEquipment}
+                  className="h-9 w-full rounded-md border border-input bg-transparent px-2.5 py-1 text-sm"
+                >
+                  {isRentalEquipment ? (
+                    <option value="NOT_APPLICABLE">Not applicable</option>
+                  ) : (
+                    <>
+                      <option value="">Select genre</option>
+                      {genres.map((genre) => (
+                        <option key={genre.genreId} value={genre.genreId}>
+                          {genre.genreName}
+                        </option>
+                      ))}
+                    </>
+                  )}
+                </select>
               </Field>
 
               {fields.map((field) => (

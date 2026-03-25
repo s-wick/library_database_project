@@ -39,10 +39,25 @@ function createAddItemHandler({
 
       const itemTypeCode = itemTypeRow[0].itemCode
       const createdId = await getNextNumericId(typeSchema.table, typeSchema.idColumn)
+      const parsedGenreId = parseNullableNumber(body.genreId)
+      const genreId =
+        itemType === "RENTAL_EQUIPMENT" ? null : Number.isInteger(parsedGenreId) ? parsedGenreId : null
+
+      if (itemType !== "RENTAL_EQUIPMENT" && !genreId) {
+        sendJson(res, 400, { ok: false, message: "genreId is required." })
+        return
+      }
+      if (genreId) {
+        const genreRows = await query("SELECT genre_id FROM genre WHERE genre_id = ? LIMIT 1", [genreId])
+        if (!genreRows.length) {
+          sendJson(res, 400, { ok: false, message: "Selected genre not found." })
+          return
+        }
+      }
 
       if (itemType === "BOOK") {
         await query(
-          "INSERT INTO book (book_id, title, author, edition, publication, publication_date, thumbnail_image, monetary_value, books_in_stock, online_pdf_url, created_at, created_by, item_type_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          "INSERT INTO book (book_id, title, author, edition, publication, publication_date, thumbnail_image, monetary_value, books_in_stock, genre_id, created_at, created_by, item_type_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
           [
             createdId,
             parseNullableString(body.title),
@@ -53,7 +68,7 @@ function createAddItemHandler({
             parseNullableBlob(body.thumbnailImage),
             parseNullableNumber(body.monetaryValue),
             parseNullableNumber(body.booksInStock),
-            parseNullableString(body.onlinePdfUrl),
+            genreId,
             createdAt,
             parseNullableString(body.createdBy),
             itemTypeCode,
@@ -61,7 +76,7 @@ function createAddItemHandler({
         )
       } else if (itemType === "VIDEO") {
         await query(
-          "INSERT INTO video (video_id, video_name, thumbnail_image, video_length_seconds, video_file, monetary_value, videos_in_stock, created_at, created_by, item_type_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          "INSERT INTO video (video_id, video_name, thumbnail_image, video_length_seconds, video_file, monetary_value, videos_in_stock, genre_id, created_at, created_by, item_type_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
           [
             createdId,
             parseNullableString(body.videoName),
@@ -70,6 +85,7 @@ function createAddItemHandler({
             parseNullableBlob(body.videoFile),
             parseNullableNumber(body.monetaryValue),
             parseNullableNumber(body.videosInStock),
+            genreId,
             createdAt,
             parseNullableString(body.createdBy),
             itemTypeCode,
@@ -77,7 +93,7 @@ function createAddItemHandler({
         )
       } else if (itemType === "AUDIO") {
         await query(
-          "INSERT INTO audio (audio_id, audio_name, thumbnail_image, audio_length_seconds, audio_file, monetary_value, audios_in_stock, created_at, created_by, item_type_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          "INSERT INTO audio (audio_id, audio_name, thumbnail_image, audio_length_seconds, audio_file, monetary_value, audios_in_stock, genre_id, created_at, created_by, item_type_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
           [
             createdId,
             parseNullableString(body.audioName),
@@ -86,6 +102,7 @@ function createAddItemHandler({
             parseNullableBlob(body.audioFile),
             parseNullableNumber(body.monetaryValue),
             parseNullableNumber(body.audiosInStock),
+            genreId,
             createdAt,
             parseNullableString(body.createdBy),
             itemTypeCode,

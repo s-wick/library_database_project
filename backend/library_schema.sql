@@ -196,7 +196,7 @@ CREATE TABLE `borrow` (
 CREATE TABLE `fined_for` (
   `fine_id` int unsigned NOT NULL AUTO_INCREMENT,
   `borrow_transaction_id` int unsigned DEFAULT NULL,
-  `amount` int unsigned DEFAULT NULL,
+  `amount` decimal(10,2) DEFAULT NULL,
   `fine_reason` varchar(256) DEFAULT NULL,
   `date_assigned` datetime DEFAULT NULL,
   `is_paid` tinyint(1) DEFAULT NULL,
@@ -237,3 +237,55 @@ CREATE TABLE `reserve_room` (
   CONSTRAINT `reserve_room_ibfk_2`
     FOREIGN KEY (`reserve_user_type`) REFERENCES `user_type` (`user_code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- ==================================================
+-- OVERDUE FINE CAP TRIGGERS
+-- ==================================================
+
+DELIMITER $$
+
+-- CREATE TRIGGER `trg_fined_for_cap_item_value_before_insert` BEFORE INSERT ON `fined_for` FOR EACH ROW
+CREATE TRIGGER `trg_fined_for_cap_item_value_before_insert`
+BEFORE INSERT ON `fined_for`
+FOR EACH ROW
+BEGIN
+  DECLARE max_item_value DECIMAL(10,2) DEFAULT NULL;
+
+  SELECT COALESCE(book.monetary_value, video.monetary_value, audio.monetary_value, rental.monetary_value)
+    INTO max_item_value
+  FROM borrow b
+  LEFT JOIN book ON b.item_type_code = 1 AND b.item_id = book.book_id
+  LEFT JOIN video ON b.item_type_code = 2 AND b.item_id = video.video_id
+  LEFT JOIN audio ON b.item_type_code = 3 AND b.item_id = audio.audio_id
+  LEFT JOIN rental_equipment rental ON b.item_type_code = 4 AND b.item_id = rental.equipment_id
+  WHERE b.borrow_transaction_id = NEW.borrow_transaction_id
+  LIMIT 1;
+
+  IF max_item_value IS NOT NULL AND NEW.amount IS NOT NULL AND NEW.amount > max_item_value THEN
+    SET NEW.amount = max_item_value;
+  END IF;
+END$$
+
+-- CREATE TRIGGER `trg_fined_for_cap_item_value_before_update` BEFORE UPDATE ON `fined_for` FOR EACH ROW
+CREATE TRIGGER `trg_fined_for_cap_item_value_before_update`
+BEFORE UPDATE ON `fined_for`
+FOR EACH ROW
+BEGIN
+  DECLARE max_item_value DECIMAL(10,2) DEFAULT NULL;
+
+  SELECT COALESCE(book.monetary_value, video.monetary_value, audio.monetary_value, rental.monetary_value)
+    INTO max_item_value
+  FROM borrow b
+  LEFT JOIN book ON b.item_type_code = 1 AND b.item_id = book.book_id
+  LEFT JOIN video ON b.item_type_code = 2 AND b.item_id = video.video_id
+  LEFT JOIN audio ON b.item_type_code = 3 AND b.item_id = audio.audio_id
+  LEFT JOIN rental_equipment rental ON b.item_type_code = 4 AND b.item_id = rental.equipment_id
+  WHERE b.borrow_transaction_id = NEW.borrow_transaction_id
+  LIMIT 1;
+
+  IF max_item_value IS NOT NULL AND NEW.amount IS NOT NULL AND NEW.amount > max_item_value THEN
+    SET NEW.amount = max_item_value;
+  END IF;
+END$$
+
+DELIMITER ;

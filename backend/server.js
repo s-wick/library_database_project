@@ -1,6 +1,11 @@
 const http = require("node:http")
 require("dotenv").config()
 const { query, testConnection } = require("./db")
+const {
+  calculateCappedFine,
+  isFineAtItemValueCap,
+  roundCurrency,
+} = require("./fine-utils")
 
 const port = Number(process.env.PORT || 4000)
 const envOrigins = process.env.ALLOWED_ORIGINS
@@ -207,8 +212,13 @@ async function syncOverdueFinesForBorrower(borrowerId, borrowerType = 1) {
   const overdueBorrows = await query(
     `SELECT
        b.borrow_transaction_id,
-       GREATEST(TIMESTAMPDIFF(DAY, b.due_date, NOW()), 0) AS days_overdue
+       GREATEST(TIMESTAMPDIFF(DAY, b.due_date, NOW()), 0) AS days_overdue,
+       COALESCE(book.monetary_value, video.monetary_value, audio.monetary_value, rental.monetary_value) AS item_monetary_value
      FROM borrow b
+     LEFT JOIN book ON b.item_type_code = 1 AND b.item_id = book.book_id
+     LEFT JOIN video ON b.item_type_code = 2 AND b.item_id = video.video_id
+     LEFT JOIN audio ON b.item_type_code = 3 AND b.item_id = audio.audio_id
+     LEFT JOIN rental_equipment rental ON b.item_type_code = 4 AND b.item_id = rental.equipment_id
      WHERE b.borrower_type = ?
        AND b.borrower_id = ?
        AND b.return_date IS NULL
@@ -218,7 +228,11 @@ async function syncOverdueFinesForBorrower(borrowerId, borrowerType = 1) {
 
   for (const borrow of overdueBorrows) {
     const daysOverdue = Number(borrow.days_overdue || 0)
-    const nextAmount = daysOverdue * DAILY_FINE_AMOUNT
+    const nextAmount = calculateCappedFine({
+      daysOverdue,
+      dailyFineAmount: DAILY_FINE_AMOUNT,
+      itemMonetaryValue: borrow.item_monetary_value,
+    })
 
     if (nextAmount <= 0) continue
 
@@ -260,7 +274,7 @@ async function syncOverdueFinesForBorrower(borrowerId, borrowerType = 1) {
       continue
     }
 
-    if (Number(currentFine.amount) !== nextAmount) {
+    if (roundCurrency(currentFine.amount) !== nextAmount) {
       await query(
         `UPDATE fined_for
          SET amount = ?, fine_reason = ?, date_assigned = NOW()
@@ -659,7 +673,8 @@ async function handleGetFines(res, userId, userTypeCode) {
          f.amount,
          f.is_paid,
          GREATEST(TIMESTAMPDIFF(DAY, b.due_date, COALESCE(b.return_date, NOW())), 0) AS days_overdue,
-         COALESCE(book.title, video.video_name, audio.audio_name, rental.rental_name) AS item_title
+        COALESCE(book.title, video.video_name, audio.audio_name, rental.rental_name) AS item_title,
+        COALESCE(book.monetary_value, video.monetary_value, audio.monetary_value, rental.monetary_value) AS item_monetary_value
        FROM fined_for f
        INNER JOIN borrow b ON f.borrow_transaction_id = b.borrow_transaction_id
        LEFT JOIN book ON b.item_type_code = 1 AND b.item_id = book.book_id
@@ -671,7 +686,22 @@ async function handleGetFines(res, userId, userTypeCode) {
       [userTypeCode, userId]
     )
 
-    sendJson(res, 200, rows)
+    const normalizedRows = rows.map((row) => {
+      const amount = roundCurrency(row.amount)
+      const itemMonetaryValue = roundCurrency(row.item_monetary_value)
+
+      return {
+        ...row,
+        amount,
+        item_monetary_value: itemMonetaryValue,
+        is_at_item_value_cap: isFineAtItemValueCap({
+          fineAmount: amount,
+          itemMonetaryValue,
+        }),
+      }
+    })
+
+    sendJson(res, 200, normalizedRows)
   } catch (error) {
     sendJson(res, 500, {
       ok: false,

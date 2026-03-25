@@ -1,4 +1,4 @@
-import React, { useEffect } from "react"
+import React, { use, useEffect, useState } from "react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 import { ArrowLeft } from "lucide-react"
 import { useTheme } from "@/components/theme-provider"
@@ -7,6 +7,9 @@ export default function PaymentPage() {
   const { setTheme, theme } = useTheme()
   const location = useLocation()
   const navigate = useNavigate()
+  const [showConfirmation, setShowConfirmation] = useState(false)
+  const [showPurchase, setShowPurchase] = useState(false)
+  const [fines, setFines] = useState([])
 
   // Force light mode for the payment page
   useEffect(() => {
@@ -15,15 +18,29 @@ export default function PaymentPage() {
     return () => setTheme(previous)
   }, [])
 
-  // added this for future to support purchase of books
-  // Get amount and type from previous page
+  // Get amount
   const amount = location.state?.amount || 0
-  const paymentType = location.state?.type || "purchase"
 
-  // Calculate tax only for book purchases
-  const taxRate = paymentType === "fine" ? 0 : 0.0825
-  const tax = amount * taxRate
-  const total = amount + tax
+  // Handle form submission but going to add error handling 
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    setShowConfirmation(true)
+  }
+  // needed to confirm the purchase and update the users account balance
+  const confirmPurchase = () => {
+    setShowConfirmation(false)
+    setShowPurchase(true)
+  }
+
+  useEffect(() => {
+    // Fetch fines from the backend
+    fetch()
+      .then(res => res.json())
+      .then(data => setFines(data.fines));
+  }, [])
+      
+
+  // add error contraints for the * fields 
 
   // Main content
   return (
@@ -54,12 +71,14 @@ export default function PaymentPage() {
               <input
                 type="text"
                 placeholder="First Name*"
+                maxLength={28}
                 className="rounded-1g w-1/2 border bg-background p-3 text-sm"
               />
 
               <input
                 type="text"
                 placeholder="Last Name*"
+                maxLength={28}
                 className="rounded-1g w-1/2 border bg-background p-3 text-sm"
               />
             </div>
@@ -67,18 +86,21 @@ export default function PaymentPage() {
             <input
               type="text"
               placeholder="ID Number*"
+              maxLength={4}
               className="rounded-1g w-full border bg-background p-3 text-sm"
             />
 
             <input
               type="email"
               placeholder="Email Address"
+              maxLength={50}
               className="rounded-1g w-full border bg-background p-3 text-sm"
             />
 
             <input
               type="text"
               placeholder="Phone Number"
+              maxLength={10}
               className="rounded-1g w-full border bg-background p-3 text-sm"
             />
           </div>
@@ -90,6 +112,7 @@ export default function PaymentPage() {
             <input
               type="text"
               placeholder="Card Number*"
+              maxLength={19}
               className="rounded-1g w-full border bg-background p-3 text-sm"
             />
 
@@ -97,12 +120,14 @@ export default function PaymentPage() {
               <input
                 type="text"
                 placeholder="Expiry Date (MM/YY)*"
+                maxLength={5}
                 className="rounded-1g w-1/2 border bg-background p-3 text-sm"
               />
 
               <input
                 type="text"
                 placeholder="CVV*"
+                maxLength={3}
                 className="rounded-1g w-1/2 border bg-background p-3 text-sm"
               />
             </div>
@@ -110,18 +135,20 @@ export default function PaymentPage() {
             <input
               type="text"
               placeholder="Cardholder Name*"
+              maxLength={50}
               className="rounded-1g w-full border bg-background p-3 text-sm"
             />
 
-            <button className="mt-4 w-full rounded-full bg-chart-3 py-3 text-white transition hover:bg-chart-3/80">
-              Pay ${total.toFixed(2)}
+            <button 
+              onClick={handleSubmit}
+              className="mt-4 w-full rounded-full bg-chart-3 py-3 text-white transition hover:bg-chart-3/80">
+              Pay ${amount.toFixed(2)}
             </button>
 
             {/* Go back button will take you to previous page you were on */}
             <button
               className="mx-auto mt-2 block py-3 text-chart-3 underline transition hover:text-black/600"
-              onClick={() => navigate(-1)}
-            >
+              onClick={() => navigate(-1)}>
               Go Back
             </button>
           </div>
@@ -129,26 +156,77 @@ export default function PaymentPage() {
 
         {/* Right side with order summary */}
         <div className="h-fit rounded-xl border p-6">
-          <h3 className="mb-4 text-lg font-semibold">Order Summary</h3>
+          <h3 className="mb-4 text-lg font-semibold"> Order Summary </h3>
 
+          {/* add the fines */}
           <div className="mb-2 flex justify-between text-sm">
-            <span>Subtotal</span>
-            <span>${amount.toFixed(2)}</span>
+            <h2> Fines </h2>
+            {fines.map((fine, index) => (
+              <div key={index} className="flex justify-between">
+                <span> Name: {fine.name} </span>
+                <span> Amount: ${fine.amount.toFixed(2)} </span>
+              </div>
+            ))}
           </div>
 
-          <div className="mb-2 flex justify-between text-sm">
-            <span>Tax</span>
-            <span>${tax.toFixed(2)}</span>
-          </div>
+
 
           <div className="my-3 border-t"></div>
 
           <div className="flex justify-between text-lg font-semibold">
-            <span>Total</span>
-            <span>${total.toFixed(2)}</span>
+            <span> Total </span>
+            <span> ${amount.toFixed(2)} </span>
           </div>
         </div>
       </div>
+
+      {/* Confirmation */}
+      {showConfirmation && (
+        <div className="fixed inset-0 bg-transparent bg-opacity-25 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg border border-black p-6 max-w-md w-full mx-4">
+
+            <h3 className="text-lg font-semibold mb-4">Confirm Purchase</h3>
+
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to proceed with this payment of ${amount.toFixed(2)}?
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowConfirmation(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition">
+                Cancel
+              </button>
+
+              <button
+                onClick={confirmPurchase}
+                className="flex-1 px-4 py-2 bg-chart-3 text-white rounded-md hover:bg-chart-3/80 transition">
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showPurchase && (
+        <div className="fixed inset-0 bg-transparent bg-opacity-25 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg border border-black p-6 max-w-md w-full mx-4">
+
+            <h3 className="text-lg font-semibold mb-4">Payment Successful</h3>
+
+            <p className="text-gray-600 mb-6">
+              Your payment of ${amount.toFixed(2)} has been processed successfully.
+            </p>
+              <button
+                onClick={() => navigate(-1)}
+                className="px-4 py-2 bg-chart-3 text-white rounded-md hover:bg-chart-3/80 transition">
+                Return
+              </button>
+          </div>
+        </div>
+      )}
+
+
     </div>
   )
 }

@@ -396,7 +396,7 @@ function FinesPanel() {
       </CardContent>
       {total > 0 && (
         <CardFooter className="pt-0">
-          <Link to="/payment" state={{ amount: total, type: "fine" }} className="w-full">
+          <Link to="/payment" state={{ amount: total }} className="w-full">
             <Button className="w-full bg-red-600 text-white hover:bg-red-700">
               <CreditCard className="mr-2 h-4 w-4" /> Pay ${total.toFixed(2)}
             </Button>

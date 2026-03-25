@@ -17,7 +17,7 @@ const {
 const port = Number(process.env.PORT || 4000)
 const envOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(",")
-  : ["http://localhost:5173/", "http://127.0.0.1:5173"]
+  : ["http://localhost:5173", "http://127.0.0.1:5173"]
 
 const allowedOrigins = new Set(envOrigins)
 let ITEM_SCHEMAS = {}

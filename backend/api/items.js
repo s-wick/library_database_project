@@ -143,32 +143,32 @@ async function handleSearchItems(req, res) {
 
     if (shouldSearchAll || type === "Book") {
       const books = await query(
-        `SELECT book_id as item_id, title, author as creator, 'Book' as standard_type, thumbnail_image, books_in_stock as in_stock, description FROM book WHERE title LIKE ? OR author LIKE ? OR description LIKE ? LIMIT ?`,
-        [likeQuery, likeQuery, likeQuery, limit]
+        `SELECT book_id as item_id, title, author as creator, 'Book' as standard_type, thumbnail_image, books_in_stock as in_stock FROM book WHERE title LIKE ? OR author LIKE ? LIMIT 50`,
+        [likeQuery, likeQuery]
       )
       items.push(...books)
     }
 
     if (shouldSearchAll || type === "Audiobook") {
       const audios = await query(
-        `SELECT audio_id as item_id, audio_name as title, '' as creator, 'Audiobook' as standard_type, thumbnail_image, audios_in_stock as in_stock, description FROM audio WHERE audio_name LIKE ? OR description LIKE ? LIMIT ?`,
-        [likeQuery, likeQuery, limit]
+        `SELECT audio_id as item_id, audio_name as title, '' as creator, 'Audiobook' as standard_type, thumbnail_image, audios_in_stock as in_stock FROM audio WHERE audio_name LIKE ? LIMIT 50`,
+        [likeQuery]
       )
       items.push(...audios)
     }
 
     if (shouldSearchAll || type === "Video") {
       const videos = await query(
-        `SELECT video_id as item_id, video_name as title, '' as creator, 'Video' as standard_type, thumbnail_image, videos_in_stock as in_stock, description FROM video WHERE video_name LIKE ? OR description LIKE ? LIMIT ?`,
-        [likeQuery, likeQuery, limit]
+        `SELECT video_id as item_id, video_name as title, '' as creator, 'Video' as standard_type, thumbnail_image, videos_in_stock as in_stock FROM video WHERE video_name LIKE ? LIMIT 50`,
+        [likeQuery]
       )
       items.push(...videos)
     }
 
     if (shouldSearchAll || type === "Equipment") {
       const equipment = await query(
-        `SELECT equipment_id as item_id, rental_name as title, '' as creator, 'Equipment' as standard_type, thumbnail_image, equipment_in_stock as in_stock, description FROM rental_equipment WHERE rental_name LIKE ? OR description LIKE ? LIMIT ?`,
-        [likeQuery, likeQuery, limit]
+        `SELECT equipment_id as item_id, rental_name as title, '' as creator, 'Equipment' as standard_type, thumbnail_image, equipment_in_stock as in_stock FROM rental_equipment WHERE rental_name LIKE ? LIMIT 50`,
+        [likeQuery]
       )
       items.push(...equipment)
     }

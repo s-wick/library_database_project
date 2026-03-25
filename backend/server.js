@@ -10,7 +10,9 @@ const { createSignupHandler } = require("./server/auth/signup")
 const { createSigninHandler } = require("./server/auth/signin")
 const { createGetItemTypesHandler } = require("./server/catalog/item-types")
 const { createGetGenresHandler } = require("./server/catalog/genres")
-const { createManagementReportsHandler } = require("./server/management/reports")
+const {
+  createManagementReportsHandler,
+} = require("./server/management/reports")
 
 const port = Number(process.env.PORT || 4000)
 const envOrigins = process.env.ALLOWED_ORIGINS
@@ -19,7 +21,9 @@ const envOrigins = process.env.ALLOWED_ORIGINS
 
 const allowedOrigins = new Set(envOrigins)
 let ITEM_SCHEMAS = {}
-const authTokenTtlMs = Number(process.env.AUTH_TOKEN_TTL_MS || 12 * 60 * 60 * 1000)
+const authTokenTtlMs = Number(
+  process.env.AUTH_TOKEN_TTL_MS || 12 * 60 * 60 * 1000
+)
 const sessions = new Map()
 
 function normalizeRoleGroup(roleGroup = "") {
@@ -312,7 +316,6 @@ async function handleHealth(_req, res) {
     })
   }
 }
-
 
 const server = http.createServer(async (req, res) => {
   writeCorsHeaders(req, res)

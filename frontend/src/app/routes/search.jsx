@@ -1,35 +1,10 @@
 import React, { useState, useEffect } from "react"
 import { useSearchParams, Link, useNavigate } from "react-router-dom"
-import {
-  Search as SearchIcon,
-  Filter,
-  Moon,
-  Sun,
-  ArrowLeft,
-  Image as ImageIcon,
-  Check,
-  ChevronsUpDown,
-} from "lucide-react"
+import { Search as SearchIcon, Filter, Image as ImageIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-} from "@/components/ui/input-group"
+import { Input } from "@/components/ui/input"
+import { Field } from "@/components/ui/field"
 import { Button } from "@/components/ui/button"
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
 import {
   Card,
   CardHeader,
@@ -39,18 +14,27 @@ import {
   CardFooter,
 } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { useTheme } from "@/components/theme-provider"
+
+import { Navbar } from "@/components/navbar"
 
 export default function SearchPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
-  const { theme, setTheme } = useTheme()
 
   const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "")
   const [selectedType, setSelectedType] = useState(
     searchParams.get("type") || "All"
   )
   const [comboboxOpen, setComboboxOpen] = useState(false)
+
+  const [showFilters, setShowFilters] = useState(false)
+  const [bookGenre, setBookGenre] = useState("")
+  const [bookAuthor, setBookAuthor] = useState("")
+  const [bookPubDate, setBookPubDate] = useState("")
+  const [bookEdition, setBookEdition] = useState("")
+  const [audioLength, setAudioLength] = useState("")
+  const [videoLength, setVideoLength] = useState("")
+  const [minStock, setMinStock] = useState("")
 
   const itemTypes = [
     { value: "All", label: "All Types" },
@@ -109,126 +93,167 @@ export default function SearchPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      {/* Top Navigation Bar */}
-      <div className="sticky top-0 z-20 flex h-16 items-center justify-between border-b bg-background px-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <Link
-            to="/"
-            className="flex items-center gap-2 transition-opacity hover:opacity-90"
-            aria-label="Back to home"
-          >
-            <div className="inline-flex h-8 min-w-[2.5rem] items-center justify-center rounded-md bg-primary px-2 text-[12px] font-bold whitespace-nowrap text-primary-foreground ring-1 ring-border">
-              LIBRARY LOGO
-            </div>
-          </Link>
-        </div>
+      <Navbar showBack={true} />
 
-        <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() =>
-              setTheme(
-                theme === "dark" ||
-                  (theme === "system" &&
-                    window.matchMedia("(prefers-color-scheme: dark)").matches)
-                  ? "light"
-                  : "dark"
-              )
-            }
-          >
-            {theme === "dark" ? (
-              <Sun className="h-5 w-5" />
-            ) : (
-              <Moon className="h-5 w-5" />
-            )}
-            <span className="sr-only">Toggle theme</span>
-          </Button>
-        </div>
-      </div>
-
-      <div className="border-b bg-slate-50 p-6 md:px-10 dark:bg-slate-900/50">
-        <div className="mx-auto flex w-full max-w-6xl flex-col items-center gap-4 md:flex-row">
-          <InputGroup className="flex-1 bg-background">
-            <InputGroupInput
-              placeholder="Search by title, author, or genre..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={handleKeyDown}
-              className="text-md h-12"
-            />
-            <Button onClick={handleSearch} className="h-12 rounded-l-none px-6">
-              <SearchIcon className="h-5 w-5" />
-            </Button>
-          </InputGroup>
-          <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                role="combobox"
-                aria-expanded={comboboxOpen}
-                className="h-12 w-full justify-between font-normal md:w-56"
-              >
-                {selectedType
-                  ? itemTypes.find((type) => type.value === selectedType)?.label
-                  : "Select item type..."}
-                <ChevronsUpDown className="ml-2 w-4 opacity-50" />
+      <div className="border-b bg-slate-50 py-6 dark:bg-slate-900/50">
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-6 md:px-10">
+          <div className="relative z-20 flex w-full flex-col items-center gap-4 md:flex-row">
+            <Field className="flex-1" orientation="horizontal">
+              <Input
+                type="search"
+                placeholder="Search by title, author, or genre..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={handleKeyDown}
+                className="h-12 text-base"
+              />
+              <Button onClick={handleSearch} className="h-12 px-6">
+                <SearchIcon className="h-5 w-5" />
               </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-full p-0 md:w-56">
-              <Command>
-                <CommandList>
-                  <CommandEmpty>No type found.</CommandEmpty>
-                  <CommandGroup>
-                    {itemTypes.map((type) => (
-                      <CommandItem
-                        key={type.value}
-                        value={type.value}
-                        onSelect={(currentValue) => {
-                          const matchedType = itemTypes.find(
-                            (t) =>
-                              t.value.toLowerCase() ===
-                                currentValue.toLowerCase() ||
-                              t.value === currentValue
-                          )
-                          const newType = matchedType
-                            ? matchedType.value
-                            : "All"
-                          setSelectedType(newType)
-                          setComboboxOpen(false)
+            </Field>
 
-                          // Auto trigger search on filter change
-                          const params = new URLSearchParams()
-                          if (searchQuery) params.set("q", searchQuery)
-                          if (newType && newType !== "All")
-                            params.set("type", newType)
-                          setSearchParams(params, { replace: true })
-                        }}
-                      >
-                        <Check
-                          className={cn(
-                            "mr-2 h-4 w-4",
-                            selectedType === type.value
-                              ? "opacity-100"
-                              : "opacity-0"
-                          )}
-                        />
-                        {type.label}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
+            <Button
+              variant={showFilters ? "secondary" : "ghost"}
+              className="h-12 shrink-0 px-4 shadow-none hover:bg-muted"
+              onClick={() => setShowFilters(!showFilters)}
+            >
+              <Filter className="mr-2 h-4 w-4" />
+              Filters
+            </Button>
+          </div>
+
+          {showFilters && (
+            <div className="z-30 grid w-full grid-cols-1 gap-4 rounded-md border bg-background p-4 shadow-sm sm:grid-cols-2 md:grid-cols-3">
+              {/* Global Filters */}
+              <div className="flex flex-col gap-1 text-left">
+                <label className="text-xs font-semibold text-muted-foreground uppercase">
+                  Item Type
+                </label>
+                <select
+                  className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                  value={selectedType}
+                  onChange={(e) => {
+                    setSelectedType(e.target.value)
+                    const params = new URLSearchParams()
+                    if (searchQuery) params.set("q", searchQuery)
+                    if (e.target.value && e.target.value !== "All")
+                      params.set("type", e.target.value)
+                    setSearchParams(params, { replace: true })
+                  }}
+                >
+                  <option value="All">All Types</option>
+                  <option value="Book">Books</option>
+                  <option value="Audiobook">Audiobooks</option>
+                  <option value="Video">Videos</option>
+                  <option value="Equipment">Equipment</option>
+                </select>
+              </div>
+              <div className="flex flex-col gap-1 text-left">
+                <label className="text-xs font-semibold text-muted-foreground uppercase">
+                  Min Stock
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="e.g. 1"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                  value={minStock}
+                  onChange={(e) => setMinStock(e.target.value)}
+                />
+              </div>
+
+              {/* Book Filters */}
+              {selectedType === "Book" && (
+                <>
+                  <div className="flex flex-col gap-1 text-left">
+                    <label className="text-xs font-semibold text-muted-foreground uppercase">
+                      Genre
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Fiction"
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+                      value={bookGenre}
+                      onChange={(e) => setBookGenre(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1 text-left">
+                    <label className="text-xs font-semibold text-muted-foreground uppercase">
+                      Author
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Orwell"
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+                      value={bookAuthor}
+                      onChange={(e) => setBookAuthor(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1 text-left">
+                    <label className="text-xs font-semibold text-muted-foreground uppercase">
+                      Pub Date
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 1949"
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+                      value={bookPubDate}
+                      onChange={(e) => setBookPubDate(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1 text-left">
+                    <label className="text-xs font-semibold text-muted-foreground uppercase">
+                      Edition
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. First"
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+                      value={bookEdition}
+                      onChange={(e) => setBookEdition(e.target.value)}
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* Audiobook Filters */}
+              {selectedType === "Audiobook" && (
+                <div className="flex flex-col gap-1 text-left">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase">
+                    Length
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 10h"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+                    value={audioLength}
+                    onChange={(e) => setAudioLength(e.target.value)}
+                  />
+                </div>
+              )}
+
+              {/* Video Filters */}
+              {selectedType === "Video" && (
+                <div className="flex flex-col gap-1 text-left">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase">
+                    Length
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 120m"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+                    value={videoLength}
+                    onChange={(e) => setVideoLength(e.target.value)}
+                  />
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
       {/* Results */}
-      <main className="mx-auto w-full max-w-6xl flex-1 p-6 md:p-10">
+      <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-6 md:px-10 md:py-10">
         <div className="mb-6">
           <h2 className="text-2xl font-semibold tracking-tight">
             Search Results

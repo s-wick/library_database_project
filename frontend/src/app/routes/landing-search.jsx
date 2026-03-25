@@ -1,11 +1,8 @@
 import React, { useState, useEffect } from "react"
 import { Search } from "lucide-react"
 import { Link, useNavigate } from "react-router-dom"
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-} from "@/components/ui/input-group"
+import { Input } from "@/components/ui/input"
+import { Field } from "@/components/ui/field"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -16,21 +13,8 @@ import {
   CardFooter,
 } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { useTheme } from "@/components/theme-provider"
-import {
-  Moon,
-  Sun,
-  LayoutDashboard,
-  Image as ImageIcon,
-  Filter,
-} from "lucide-react"
+import { Navbar } from "@/components/navbar"
+import { LayoutDashboard, Image as ImageIcon, Filter } from "lucide-react"
 
 // Background image import
 import bgImage from "@/assets/library-hero.png"
@@ -47,21 +31,12 @@ export default function LandingSearchPage() {
   const [videoLength, setVideoLength] = useState("")
   const [minStock, setMinStock] = useState("")
 
-  const { theme, setTheme } = useTheme()
-
   const [books, setBooks] = useState([])
   const [audios, setAudios] = useState([])
   const [videos, setVideos] = useState([])
   const [equipments, setEquipments] = useState([])
   const [loading, setLoading] = useState(true)
 
-  // Track login state in local storage to simulate authentication
-  const [isLoggedIn, setIsLoggedIn] = useState(() => {
-    // For demo purposes, if unset let's show logged in initially, else use the setting.
-    const stored = localStorage.getItem("isLoggedIn")
-    return stored === null ? true : stored === "true"
-  })
-  const [dropdownOpen, setDropdownOpen] = useState(false)
   const navigate = useNavigate()
 
   const apiBaseUrl =
@@ -100,29 +75,6 @@ export default function LandingSearchPage() {
     fetchAll()
   }, [])
 
-  let avatarInitials = "U"
-  try {
-    const storedUser = localStorage.getItem("user")
-    if (storedUser) {
-      const parsed = JSON.parse(storedUser)
-      if (parsed.firstName && parsed.lastName) {
-        avatarInitials =
-          `${parsed.firstName[0]}${parsed.lastName[0]}`.toUpperCase()
-      } else if (parsed.email) {
-        avatarInitials = parsed.email[0].toUpperCase()
-      }
-    }
-  } catch (err) {
-    // Ignore error
-  }
-
-  const handleSignOut = () => {
-    localStorage.setItem("isLoggedIn", "false")
-    localStorage.removeItem("user")
-    setIsLoggedIn(false)
-    setDropdownOpen(false)
-  }
-
   const handleSearch = () => {
     const params = new URLSearchParams()
     if (searchQuery) params.set("q", searchQuery)
@@ -138,75 +90,7 @@ export default function LandingSearchPage() {
 
   return (
     <div>
-      {/* ── Top Navigation Bar ── */}
-      <div className="sticky top-0 z-20 flex h-16 items-center justify-between border-b bg-background px-6">
-        {/* Logo Placeholder */}
-        <Link
-          to="/"
-          className="flex items-center gap-2 transition-opacity hover:opacity-90"
-          aria-label="Back to home"
-        >
-          <div className="inline-flex h-8 min-w-[2.5rem] items-center justify-center rounded-md bg-primary px-2 text-[12px] font-bold whitespace-nowrap text-primary-foreground ring-1 ring-border">
-            LIBRARY LOGO HERE
-          </div>
-        </Link>
-
-        <div className="flex items-center gap-3">
-          {/* Theme toggle */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() =>
-              setTheme(
-                theme === "dark" ||
-                  (theme === "system" &&
-                    window.matchMedia("(prefers-color-scheme: dark)").matches)
-                  ? "light"
-                  : "dark"
-              )
-            }
-          >
-            {theme === "dark" ? (
-              <Sun className="h-5 w-5" />
-            ) : (
-              <Moon className="h-5 w-5" />
-            )}
-            <span className="sr-only">Toggle theme</span>
-          </Button>
-
-          {/* User Dropdown or Sign in */}
-          {isLoggedIn ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-violet-600 shadow-md transition-opacity outline-none hover:opacity-90">
-                  <Avatar className="h-9 w-9 bg-transparent">
-                    <AvatarFallback className="bg-transparent text-sm font-bold text-white">
-                      {avatarInitials}
-                    </AvatarFallback>
-                  </Avatar>
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem asChild>
-                  <Link to="/user-dashboard" className="w-full cursor-pointer">
-                    Dashboard
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={handleSignOut}
-                  className="w-full cursor-pointer"
-                >
-                  Sign out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <Button asChild variant="outline">
-              <Link to="/auth">Sign in</Link>
-            </Button>
-          )}
-        </div>
-      </div>
+      <Navbar showBack={false} />
 
       {/* ── Hero Section ── */}
       <div
@@ -229,21 +113,19 @@ export default function LandingSearchPage() {
 
           <div className="backdrop-blur-medium relative flex max-w-3xl flex-col items-center overflow-visible rounded-md bg-background/95 p-2 shadow-lg">
             <div className="relative z-20 flex w-full items-center">
-              <InputGroup className="flex-1">
-                <InputGroupInput
+              <Field className="flex-1" orientation="horizontal">
+                <Input
+                  type="search"
                   placeholder="Search by title, author, or genre..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  className="h-12 rounded-r-none border-r-0 text-lg"
+                  className="h-12 text-lg"
                 />
-                <Button
-                  onClick={handleSearch}
-                  className="h-12 rounded-l-none px-6"
-                >
+                <Button onClick={handleSearch} className="h-12 px-6">
                   <Search className="h-5 w-5" />
                 </Button>
-              </InputGroup>
+              </Field>
               <Button
                 variant={showFilters ? "secondary" : "ghost"}
                 className="ml-2 h-12 px-4 shadow-none hover:bg-muted"

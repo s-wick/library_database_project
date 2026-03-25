@@ -9,10 +9,11 @@
     "dev:frontend": "npm run dev --prefix frontend",
     "dev:backend": "npm run dev --prefix backend",
     "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "lint": "npm run lint --prefix frontend && npm run lint --prefix backend"
   },
   "simple-git-hooks": {
-    "pre-commit": "npm run lint --prefix frontend && npm run format --prefix frontend"
+    "pre-commit": "npm run lint && npm run format"
   },
   "devDependencies": {
     "concurrently": "^8.0.0",

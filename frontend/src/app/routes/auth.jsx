@@ -13,10 +13,15 @@ const roles = [
 ]
 
 const emptyForm = {
+
+  firstName: "",
+  middleName: "",
+  lastName: "",
   email: "",
   password: "",
   confirmPassword: "",
 }
+
 
 const API_BASE_URL =
   (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL) ||
@@ -34,6 +39,7 @@ const SIGNIN_ATTEMPTS = {
   ],
 }
 
+
 export default function AuthPage() {
   const navigate = useNavigate()
   const [selectedRole, setSelectedRole] = useState("admin")
@@ -41,6 +47,8 @@ export default function AuthPage() {
   const [form, setForm] = useState(emptyForm)
   const [errors, setErrors] = useState({})
   const [success, setSuccess] = useState("")
+
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const isSignUp = mode === "signup"
 
@@ -56,6 +64,11 @@ export default function AuthPage() {
 
   function switchMode(nextMode) {
     setMode(nextMode)
+
+    if (nextMode === "signup") {
+      setSelectedRole("student")
+    }
+
     setErrors({})
     setSuccess("")
     setForm(emptyForm)
@@ -66,39 +79,76 @@ export default function AuthPage() {
     setErrors({})
     setSuccess("")
 
+    const nextErrors = {}
+
     if (!form.email.trim()) {
-      setErrors({ email: "Email is required." })
+      nextErrors.email = "Email is required."
     }
 
     if (!form.password.trim()) {
-      setErrors((prev) => ({ ...prev, password: "Password is required." }))
-      return
+      nextErrors.password = "Password is required."
     }
 
     if (isSignUp) {
       if (!form.confirmPassword.trim()) {
-        setErrors({ confirmPassword: "Retype password is required." })
-        return
+        nextErrors.confirmPassword = "Retype password is required."
       }
 
       if (form.password !== form.confirmPassword) {
-        setErrors({ confirmPassword: "Passwords do not match." })
-        return
+        nextErrors.confirmPassword = "Passwords do not match."
+      }
+
+      if (!form.firstName.trim()) {
+        nextErrors.firstName = "First name is required."
+      }
+
+      if (!form.lastName.trim()) {
+        nextErrors.lastName = "Last name is required."
       }
     }
 
-    if (isSignUp) {
-      const roleLabel =
-        selectedRole === "admin" ? "Admin / Staff" : "Student & Faculty"
-      setSuccess(`Account created for ${roleLabel}.`)
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors)
       return
     }
 
-    const attempts = SIGNIN_ATTEMPTS[selectedRole] || []
-    let lastFailureMessage = "Invalid credentials."
+    setIsSubmitting(true)
+    try {
+      if (isSignUp) {
+        const response = await fetch(`${API_BASE_URL}/auth/signup`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            roleGroup: "studentFaculty",
+            role: "student",
+            firstName: form.firstName.trim(),
+            middleName: form.middleName.trim(),
+            lastName: form.lastName.trim(),
+            email: form.email.trim(),
+            password: form.password,
+          }),
+        })
 
-    for (const attempt of attempts) {
-      try {
+        const payload = await response.json().catch(() => ({}))
+        if (!response.ok) {
+          setErrors({
+            general: payload?.message || "Failed to create account.",
+          })
+          return
+        }
+
+        setMode("signin")
+        setSelectedRole("student")
+        setErrors({})
+        setForm(emptyForm)
+        setSuccess("Account created successfully. Sign in to continue.")
+        return
+      }
+
+      const attempts = SIGNIN_ATTEMPTS[selectedRole] || []
+      let lastFailureMessage = "Invalid credentials."
+
+      for (const attempt of attempts) {
         const response = await fetch(`${API_BASE_URL}/auth/signin`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -110,7 +160,7 @@ export default function AuthPage() {
           }),
         })
 
-        const payload = await response.json()
+        const payload = await response.json().catch(() => ({}))
 
         if (!response.ok) {
           lastFailureMessage = payload?.message || "Invalid credentials."
@@ -130,13 +180,16 @@ export default function AuthPage() {
 
         navigate("/")
         return
-      } catch {
-        setErrors({ email: "Unable to reach the server. Please try again." })
-        return
       }
-    }
 
-    setErrors({ email: lastFailureMessage })
+      setErrors({ general: lastFailureMessage })
+    } catch {
+      setErrors({
+        general: "Unable to reach the server. Please try again.",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -165,7 +218,11 @@ export default function AuthPage() {
             >
               <TabsList className="grid w-full grid-cols-2">
                 {roles.map((role) => (
-                  <TabsTrigger key={role.id} value={role.id}>
+                  <TabsTrigger
+                    key={role.id}
+                    value={role.id}
+                    disabled={isSignUp && role.id === "admin"}
+                  >
                     {role.label}
                   </TabsTrigger>
                 ))}
@@ -173,6 +230,67 @@ export default function AuthPage() {
             </Tabs>
 
             <form className="space-y-4" onSubmit={handleSubmit}>
+              {isSignUp && (
+                <>
+                  <Field className="space-y-0">
+                    <FieldLabel htmlFor="firstName">First name</FieldLabel>
+                    <Input
+                      id="firstName"
+                      name="firstName"
+                      type="text"
+                      placeholder="First name"
+                      value={form.firstName}
+                      onChange={handleChange}
+                      aria-invalid={!!errors.firstName}
+                      className={
+                        errors.firstName
+                          ? "border-destructive text-destructive focus-visible:ring-destructive"
+                          : ""
+                      }
+                    />
+                    {errors.firstName && (
+                      <p className="text-sm font-medium text-destructive">
+                        {errors.firstName}
+                      </p>
+                    )}
+                  </Field>
+
+                  <Field className="space-y-0">
+                    <FieldLabel htmlFor="middleName">Middle name</FieldLabel>
+                    <Input
+                      id="middleName"
+                      name="middleName"
+                      type="text"
+                      placeholder="Middle name"
+                      value={form.middleName}
+                      onChange={handleChange}
+                    />
+                  </Field>
+
+                  <Field className="space-y-0">
+                    <FieldLabel htmlFor="lastName">Last name</FieldLabel>
+                    <Input
+                      id="lastName"
+                      name="lastName"
+                      type="text"
+                      placeholder="Last name"
+                      value={form.lastName}
+                      onChange={handleChange}
+                      aria-invalid={!!errors.lastName}
+                      className={
+                        errors.lastName
+                          ? "border-destructive text-destructive focus-visible:ring-destructive"
+                          : ""
+                      }
+                    />
+                    {errors.lastName && (
+                      <p className="text-sm font-medium text-destructive">
+                        {errors.lastName}
+                      </p>
+                    )}
+                  </Field>
+                </>
+              )}
               <Field className="space-y-0">
                 <FieldLabel htmlFor={errors.email ? "input-invalid" : "email"}>
                   Email
@@ -267,8 +385,13 @@ export default function AuthPage() {
                   {success}
                 </p>
               )}
+              {errors.general && (
+                <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                  {errors.general}
+                </p>
+              )}
 
-              <Button type="submit" className="w-full">
+              <Button type="submit" className="w-full" disabled={isSubmitting}>
                 {submitLabel}
               </Button>
             </form>

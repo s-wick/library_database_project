@@ -9,6 +9,7 @@ const envOrigins = process.env.ALLOWED_ORIGINS
 
 const allowedOrigins = new Set(envOrigins)
 
+
 function isAllowedOrigin(origin) {
   if (!origin) return false
   if (allowedOrigins.has(origin)) return true
@@ -116,6 +117,7 @@ function getUserProfileConfig(userTypeCode) {
   return null
 }
 
+
 function resolveRoleContext(roleGroupInput, roleInput) {
   const roleGroup = normalizeRoleGroup(roleGroupInput)
   const groupConfig = ROLE_DEFINITIONS[roleGroup]
@@ -157,10 +159,12 @@ function generateStudentId() {
 
 function writeCorsHeaders(req, res) {
   const origin = req.headers.origin
+
   if (origin && isAllowedOrigin(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin)
   }
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,PATCH,OPTIONS")
+
   res.setHeader("Access-Control-Allow-Headers", "Content-Type")
 }
 
@@ -281,6 +285,7 @@ async function syncOverdueFinesForAllStudents() {
 
   return overdueStudents.length
 }
+
 
 async function handleHealth(_req, res) {
   try {
@@ -459,6 +464,7 @@ async function handleSignin(req, res) {
     })
   }
 }
+
 
 async function handleGetStudent(res, studentId) {
   try {
@@ -723,6 +729,7 @@ const server = http.createServer(async (req, res) => {
   const { pathname } = url
   const studentMatch = pathname.match(/^\/api\/students\/(\d+)$/)
   const holdMatch = pathname.match(/^\/api\/holds\/(\d+)$/)
+
 
   if (req.method === "GET" && pathname === "/api/health") {
     await handleHealth(req, res)

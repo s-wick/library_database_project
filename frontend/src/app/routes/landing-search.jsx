@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Navbar } from "@/components/navbar"
+import { ItemCard } from "@/components/item-card"
 import { LayoutDashboard, Image as ImageIcon, Filter } from "lucide-react"
 
 // Background image import
@@ -334,73 +335,5 @@ function CategorySection({
         </div>
       )}
     </section>
-  )
-}
-
-function ItemCard({ item }) {
-  // Use a generic id instead of only book.id so item.jsx can fetch properly based on params,
-  // however item.jsx only searches books right now. We map routing correctly using item_id.
-  return (
-    <Card className="flex h-full flex-col gap-0 overflow-hidden p-0">
-      <div className="p-3 pb-0">
-        <div className="aspect-[4/3] w-full overflow-hidden rounded-md bg-muted">
-          {item.thumbnail_image ? (
-            <img
-              src={item.thumbnail_image}
-              alt={item.title}
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <div
-              className="flex h-full w-full items-center justify-center"
-              style={{
-                backgroundColor: item.coverColor || "#e2e8f0",
-              }}
-            >
-              <div className="flex flex-col items-center justify-center text-slate-500 dark:text-slate-400">
-                <ImageIcon className="mb-2 h-10 w-10" />
-                <span className="text-xs font-medium">No Image</span>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-      <div className="flex flex-1 flex-col">
-        <CardHeader className="p-3 pb-2">
-          <div className="mb-2 flex items-start justify-between gap-2">
-            <Badge
-              variant={
-                item.availability === "Available" ? "default" : "secondary"
-              }
-            >
-              {item.availability}
-            </Badge>
-            <span className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
-              {item.tag}
-            </span>
-          </div>
-          <CardTitle className="line-clamp-2 text-lg leading-tight">
-            {item.title}
-          </CardTitle>
-          <CardDescription className="line-clamp-1">
-            {item.creator ? `by ${item.creator}` : item.standard_type}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-1 flex-col p-4 pt-2">
-          <p className="line-clamp-3 text-sm text-slate-600 dark:text-slate-300">
-            {item.description}
-          </p>
-        </CardContent>
-        <CardFooter className="mt-auto px-4 pt-0 pb-3">
-          <Button variant="outline" className="w-full" asChild>
-            <Link
-              to={`/item/${item.item_id}?type=${item.standard_type?.toLowerCase() || ""}`}
-            >
-              {item.availability === "Available" ? "Borrow" : "Place Hold"}
-            </Link>
-          </Button>
-        </CardFooter>
-      </div>
-    </Card>
   )
 }

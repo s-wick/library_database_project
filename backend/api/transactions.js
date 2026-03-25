@@ -73,7 +73,51 @@ async function handleHold(req, res) {
   }
 }
 
+async function handleCheckout(req, res) {
+  try {
+    const body = await parseJsonBody(req)
+    const { items } = body
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return sendJson(res, 400, { ok: false, message: "No items to checkout" })
+    }
+
+    if (items.length > 5) {
+      return sendJson(res, 400, {
+        ok: false,
+        message: "Exceeded maximum checkout limit of 5 items",
+      })
+    }
+
+    for (const item of items) {
+      let typeCode = 1
+      if (item.itemType === "video") typeCode = 2
+      else if (item.itemType === "audiobook" || item.itemType === "audio")
+        typeCode = 3
+      else if (item.itemType === "equipment") typeCode = 4
+
+      await query(
+        `
+        INSERT INTO borrow (item_type_code, item_id, borrower_type, borrower_id, checkout_date, due_date)
+        VALUES (?, ?, ?, ?, NOW(), DATE_ADD(NOW(), INTERVAL 7 DAY))
+        `,
+        [typeCode, item.itemId, 1, 1]
+      )
+    }
+
+    sendJson(res, 200, { ok: true, message: "Successfully checked out items" })
+  } catch (error) {
+    console.error(error)
+    sendJson(res, 500, {
+      ok: false,
+      message: "Failed to checkout",
+      error: error.message,
+    })
+  }
+}
+
 module.exports = {
+  handleCheckout,
   handleBorrow,
   handleHold,
 }

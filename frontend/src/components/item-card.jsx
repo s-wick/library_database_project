@@ -79,7 +79,7 @@ export function ItemCard({ item }) {
           </CardHeader>
           <CardContent className="flex flex-1 flex-col p-4 pt-2">
             <p className="line-clamp-3 text-sm text-slate-600 dark:text-slate-300">
-              {item.description}
+              {item.description || "No description available."}
             </p>
           </CardContent>
           <CardFooter className="mt-auto px-4 pt-0 pb-3">
@@ -113,20 +113,25 @@ export function ItemCard({ item }) {
           </div>
           <div className="flex flex-col gap-4">
             <div>
-              <h4 className="mb-1 font-medium">Details</h4>
+              <h4 className="mb-1 font-medium">{item.standard_type} Details</h4>
               <div className="space-y-1 text-sm text-muted-foreground">
-                {item.publication && <p>Publication: {item.publication}</p>}
-                {item.edition && <p>Edition: {item.edition}</p>}
-                {item.duration && <p>Duration: {item.duration} mins</p>}
-                {item.model && <p>Model: {item.model}</p>}
+                {item.creator && (
+                  <p>
+                    {item.standard_type === "Book" ? "Author:" : "Creator:"}{" "}
+                    {item.creator}
+                  </p>
+                )}
+                <p>In Stock: {item.in_stock}</p>
               </div>
             </div>
-            <div>
-              <h4 className="mb-1 font-medium">Description</h4>
-              <p className="line-clamp-6 text-sm text-muted-foreground">
-                {item.description}
-              </p>
-            </div>
+            {item.description && (
+              <div>
+                <h4 className="mb-1 font-medium">Description</h4>
+                <p className="line-clamp-6 text-sm text-muted-foreground">
+                  {item.description}
+                </p>
+              </div>
+            )}
             <div className="mt-auto pt-4">
               {inCart ? (
                 <Button className="w-full" asChild variant="secondary">

@@ -17,7 +17,7 @@ const {
 const {
   handleGetCart,
   handleAddToCart,
-  handleRemoveFromCart
+  handleRemoveFromCart,
 } = require("./api/cart")
 
 const port = Number(process.env.PORT || 4000)

@@ -1,23 +1,40 @@
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
-import { Image as ImageIcon } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
-import { useCart } from "@/app/cart-provider";
+import React, { useState } from "react"
+import { Link } from "react-router-dom"
+import { Image as ImageIcon } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { useCart } from "@/app/cart-provider"
 
 export function ItemCard({ item }) {
-  const { cartItems, addToCart } = useCart();
-  const [open, setOpen] = useState(false);
+  const { cartItems, addToCart } = useCart()
+  const [open, setOpen] = useState(false)
 
-  const isAvailable = item.availability === "Available";
-  const inCart = cartItems.some(i => i.item_id === item.item_id && i.standard_type === item.standard_type);
+  const isAvailable = item.availability === "Available"
+  const inCart = cartItems.some(
+    (i) => i.item_id === item.item_id && i.standard_type === item.standard_type
+  )
 
   const handleAddToCart = () => {
-    addToCart(item);
-    setOpen(false);
-  };
+    addToCart(item)
+    setOpen(false)
+  }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -25,7 +42,11 @@ export function ItemCard({ item }) {
         <div className="p-3 pb-0">
           <div className="aspect-[4/3] w-full overflow-hidden rounded-md bg-muted">
             {item.thumbnail_image ? (
-              <img src={item.thumbnail_image} alt={item.title} className="h-full w-full object-cover" />
+              <img
+                src={item.thumbnail_image}
+                alt={item.title}
+                className="h-full w-full object-cover"
+              />
             ) : (
               <div
                 className="flex h-full w-full items-center justify-center"
@@ -79,17 +100,21 @@ export function ItemCard({ item }) {
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-6 py-4 md:grid-cols-2">
-          <div className="aspect-[3/4] w-full overflow-hidden rounded-md bg-muted flex items-center justify-center">
-             {item.thumbnail_image ? (
-                <img src={item.thumbnail_image} alt={item.title} className="h-full w-full object-cover" />
-              ) : (
-                <ImageIcon className="h-16 w-16 text-muted-foreground" />
-              )}
+          <div className="flex aspect-[3/4] w-full items-center justify-center overflow-hidden rounded-md bg-muted">
+            {item.thumbnail_image ? (
+              <img
+                src={item.thumbnail_image}
+                alt={item.title}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <ImageIcon className="h-16 w-16 text-muted-foreground" />
+            )}
           </div>
           <div className="flex flex-col gap-4">
             <div>
-              <h4 className="font-medium mb-1">Details</h4>
-              <div className="text-sm text-muted-foreground space-y-1">
+              <h4 className="mb-1 font-medium">Details</h4>
+              <div className="space-y-1 text-sm text-muted-foreground">
                 {item.publication && <p>Publication: {item.publication}</p>}
                 {item.edition && <p>Edition: {item.edition}</p>}
                 {item.duration && <p>Duration: {item.duration} mins</p>}
@@ -97,24 +122,31 @@ export function ItemCard({ item }) {
               </div>
             </div>
             <div>
-              <h4 className="font-medium mb-1">Description</h4>
-              <p className="text-sm text-muted-foreground line-clamp-6">{item.description}</p>
+              <h4 className="mb-1 font-medium">Description</h4>
+              <p className="line-clamp-6 text-sm text-muted-foreground">
+                {item.description}
+              </p>
             </div>
             <div className="mt-auto pt-4">
               {inCart ? (
-                 <Button className="w-full" asChild variant="secondary">
-                   <Link to="/checkout" onClick={() => setOpen(false)}>View in Cart</Link>
-                 </Button>
+                <Button className="w-full" asChild variant="secondary">
+                  <Link to="/checkout" onClick={() => setOpen(false)}>
+                    View in Cart
+                  </Link>
+                </Button>
               ) : (
-                 <Button className="w-full" onClick={handleAddToCart} disabled={!isAvailable}>
-                   {isAvailable ? "Add to Cart" : "Currently Unavailable"}
-                 </Button>
+                <Button
+                  className="w-full"
+                  onClick={handleAddToCart}
+                  disabled={!isAvailable}
+                >
+                  {isAvailable ? "Add to Cart" : "Currently Unavailable"}
+                </Button>
               )}
             </div>
           </div>
         </div>
       </DialogContent>
     </Dialog>
-  );
+  )
 }
-

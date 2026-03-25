@@ -225,8 +225,6 @@ function writeCorsHeaders(req, res) {
   if (origin && allowedOrigins.has(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin)
   }
-  //   const origin = req.headers.origin || "*"
-  // res.setHeader("Access-Control-Allow-Origin", origin)
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS")
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization")
 }

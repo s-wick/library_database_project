@@ -76,7 +76,14 @@ async function handleHold(req, res) {
 async function handleCheckout(req, res) {
   try {
     const body = await parseJsonBody(req)
-    const { items } = body
+    const { items, userId, userType } = body
+
+    if (!userId || !userType) {
+      return sendJson(res, 400, {
+        ok: false,
+        message: "User context is required for checkout",
+      })
+    }
 
     if (!items || !Array.isArray(items) || items.length === 0) {
       return sendJson(res, 400, { ok: false, message: "No items to checkout" })
@@ -88,6 +95,13 @@ async function handleCheckout(req, res) {
         message: "Exceeded maximum checkout limit of 5 items",
       })
     }
+
+    // Map string roles to expected borrower_type codes
+    let borrowerTypeCode = 1 // default student
+    if (userType === "faculty") borrowerTypeCode = 2
+    else if (userType === "staff" || userType === "librarian")
+      borrowerTypeCode = 3
+    else if (userType === "admin") borrowerTypeCode = 4
 
     for (const item of items) {
       let typeCode = 1
@@ -101,7 +115,7 @@ async function handleCheckout(req, res) {
         INSERT INTO borrow (item_type_code, item_id, borrower_type, borrower_id, checkout_date, due_date)
         VALUES (?, ?, ?, ?, NOW(), DATE_ADD(NOW(), INTERVAL 7 DAY))
         `,
-        [typeCode, item.itemId, 1, 1]
+        [typeCode, item.itemId, borrowerTypeCode, userId]
       )
     }
 

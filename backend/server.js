@@ -9,7 +9,11 @@ const {
   handleSearchItems,
 } = require("./api/items")
 const { handleGetDashboard } = require("./api/dashboard")
-const { handleBorrow, handleHold } = require("./api/transactions")
+const {
+  handleBorrow,
+  handleHold,
+  handleCheckout,
+} = require("./api/transactions")
 
 const port = Number(process.env.PORT || 4000)
 const envOrigins = process.env.ALLOWED_ORIGINS
@@ -369,6 +373,11 @@ const server = http.createServer(async (req, res) => {
 
   if (req.method === "POST" && pathname === "/api/hold") {
     await handleHold(req, res)
+    return
+  }
+
+  if (req.method === "POST" && pathname === "/api/checkout") {
+    await handleCheckout(req, res)
     return
   }
 

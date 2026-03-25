@@ -22,8 +22,8 @@ export const router = createBrowserRouter([
     errorElement: <NotFoundRoute />,
   },
   {
-    path:"/payment",
+    path: "/payment",
     element: <PaymentPage />,
     errorElement: <NotFoundRoute />,
-  }
+  },
 ])

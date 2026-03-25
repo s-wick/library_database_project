@@ -21,7 +21,7 @@ export default function PaymentPage() {
   // Get amount
   const amount = location.state?.amount || 0
 
-  // Handle form submission but going to add error handling 
+  // Handle form submission but going to add error handling
   const handleSubmit = (e) => {
     e.preventDefault()
     setShowConfirmation(true)
@@ -35,12 +35,11 @@ export default function PaymentPage() {
   useEffect(() => {
     // Fetch fines from the backend
     fetch()
-      .then(res => res.json())
-      .then(data => setFines(data.fines));
+      .then((res) => res.json())
+      .then((data) => setFines(data.fines))
   }, [])
-      
 
-  // add error contraints for the * fields 
+  // add error contraints for the * fields
 
   // Main content
   return (
@@ -139,16 +138,18 @@ export default function PaymentPage() {
               className="rounded-1g w-full border bg-background p-3 text-sm"
             />
 
-            <button 
+            <button
               onClick={handleSubmit}
-              className="mt-4 w-full rounded-full bg-chart-3 py-3 text-white transition hover:bg-chart-3/80">
+              className="mt-4 w-full rounded-full bg-chart-3 py-3 text-white transition hover:bg-chart-3/80"
+            >
               Pay ${amount.toFixed(2)}
             </button>
 
             {/* Go back button will take you to previous page you were on */}
             <button
               className="mx-auto mt-2 block py-3 text-chart-3 underline transition hover:text-black/600"
-              onClick={() => navigate(-1)}>
+              onClick={() => navigate(-1)}
+            >
               Go Back
             </button>
           </div>
@@ -169,8 +170,6 @@ export default function PaymentPage() {
             ))}
           </div>
 
-
-
           <div className="my-3 border-t"></div>
 
           <div className="flex justify-between text-lg font-semibold">
@@ -182,25 +181,27 @@ export default function PaymentPage() {
 
       {/* Confirmation */}
       {showConfirmation && (
-        <div className="fixed inset-0 bg-transparent bg-opacity-25 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg border border-black p-6 max-w-md w-full mx-4">
+        <div className="bg-opacity-25 fixed inset-0 z-50 flex items-center justify-center bg-transparent backdrop-blur-sm">
+          <div className="mx-4 w-full max-w-md rounded-lg border border-black bg-white p-6">
+            <h3 className="mb-4 text-lg font-semibold">Confirm Purchase</h3>
 
-            <h3 className="text-lg font-semibold mb-4">Confirm Purchase</h3>
-
-            <p className="text-gray-600 mb-6">
-              Are you sure you want to proceed with this payment of ${amount.toFixed(2)}?
+            <p className="mb-6 text-gray-600">
+              Are you sure you want to proceed with this payment of $
+              {amount.toFixed(2)}?
             </p>
 
             <div className="flex gap-3">
               <button
                 onClick={() => setShowConfirmation(false)}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition">
+                className="flex-1 rounded-md border border-gray-300 px-4 py-2 text-gray-700 transition hover:bg-gray-50"
+              >
                 Cancel
               </button>
 
               <button
                 onClick={confirmPurchase}
-                className="flex-1 px-4 py-2 bg-chart-3 text-white rounded-md hover:bg-chart-3/80 transition">
+                className="flex-1 rounded-md bg-chart-3 px-4 py-2 text-white transition hover:bg-chart-3/80"
+              >
                 Confirm
               </button>
             </div>
@@ -209,24 +210,23 @@ export default function PaymentPage() {
       )}
 
       {showPurchase && (
-        <div className="fixed inset-0 bg-transparent bg-opacity-25 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg border border-black p-6 max-w-md w-full mx-4">
+        <div className="bg-opacity-25 fixed inset-0 z-50 flex items-center justify-center bg-transparent backdrop-blur-sm">
+          <div className="mx-4 w-full max-w-md rounded-lg border border-black bg-white p-6">
+            <h3 className="mb-4 text-lg font-semibold">Payment Successful</h3>
 
-            <h3 className="text-lg font-semibold mb-4">Payment Successful</h3>
-
-            <p className="text-gray-600 mb-6">
-              Your payment of ${amount.toFixed(2)} has been processed successfully.
+            <p className="mb-6 text-gray-600">
+              Your payment of ${amount.toFixed(2)} has been processed
+              successfully.
             </p>
-              <button
-                onClick={() => navigate(-1)}
-                className="px-4 py-2 bg-chart-3 text-white rounded-md hover:bg-chart-3/80 transition">
-                Return
-              </button>
+            <button
+              onClick={() => navigate(-1)}
+              className="rounded-md bg-chart-3 px-4 py-2 text-white transition hover:bg-chart-3/80"
+            >
+              Return
+            </button>
           </div>
         </div>
       )}
-
-
     </div>
   )
 }

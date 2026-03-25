@@ -129,7 +129,78 @@ async function handleGetItemById(req, res, type, id) {
   }
 }
 
+async function handleSearchItems(req, res) {
+  try {
+    const url = new URL(req.url, `http://${req.headers.host || "localhost"}`)
+    const q = url.searchParams.get("q") || ""
+    const type = url.searchParams.get("type") || "All"
+
+    let items = []
+
+    const likeQuery = `%${q}%`
+    const shouldSearchAll = type === "All"
+    const limit = 50
+
+    if (shouldSearchAll || type === "Book") {
+      const books = await query(
+        `SELECT book_id as item_id, title, author as creator, 'Book' as standard_type, thumbnail_image, books_in_stock as in_stock, description FROM book WHERE title LIKE ? OR author LIKE ? OR description LIKE ? LIMIT ?`,
+        [likeQuery, likeQuery, likeQuery, limit]
+      )
+      items.push(...books)
+    }
+
+    if (shouldSearchAll || type === "Audiobook") {
+      const audios = await query(
+        `SELECT audio_id as item_id, audio_name as title, '' as creator, 'Audiobook' as standard_type, thumbnail_image, audios_in_stock as in_stock, description FROM audio WHERE audio_name LIKE ? OR description LIKE ? LIMIT ?`,
+        [likeQuery, likeQuery, limit]
+      )
+      items.push(...audios)
+    }
+
+    if (shouldSearchAll || type === "Video") {
+      const videos = await query(
+        `SELECT video_id as item_id, video_name as title, '' as creator, 'Video' as standard_type, thumbnail_image, videos_in_stock as in_stock, description FROM video WHERE video_name LIKE ? OR description LIKE ? LIMIT ?`,
+        [likeQuery, likeQuery, limit]
+      )
+      items.push(...videos)
+    }
+
+    if (shouldSearchAll || type === "Equipment") {
+      const equipment = await query(
+        `SELECT equipment_id as item_id, rental_name as title, '' as creator, 'Equipment' as standard_type, thumbnail_image, equipment_in_stock as in_stock, description FROM rental_equipment WHERE rental_name LIKE ? OR description LIKE ? LIMIT ?`,
+        [likeQuery, likeQuery, limit]
+      )
+      items.push(...equipment)
+    }
+
+    items = items.slice(0, limit)
+
+    const formattedItems = items.map((item) => {
+      let thumb = item.thumbnail_image
+      if (thumb && thumb instanceof Buffer) {
+        thumb = `data:image/jpeg;base64,${thumb.toString("base64")}`
+      }
+      return {
+        ...item,
+        thumbnail_image: thumb,
+        tag: "Library Item",
+        availability: item.in_stock > 0 ? "Available" : "Not Available",
+      }
+    })
+
+    sendJson(res, 200, { ok: true, items: formattedItems })
+  } catch (error) {
+    console.error(error)
+    sendJson(res, 500, {
+      ok: false,
+      message: "Failed to search items",
+      error: error.message,
+    })
+  }
+}
+
 module.exports = {
   handleGetItemsAll,
   handleGetItemById,
+  handleSearchItems,
 }

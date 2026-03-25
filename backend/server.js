@@ -3,7 +3,11 @@ require("dotenv").config()
 const { query, testConnection } = require("./db")
 const { sendJson, parseJsonBody } = require("./utils")
 
-const { handleGetItemsAll, handleGetItemById } = require("./api/items")
+const {
+  handleGetItemsAll,
+  handleGetItemById,
+  handleSearchItems,
+} = require("./api/items")
 const { handleGetDashboard } = require("./api/dashboard")
 const { handleBorrow, handleHold } = require("./api/transactions")
 
@@ -334,6 +338,11 @@ const server = http.createServer(async (req, res) => {
 
   if (req.method === "GET" && pathname === "/api/dashboard") {
     await handleGetDashboard(req, res)
+    return
+  }
+
+  if (req.method === "GET" && pathname === "/api/items/search") {
+    await handleSearchItems(req, res)
     return
   }
 

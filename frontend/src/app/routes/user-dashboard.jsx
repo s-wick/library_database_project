@@ -419,8 +419,19 @@ export default function UserDashboard() {
     const fetchDashboardData = async () => {
       try {
         setLoading(true)
+        const userStr = localStorage.getItem("user")
+        const user = userStr ? JSON.parse(userStr) : null
+
+        if (!user?.id) {
+          setBorrowedBooks([])
+          setHoldQueue([])
+          setFines([])
+          setBorrowHistory([])
+          return
+        }
+
         // Simulate API call to fetch full dashboard data
-        const res = await fetch(`${apiBaseUrl}/api/dashboard`)
+        const res = await fetch(`${apiBaseUrl}/api/dashboard?userId=${user.id}`)
         if (res.ok) {
           const data = await res.json()
           setBorrowedBooks(data.borrowedBooks || [])

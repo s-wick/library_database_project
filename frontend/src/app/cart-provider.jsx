@@ -69,7 +69,6 @@ export function CartProvider({ children }) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             userId: user.id,
-            itemType: item.standard_type,
             itemId: item.item_id,
           }),
         })
@@ -90,7 +89,7 @@ export function CartProvider({ children }) {
         await fetch(`${apiBaseUrl}/api/cart`, {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId: user.id, itemType: type, itemId }),
+          body: JSON.stringify({ userId: user.id, itemId }),
         })
       } catch (e) {
         console.error("Error removing from cart API", e)

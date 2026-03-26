@@ -1,11 +1,8 @@
-import React, { useEffect, useState } from "react"
+import React, { useState, useEffect } from "react"
 import { Search } from "lucide-react"
-import { Link } from "react-router-dom"
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-} from "@/components/ui/input-group"
+import { Link, useNavigate } from "react-router-dom"
+import { Input } from "@/components/ui/input"
+import { Field } from "@/components/ui/field"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -16,209 +13,85 @@ import {
   CardFooter,
 } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { useTheme } from "@/components/theme-provider"
-import { Moon, Sun, LayoutDashboard } from "lucide-react"
+import { Navbar } from "@/components/navbar"
+import { ItemCard } from "@/components/item-card"
+import { LayoutDashboard, Image as ImageIcon, Filter } from "lucide-react"
 
 // Background image import
 import bgImage from "@/assets/library-hero.png"
-import { books, borrows, holds } from "@/data/dummy-data"
-
-const API_BASE_URL =
-  (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL) ||
-  (typeof process !== "undefined" && process.env?.REACT_APP_API_URL) ||
-  "http://localhost:4000/api"
 
 export default function LandingSearchPage() {
   const [searchQuery, setSearchQuery] = useState("")
-  const { theme, setTheme } = useTheme()
+  const [showFilters, setShowFilters] = useState(false)
+  const [selectedType, setSelectedType] = useState("All")
+  const [bookGenre, setBookGenre] = useState("")
+  const [bookAuthor, setBookAuthor] = useState("")
+  const [bookPubDate, setBookPubDate] = useState("")
+  const [bookEdition, setBookEdition] = useState("")
+  const [audioLength, setAudioLength] = useState("")
+  const [videoLength, setVideoLength] = useState("")
+  const [minStock, setMinStock] = useState("")
 
-  // Track login state in local storage to simulate authentication
-  const [isLoggedIn, setIsLoggedIn] = useState(() => {
-    const stored = localStorage.getItem("isLoggedIn")
-    return stored === "true"
-  })
-  const [userDisplayName, setUserDisplayName] = useState("Guest")
-  const [avatarInitials, setAvatarInitials] = useState("G")
+  const [books, setBooks] = useState([])
+  const [audios, setAudios] = useState([])
+  const [videos, setVideos] = useState([])
+  const [equipments, setEquipments] = useState([])
+  const [loading, setLoading] = useState(true)
 
+  const navigate = useNavigate()
+
+  const apiBaseUrl =
+    import.meta.env.VITE_API_BASE_URL || "http://localhost:4000"
+
+  // Fetch all items by type to populate the landing page categories
   useEffect(() => {
-    async function hydrateSignedInUser() {
-      if (!isLoggedIn) {
-        setUserDisplayName("Guest")
-        setAvatarInitials("G")
-        return
-      }
-
-      const currentUserId = localStorage.getItem("userId")
-      const currentUserRole = String(localStorage.getItem("userRole") || "")
-        .trim()
-        .toLowerCase()
-      const storedUserTypeCode = Number.parseInt(
-        localStorage.getItem("userTypeCode") || "",
-        10
-      )
-
-      if (currentUserId && (storedUserTypeCode === 1 || storedUserTypeCode === 2)) {
-        try {
-          const response = await fetch(
-            `${API_BASE_URL}/users/profile?user_id=${currentUserId}&user_type=${storedUserTypeCode}`
-          )
-          if (response.ok) {
-            const user = await response.json()
-            const first = String(user.first_name || "").trim()
-            const last = String(user.last_name || "").trim()
-            const fullName = `${first} ${last}`.trim() || "Library Member"
-            setUserDisplayName(fullName)
-            setAvatarInitials(`${first[0] || "L"}${last[0] || "M"}`)
-            return
-          }
-        } catch {
-          // Fall through to role-based fallback if profile request fails.
+    const fetchCategory = async (type) => {
+      try {
+        const res = await fetch(`${apiBaseUrl}/api/items/search?type=${type}`)
+        if (res.ok) {
+          const data = await res.json()
+          return data.items || []
         }
+      } catch (err) {
+        console.error(`Failed to fetch ${type} items`, err)
       }
-
-      const fallbackName =
-        currentUserRole === "admin"
-          ? "Admin"
-          : currentUserRole === "staff"
-            ? "Staff"
-            : currentUserRole === "faculty"
-              ? "Faculty"
-              : currentUserRole === "student"
-                ? "Student"
-                : "Library Member"
-
-      setUserDisplayName(fallbackName)
-      setAvatarInitials(fallbackName.slice(0, 2).toUpperCase())
+      return []
     }
 
-    hydrateSignedInUser()
-  }, [isLoggedIn])
+    const fetchAll = async () => {
+      setLoading(true)
+      const [b, a, v, e] = await Promise.all([
+        fetchCategory("Book"),
+        fetchCategory("Audiobook"),
+        fetchCategory("Video"),
+        fetchCategory("Equipment"),
+      ])
+      setBooks(b)
+      setAudios(a)
+      setVideos(v)
+      setEquipments(e)
+      setLoading(false)
+    }
 
-  const handleSignOut = () => {
-    localStorage.setItem("isLoggedIn", "false")
-    localStorage.removeItem("userId")
-    localStorage.removeItem("userRole")
-    localStorage.removeItem("userRoleGroup")
-    localStorage.removeItem("userTypeCode")
-    localStorage.removeItem("userName")
-    setIsLoggedIn(false)
+    fetchAll()
+  }, [])
+
+  const handleSearch = () => {
+    const params = new URLSearchParams()
+    if (searchQuery) params.set("q", searchQuery)
+    if (selectedType && selectedType !== "All") params.set("type", selectedType)
+    navigate(`/search?${params.toString()}`)
   }
 
-  // Compute availability dynamically from borrowing entities
-  const libraryBooks = books.map((book) => {
-    const activeBorrowsCount = borrows.filter(
-      (b) => b.item_id === book.item_id && b.return_date === null
-    ).length
-    const activeHoldsCount = holds.filter(
-      (h) => h.item_id === book.item_id && h.hold_status === "active"
-    ).length
-
-    // If fully borrowed and holds exist: Waitlist. If borrowed but no holds: Checked Out.
-    let availability = "Available"
-    if (activeBorrowsCount >= book.books_in_stock) {
-      availability = activeHoldsCount > 0 ? "Waitlist" : "Checked Out"
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter") {
+      handleSearch()
     }
-
-    return {
-      ...book,
-      id: book.book_id,
-      availability,
-    }
-  })
-
-  const filteredBooks = libraryBooks.filter((book) => {
-    const lowerCaseQuery = searchQuery.toLowerCase()
-    return (
-      book.title.toLowerCase().includes(lowerCaseQuery) ||
-      book.author.toLowerCase().includes(lowerCaseQuery) ||
-      book.genre.toLowerCase().includes(lowerCaseQuery)
-    )
-  })
+  }
 
   return (
     <div>
-      {/* ── Top Navigation Bar ── */}
-      <div className="sticky top-0 z-20 flex h-16 items-center justify-between border-b bg-background px-6">
-        {/* Logo Placeholder */}
-        <Link
-          to="/"
-          className="flex items-center gap-2 transition-opacity hover:opacity-90"
-          aria-label="Back to home"
-        >
-          <div className="inline-flex h-8 min-w-[2.5rem] items-center justify-center rounded-md bg-primary px-2 text-[12px] font-bold whitespace-nowrap text-primary-foreground ring-1 ring-border">
-            LIBRARY LOGO HERE
-          </div>
-        </Link>
-
-        <div className="flex items-center gap-3">
-          {/* Theme toggle */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() =>
-              setTheme(
-                theme === "dark" ||
-                  (theme === "system" &&
-                    window.matchMedia("(prefers-color-scheme: dark)").matches)
-                  ? "light"
-                  : "dark"
-              )
-            }
-          >
-            {theme === "dark" ? (
-              <Sun className="h-5 w-5" />
-            ) : (
-              <Moon className="h-5 w-5" />
-            )}
-            <span className="sr-only">Toggle theme</span>
-          </Button>
-
-          {/* User Dropdown or Sign in */}
-          {isLoggedIn ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 rounded-full pr-1 transition-opacity outline-none hover:opacity-90">
-                  <span className="hidden text-sm font-medium text-foreground sm:inline">
-                    {userDisplayName}
-                  </span>
-                  <Avatar className="h-9 w-9 bg-gradient-to-br from-blue-500 to-violet-600">
-                    <AvatarFallback className="bg-transparent text-sm font-bold text-white">
-                      {avatarInitials}
-                    </AvatarFallback>
-                  </Avatar>
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem className="pointer-events-none text-xs text-muted-foreground">
-                  Signed in as {userDisplayName}
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/user-dashboard" className="w-full cursor-pointer">
-                    Dashboard
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={handleSignOut}
-                  className="w-full cursor-pointer"
-                >
-                  Sign out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <Button asChild variant="outline">
-              <Link to="/auth">Sign in</Link>
-            </Button>
-          )}
-        </div>
-      </div>
+      <Navbar showBack={false} />
 
       {/* ── Hero Section ── */}
       <div
@@ -235,165 +108,232 @@ export default function LandingSearchPage() {
           <h1 className="mb-6 text-4xl font-bold tracking-tight text-white md:text-5xl">
             Browse the Catalog
           </h1>
-          <p className="mb-8 text-lg text-slate-200">
+          <p className="mb-4 text-lg text-slate-200">
             Search books, audiobooks, and resources in our library.
           </p>
 
-          <div className="relative mx-auto flex max-w-xl items-center overflow-hidden rounded-md bg-background shadow-lg">
-            <InputGroup>
-              <InputGroupInput
-                placeholder="Search by title, author, or genre..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-              <InputGroupAddon>
-                <Search />
-              </InputGroupAddon>
-            </InputGroup>
+          <div className="backdrop-blur-medium relative flex max-w-3xl flex-col items-center overflow-visible rounded-md bg-background/95 p-2 shadow-lg">
+            <div className="relative z-20 flex w-full items-center">
+              <Field className="flex-1" orientation="horizontal">
+                <Input
+                  type="search"
+                  placeholder="Search by title, author, or genre..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  className="h-12 text-lg"
+                />
+                <Button onClick={handleSearch} className="h-12 px-6">
+                  <Search className="h-5 w-5" />
+                </Button>
+              </Field>
+              <Button
+                variant={showFilters ? "secondary" : "ghost"}
+                className="ml-2 h-12 px-4 shadow-none hover:bg-muted"
+                onClick={() => setShowFilters(!showFilters)}
+              >
+                <Filter className="mr-2 h-4 w-4" />
+                Filters
+              </Button>
+            </div>
+
+            {/* Expando Filters */}
+            {showFilters && (
+              <div className="absolute top-full left-0 z-30 mt-2 grid w-full grid-cols-1 gap-4 rounded-md border bg-background p-4 shadow-xl sm:grid-cols-2 md:grid-cols-3">
+                {/* Global Filters */}
+                <div className="flex flex-col gap-1 text-left">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase">
+                    Item Type
+                  </label>
+                  <select
+                    className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                    value={selectedType}
+                    onChange={(e) => setSelectedType(e.target.value)}
+                  >
+                    <option value="All">All Types</option>
+                    <option value="Book">Books</option>
+                    <option value="Audiobook">Audiobooks</option>
+                    <option value="Video">Videos</option>
+                    <option value="Equipment">Equipment</option>
+                  </select>
+                </div>
+                <div className="flex flex-col gap-1 text-left">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase">
+                    Min Stock
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="e.g. 1"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                    value={minStock}
+                    onChange={(e) => setMinStock(e.target.value)}
+                  />
+                </div>
+
+                {/* Book Filters */}
+                {selectedType === "Book" && (
+                  <>
+                    <div className="flex flex-col gap-1 text-left">
+                      <label className="text-xs font-semibold text-muted-foreground uppercase">
+                        Genre
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Fiction"
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+                        value={bookGenre}
+                        onChange={(e) => setBookGenre(e.target.value)}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1 text-left">
+                      <label className="text-xs font-semibold text-muted-foreground uppercase">
+                        Author
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Orwell"
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+                        value={bookAuthor}
+                        onChange={(e) => setBookAuthor(e.target.value)}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1 text-left">
+                      <label className="text-xs font-semibold text-muted-foreground uppercase">
+                        Pub Date
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 1949"
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+                        value={bookPubDate}
+                        onChange={(e) => setBookPubDate(e.target.value)}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1 text-left">
+                      <label className="text-xs font-semibold text-muted-foreground uppercase">
+                        Edition
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. First"
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+                        value={bookEdition}
+                        onChange={(e) => setBookEdition(e.target.value)}
+                      />
+                    </div>
+                  </>
+                )}
+
+                {/* Audiobook Filters */}
+                {selectedType === "Audiobook" && (
+                  <div className="flex flex-col gap-1 text-left">
+                    <label className="text-xs font-semibold text-muted-foreground uppercase">
+                      Length
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 10h"
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+                      value={audioLength}
+                      onChange={(e) => setAudioLength(e.target.value)}
+                    />
+                  </div>
+                )}
+
+                {/* Video Filters */}
+                {selectedType === "Video" && (
+                  <div className="flex flex-col gap-1 text-left">
+                    <label className="text-xs font-semibold text-muted-foreground uppercase">
+                      Length
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 120m"
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+                      value={videoLength}
+                      onChange={(e) => setVideoLength(e.target.value)}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       {/* ── Main Content / Results ── */}
       <main className="mx-auto w-full max-w-6xl flex-1 space-y-16 p-6 md:p-10">
-        {/* Books Section */}
-        <section>
-          <div className="mb-8">
-            <h2 className="text-2xl font-semibold tracking-tight">
-              {searchQuery
-                ? `Search Results for "${searchQuery}"`
-                : "Featured Books"}
-            </h2>
-            <p className="mt-1 text-muted-foreground">
-              {filteredBooks.length}{" "}
-              {filteredBooks.length === 1 ? "book" : "books"} found
-            </p>
-          </div>
+        <CategorySection
+          title="Books"
+          description="Browse our collection"
+          items={books}
+          emptyMessage="No books found"
+          viewAllLink="/search?type=Book"
+        />
 
-          {filteredBooks.length > 0 ? (
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {filteredBooks.map((book) => (
-                <Card key={book.id} className="flex flex-col">
-                  <CardHeader>
-                    <div className="mb-2 flex items-start justify-between">
-                      <Badge
-                        variant={
-                          book.availability === "Available"
-                            ? "default"
-                            : "secondary"
-                        }
-                      >
-                        {book.availability}
-                      </Badge>
-                      <span className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                        {book.genre}
-                      </span>
-                    </div>
-                    <CardTitle className="mb-1 text-xl leading-tight">
-                      {book.title}
-                    </CardTitle>
-                    <CardDescription>by {book.author}</CardDescription>
-                  </CardHeader>
-                  <CardContent className="flex-1">
-                    <p className="text-sm text-slate-600 dark:text-slate-300">
-                      {book.description}
-                    </p>
-                  </CardContent>
-                  <CardFooter>
-                    <Button variant="outline" className="w-full">
-                      {book.availability === "Available"
-                        ? "Borrow"
-                        : "Place Hold"}
-                    </Button>
-                  </CardFooter>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-lg border border-dashed bg-slate-50 py-20 text-center dark:bg-slate-900">
-              <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100">
-                No items found
-              </h3>
-              <p className="mt-2 text-muted-foreground">
-                Try adjusting your search terms or browsing our categories.
-              </p>
-            </div>
-          )}
-        </section>
+        <CategorySection
+          title="Audiobooks"
+          description="Listen on the go"
+          items={audios}
+          emptyMessage="New Audiobooks Coming Soon"
+          viewAllLink="/search?type=Audiobook"
+        />
 
-        {/* Audiobooks Section */}
-        {!searchQuery && (
-          <section>
-            <div className="mb-8 flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-semibold tracking-tight">
-                  Audiobooks
-                </h2>
-                <p className="mt-1 text-muted-foreground">Listen on the go</p>
-              </div>
-              <Button variant="ghost">View all</Button>
-            </div>
-            <div className="rounded-lg border border-dashed bg-slate-50 py-12 text-center dark:bg-slate-900">
-              <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100">
-                New Audiobooks Coming Soon
-              </h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                We are currently expanding our digital audio catalog.
-              </p>
-            </div>
-          </section>
-        )}
+        <CategorySection
+          title="Videos"
+          description="Watch movies, documentaries, and courses"
+          items={videos}
+          emptyMessage="New Videos Coming Soon"
+          viewAllLink="/search?type=Video"
+        />
 
-        {/* Videos Section */}
-        {!searchQuery && (
-          <section>
-            <div className="mb-8 flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-semibold tracking-tight">
-                  Videos
-                </h2>
-                <p className="mt-1 text-muted-foreground">
-                  Watch movies, documentaries, and courses
-                </p>
-              </div>
-              <Button variant="ghost">View all</Button>
-            </div>
-            <div className="rounded-lg border border-dashed bg-slate-50 py-12 text-center dark:bg-slate-900">
-              <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100">
-                New Videos Coming Soon
-              </h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                We are currently expanding our digital video catalog.
-              </p>
-            </div>
-          </section>
-        )}
-
-        {/* Equipment & Devices Section */}
-        {!searchQuery && (
-          <section>
-            <div className="mb-8 flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-semibold tracking-tight">
-                  Equipment & Devices
-                </h2>
-                <p className="mt-1 text-muted-foreground">
-                  Tech rentals for students and faculty
-                </p>
-              </div>
-              <Button variant="ghost">View all</Button>
-            </div>
-            <div className="rounded-lg border border-dashed bg-slate-50 py-12 text-center dark:bg-slate-900">
-              <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100">
-                Laptops, Tablets & Accessories
-              </h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Check device availability at the front desk.
-              </p>
-            </div>
-          </section>
-        )}
+        <CategorySection
+          title="Equipment"
+          description="Tech rentals for students and faculty"
+          items={equipments}
+          emptyMessage="No Equipment Found"
+          viewAllLink="/search?type=Equipment"
+        />
       </main>
     </div>
+  )
+}
+
+function CategorySection({
+  title,
+  description,
+  items,
+  emptyMessage,
+  viewAllLink,
+}) {
+  return (
+    <section>
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-semibold tracking-tight">{title}</h2>
+          <p className="mt-1 text-muted-foreground">{description}</p>
+        </div>
+        {viewAllLink && (
+          <Button variant="ghost" asChild>
+            <Link to={viewAllLink}>View all</Link>
+          </Button>
+        )}
+      </div>
+
+      {items.length > 0 ? (
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {items.slice(0, 4).map((item) => (
+            <ItemCard key={item.item_id} item={item} />
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-lg border border-dashed bg-slate-50 py-12 text-center dark:bg-slate-900">
+          <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100">
+            {emptyMessage}
+          </h3>
+        </div>
+      )}
+    </section>
   )
 }

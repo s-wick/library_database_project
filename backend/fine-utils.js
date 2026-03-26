@@ -4,7 +4,11 @@ function roundCurrency(value) {
   return Math.round(numeric * 100) / 100
 }
 
-function calculateCappedFine({ daysOverdue, dailyFineAmount, itemMonetaryValue }) {
+function calculateCappedFine({
+  daysOverdue,
+  dailyFineAmount,
+  itemMonetaryValue,
+}) {
   const safeDaysOverdue = Math.max(Number(daysOverdue) || 0, 0)
   const safeDailyFine = Math.max(Number(dailyFineAmount) || 0, 0)
   const rawFine = safeDaysOverdue * safeDailyFine

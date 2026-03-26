@@ -11,7 +11,7 @@ import ReportsPage from "./routes/reports"
 import CheckoutPage from "./routes/checkout"
 import ItemPage from "./routes/item"
 import { NotFoundRoute } from "./routes/not-found"
-import PaymentPage from "./routes/Payment_Page"
+import PaymentPage from "./routes/payment-page"
 
 function getStoredUser() {
   try {

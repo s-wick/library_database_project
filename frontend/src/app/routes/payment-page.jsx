@@ -1,6 +1,5 @@
-import React, { useEffect } from "react"
+import { useEffect } from "react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
-import { ArrowLeft } from "lucide-react"
 import { useTheme } from "@/components/theme-provider"
 
 export default function PaymentPage() {
@@ -54,32 +53,32 @@ export default function PaymentPage() {
               <input
                 type="text"
                 placeholder="First Name*"
-                className="rounded-1g w-1/2 border bg-background p-3 text-sm"
+                className="w-1/2 rounded-lg border bg-background p-3 text-sm"
               />
 
               <input
                 type="text"
                 placeholder="Last Name*"
-                className="rounded-1g w-1/2 border bg-background p-3 text-sm"
+                className="w-1/2 rounded-lg border bg-background p-3 text-sm"
               />
             </div>
 
             <input
               type="text"
               placeholder="ID Number*"
-              className="rounded-1g w-full border bg-background p-3 text-sm"
+              className="w-full rounded-lg border bg-background p-3 text-sm"
             />
 
             <input
               type="email"
               placeholder="Email Address"
-              className="rounded-1g w-full border bg-background p-3 text-sm"
+              className="w-full rounded-lg border bg-background p-3 text-sm"
             />
 
             <input
               type="text"
               placeholder="Phone Number"
-              className="rounded-1g w-full border bg-background p-3 text-sm"
+              className="w-full rounded-lg border bg-background p-3 text-sm"
             />
           </div>
 
@@ -90,27 +89,27 @@ export default function PaymentPage() {
             <input
               type="text"
               placeholder="Card Number*"
-              className="rounded-1g w-full border bg-background p-3 text-sm"
+              className="w-full rounded-lg border bg-background p-3 text-sm"
             />
 
             <div className="flex gap-4">
               <input
                 type="text"
                 placeholder="Expiry Date (MM/YY)*"
-                className="rounded-1g w-1/2 border bg-background p-3 text-sm"
+                className="w-1/2 rounded-lg border bg-background p-3 text-sm"
               />
 
               <input
                 type="text"
                 placeholder="CVV*"
-                className="rounded-1g w-1/2 border bg-background p-3 text-sm"
+                className="w-1/2 rounded-lg border bg-background p-3 text-sm"
               />
             </div>
 
             <input
               type="text"
               placeholder="Cardholder Name*"
-              className="rounded-1g w-full border bg-background p-3 text-sm"
+              className="w-full rounded-lg border bg-background p-3 text-sm"
             />
 
             <button className="mt-4 w-full rounded-full bg-chart-3 py-3 text-white transition hover:bg-chart-3/80">

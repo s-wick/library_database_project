@@ -88,6 +88,10 @@ export default function ManageItemsPage() {
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [selectedImageName, setSelectedImageName] = useState("")
+
+  const pageSize = 8
 
   async function loadItems(search = "") {
     setLoading(true)
@@ -103,6 +107,7 @@ export default function ManageItemsPage() {
         return
       }
       setItems(data.items || [])
+      setCurrentPage(1)
     } catch {
       setError("Unable to connect to server.")
       setItems([])
@@ -114,6 +119,10 @@ export default function ManageItemsPage() {
   useEffect(() => {
     loadItems("")
   }, [])
+
+  const totalPages = Math.max(1, Math.ceil((items || []).length / pageSize))
+  const startIndex = (currentPage - 1) * pageSize
+  const pagedItems = (items || []).slice(startIndex, startIndex + pageSize)
 
   async function handleDelete(itemId) {
     setIsSubmitting(true)
@@ -205,7 +214,7 @@ export default function ManageItemsPage() {
             {mode === "remove" ? (
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2 rounded-md border p-3">
-                  {(items || []).map((item) => (
+                  {pagedItems.map((item) => (
                     <button
                       key={item.item_id}
                       type="button"
@@ -222,10 +231,41 @@ export default function ManageItemsPage() {
                       </p>
                     </button>
                   ))}
-                  {!items.length && (
+                  {!pagedItems.length && (
                     <p className="text-sm text-muted-foreground">
                       No items found.
                     </p>
+                  )}
+                  {!!items.length && (
+                    <div className="mt-3 flex items-center justify-between">
+                      <p className="text-xs text-muted-foreground">
+                        Page {currentPage} of {totalPages}
+                      </p>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={currentPage <= 1}
+                          onClick={() =>
+                            setCurrentPage((prev) => Math.max(1, prev - 1))
+                          }
+                        >
+                          Previous
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={currentPage >= totalPages}
+                          onClick={() =>
+                            setCurrentPage((prev) =>
+                              Math.min(totalPages, prev + 1)
+                            )
+                          }
+                        >
+                          Next
+                        </Button>
+                      </div>
+                    </div>
                   )}
                 </div>
 
@@ -336,13 +376,14 @@ export default function ManageItemsPage() {
             ) : (
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2 rounded-md border p-3">
-                  {(items || []).map((item) => (
+                  {pagedItems.map((item) => (
                     <button
                       key={item.item_id}
                       type="button"
                       onClick={() => {
                         setSelected(item)
                         setForm(getInitialForm(item))
+                        setSelectedImageName("")
                       }}
                       className={`w-full rounded-md border px-3 py-2 text-left transition hover:bg-muted/30 ${
                         selected?.item_id === item.item_id
@@ -356,6 +397,42 @@ export default function ManageItemsPage() {
                       </p>
                     </button>
                   ))}
+                  {!pagedItems.length && (
+                    <p className="text-sm text-muted-foreground">
+                      No items found.
+                    </p>
+                  )}
+                  {!!items.length && (
+                    <div className="mt-3 flex items-center justify-between">
+                      <p className="text-xs text-muted-foreground">
+                        Page {currentPage} of {totalPages}
+                      </p>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={currentPage <= 1}
+                          onClick={() =>
+                            setCurrentPage((prev) => Math.max(1, prev - 1))
+                          }
+                        >
+                          Previous
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={currentPage >= totalPages}
+                          onClick={() =>
+                            setCurrentPage((prev) =>
+                              Math.min(totalPages, prev + 1)
+                            )
+                          }
+                        >
+                          Next
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="rounded-md border p-3">
@@ -365,9 +442,9 @@ export default function ManageItemsPage() {
                     </p>
                   ) : (
                     <form className="space-y-3" onSubmit={handleUpdate}>
-                      {selected.thumbnail_image ? (
+                      {form.thumbnailImage || selected.thumbnail_image ? (
                         <img
-                          src={selected.thumbnail_image}
+                          src={form.thumbnailImage || selected.thumbnail_image}
                           alt={selected.title}
                           className="h-24 w-24 rounded object-cover"
                         />
@@ -375,19 +452,42 @@ export default function ManageItemsPage() {
                         <div className="h-24 w-24 rounded bg-muted" />
                       )}
 
-                      <Input
-                        type="file"
-                        accept="image/*"
-                        onChange={async (event) => {
-                          const file = event.target.files?.[0]
-                          if (!file) return
-                          const dataUrl = await fileToDataUrl(file)
-                          setForm((prev) => ({
-                            ...prev,
-                            thumbnailImage: dataUrl,
-                          }))
-                        }}
-                      />
+                      <div className="space-y-2">
+                        <input
+                          id="item-thumbnail-upload"
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={async (event) => {
+                            const file = event.target.files?.[0]
+                            if (!file) return
+                            try {
+                              const dataUrl = await fileToDataUrl(file)
+                              setForm((prev) => ({
+                                ...prev,
+                                thumbnailImage: dataUrl,
+                              }))
+                              setSelectedImageName(file.name)
+                            } catch {
+                              setError("Failed to load image preview.")
+                            }
+                          }}
+                        />
+                        <div className="flex items-center gap-2">
+                          <label
+                            htmlFor="item-thumbnail-upload"
+                            className="inline-flex h-10 cursor-pointer items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition hover:opacity-90"
+                          >
+                            Browse image
+                          </label>
+                          <div className="flex-1 rounded-md border border-input px-3 py-2 text-sm text-muted-foreground">
+                            {selectedImageName ||
+                              (selected.thumbnail_image
+                                ? "Using current image"
+                                : "No file selected")}
+                          </div>
+                        </div>
+                      </div>
 
                       <Input
                         value={form.title || ""}

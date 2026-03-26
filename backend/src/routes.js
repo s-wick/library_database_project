@@ -6,6 +6,7 @@ const {
   handleGetItemsAll,
   handleGetItemById,
   handleSearchItems,
+  handleSearchGenres,
   handleCreateItem,
   handleUpdateItem,
   handleDeleteItem,
@@ -46,6 +47,11 @@ async function handleApiRoute(req, res, url) {
 
   if (req.method === "GET" && pathname === "/api/items/search") {
     await handleSearchItems(req, res, url)
+    return
+  }
+
+  if (req.method === "GET" && pathname === "/api/genres/search") {
+    await handleSearchGenres(req, res, url)
     return
   }
 

@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react"
 import { Link, useSearchParams } from "react-router-dom"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, X } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
 import {
   Dialog,
   DialogContent,
@@ -20,7 +21,11 @@ function getEditPayload(item, values) {
     title: values.title,
     monetaryValue: values.monetaryValue,
     itemsInStock: values.itemsInStock,
-    thumbnailImage: values.thumbnailImage,
+    genres: values.genres,
+  }
+
+  if (values.thumbnailImage) {
+    base.thumbnailImage = values.thumbnailImage
   }
 
   if (item.item_type_code === 1) {
@@ -63,6 +68,7 @@ function getInitialForm(item) {
       : "",
     videoLengthSeconds: item.video_length_seconds || "",
     audioLengthSeconds: item.audio_length_seconds || "",
+    genres: Array.isArray(item.genres) ? item.genres : [],
     thumbnailImage: "",
   }
 }
@@ -90,6 +96,8 @@ export default function ManageItemsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [selectedImageName, setSelectedImageName] = useState("")
+  const [genreInput, setGenreInput] = useState("")
+  const [genres, setGenres] = useState([])
 
   const pageSize = 8
 
@@ -118,6 +126,17 @@ export default function ManageItemsPage() {
 
   useEffect(() => {
     loadItems("")
+
+    fetch(`${API_BASE_URL}/api/genres/search?q=`)
+      .then((response) => response.json())
+      .then((data) => {
+        if (data?.ok && Array.isArray(data.genres)) {
+          setGenres(data.genres)
+        }
+      })
+      .catch(() => {
+        setGenres([])
+      })
   }, [])
 
   const totalPages = Math.max(1, Math.ceil((items || []).length / pageSize))
@@ -181,6 +200,24 @@ export default function ManageItemsPage() {
       setError("Unable to connect to server.")
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  async function handleSelectEditItem(item) {
+    setSelected(item)
+    setForm(getInitialForm(item))
+    setSelectedImageName("")
+    setGenreInput("")
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/items/${item.item_id}`)
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok || !data?.item) return
+
+      setSelected(data.item)
+      setForm(getInitialForm(data.item))
+    } catch {
+      // Keep base list item details loaded if detail request fails.
     }
   }
 
@@ -380,11 +417,7 @@ export default function ManageItemsPage() {
                     <button
                       key={item.item_id}
                       type="button"
-                      onClick={() => {
-                        setSelected(item)
-                        setForm(getInitialForm(item))
-                        setSelectedImageName("")
-                      }}
+                      onClick={() => handleSelectEditItem(item)}
                       className={`w-full rounded-md border px-3 py-2 text-left transition hover:bg-muted/30 ${
                         selected?.item_id === item.item_id
                           ? "border-primary"
@@ -522,6 +555,97 @@ export default function ManageItemsPage() {
                         }
                         placeholder="Items in stock"
                       />
+                      <div className="space-y-2">
+                        <div className="flex flex-wrap gap-2">
+                          {(form.genres || []).map((genre) => (
+                            <Badge
+                              key={genre}
+                              variant="secondary"
+                              className="px-2 py-1"
+                            >
+                              {genre}
+                              <button
+                                type="button"
+                                className="ml-2 text-muted-foreground hover:text-foreground"
+                                onClick={() => {
+                                  setForm((prev) => ({
+                                    ...prev,
+                                    genres: (prev.genres || []).filter(
+                                      (entry) => entry !== genre
+                                    ),
+                                  }))
+                                }}
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </Badge>
+                          ))}
+                        </div>
+                        <div className="relative">
+                          <Input
+                            value={genreInput}
+                            onChange={(e) => setGenreInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault()
+                                const value = genreInput.trim()
+                                if (
+                                  value &&
+                                  !(form.genres || []).includes(value)
+                                ) {
+                                  setForm((prev) => ({
+                                    ...prev,
+                                    genres: [...(prev.genres || []), value],
+                                  }))
+                                  setGenreInput("")
+                                }
+                              }
+                            }}
+                            placeholder="Type a genre and press Enter..."
+                          />
+                          {genreInput.trim() && genres.length > 0 && (
+                            <div className="absolute top-full left-0 z-10 mt-1 flex max-h-40 w-full flex-col gap-1 overflow-auto rounded-md border bg-background p-1 shadow-md">
+                              {genres
+                                .filter(
+                                  (genre) =>
+                                    genre
+                                      .toLowerCase()
+                                      .includes(
+                                        genreInput.trim().toLowerCase()
+                                      ) && !(form.genres || []).includes(genre)
+                                )
+                                .map((genre) => (
+                                  <button
+                                    key={genre}
+                                    type="button"
+                                    className="rounded-sm px-2 py-1.5 text-left text-sm hover:bg-muted"
+                                    onClick={() => {
+                                      setForm((prev) => ({
+                                        ...prev,
+                                        genres: [...(prev.genres || []), genre],
+                                      }))
+                                      setGenreInput("")
+                                    }}
+                                  >
+                                    {genre}
+                                  </button>
+                                ))}
+                              {genres.filter(
+                                (genre) =>
+                                  genre
+                                    .toLowerCase()
+                                    .includes(
+                                      genreInput.trim().toLowerCase()
+                                    ) && !(form.genres || []).includes(genre)
+                              ).length === 0 && (
+                                <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                                  Press enter to add "{genreInput.trim()}"
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
 
                       {selected.item_type_code === 1 && (
                         <>

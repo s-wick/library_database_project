@@ -35,6 +35,10 @@ function RequireManagementAccess({ children }) {
     return children
   }
 
+  if (isLoggedIn()) {
+    return <Navigate to="/user-dashboard" replace />
+  }
+
   return <Navigate to="/auth" replace />
 }
 

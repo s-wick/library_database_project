@@ -4,6 +4,12 @@ import { ArrowLeft, X } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+  InputGroupText,
+} from "@/components/ui/input-group"
 import { Field, FieldError, FieldLabel } from "@/components/ui/field"
 import { Badge } from "@/components/ui/badge"
 import { API_BASE_URL } from "@/lib/api-config"
@@ -121,6 +127,17 @@ export default function AddItemPage() {
       ...defaultForm(types[0].itemType),
       genres: [],
     })
+
+    fetch(`${apiBaseUrl}/api/genres/search?q=`)
+      .then((response) => response.json())
+      .then((data) => {
+        if (data?.ok && Array.isArray(data.genres)) {
+          setGenres(data.genres)
+        }
+      })
+      .catch(() => {
+        setGenres([])
+      })
   }, [apiBaseUrl])
 
   function onTypeChange(event) {
@@ -168,12 +185,9 @@ export default function AddItemPage() {
 
     const nextErrors = {}
     for (const field of fields) {
-      if (!String(form[field.name] || "").trim()) {
+      if (field.required && !String(form[field.name] || "").trim()) {
         nextErrors[field.name] = `${field.label} is required.`
       }
-    }
-    if (!!isBook && (!form.genres || form.genres.length === 0)) {
-      nextErrors.genres = "Genre is required."
     }
     if (Object.keys(nextErrors).length) {
       setFieldErrors(nextErrors)
@@ -215,6 +229,20 @@ export default function AddItemPage() {
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  function onMonetaryBlur(event) {
+    const { name, value } = event.target
+    const trimmed = String(value || "").trim()
+    if (!trimmed) return
+
+    const parsed = Number(trimmed)
+    if (!Number.isFinite(parsed)) return
+
+    setForm((prev) => ({
+      ...prev,
+      [name]: parsed.toFixed(2),
+    }))
   }
 
   return (
@@ -308,41 +336,38 @@ export default function AddItemPage() {
                         }}
                         placeholder="Type a genre and press Enter..."
                       />
-                      {genreInput.trim() && Object.keys(genres).length > 0 && (
+                      {genreInput.trim() && genres.length > 0 && (
                         <div className="absolute top-full left-0 z-10 mt-1 flex max-h-40 w-full flex-col gap-1 overflow-auto rounded-md border bg-background p-1 shadow-md">
                           {genres
                             .filter(
-                              (g) =>
-                                g.genreName
+                              (genre) =>
+                                genre
                                   .toLowerCase()
                                   .includes(genreInput.trim().toLowerCase()) &&
-                                !(form.genres || []).includes(g.genreName)
+                                !(form.genres || []).includes(genre)
                             )
-                            .map((g) => (
+                            .map((genre) => (
                               <button
-                                key={g.genreName}
+                                key={genre}
                                 type="button"
                                 className="rounded-sm px-2 py-1.5 text-left text-sm hover:bg-muted"
                                 onClick={() => {
                                   setForm((prev) => ({
                                     ...prev,
-                                    genres: [
-                                      ...(prev.genres || []),
-                                      g.genreName,
-                                    ],
+                                    genres: [...(prev.genres || []), genre],
                                   }))
                                   setGenreInput("")
                                 }}
                               >
-                                {g.genreName}
+                                {genre}
                               </button>
                             ))}
                           {genres.filter(
-                            (g) =>
-                              g.genreName
+                            (genre) =>
+                              genre
                                 .toLowerCase()
                                 .includes(genreInput.trim().toLowerCase()) &&
-                              !(form.genres || []).includes(g.genreName)
+                              !(form.genres || []).includes(genre)
                           ).length === 0 && (
                             <div className="px-2 py-1.5 text-sm text-muted-foreground">
                               Press enter to add "{genreInput.trim()}"
@@ -363,19 +388,48 @@ export default function AddItemPage() {
                 >
                   <FieldLabel htmlFor={field.name}>{field.label}</FieldLabel>
                   {field.type === "file" ? (
-                    <div className="rounded-md border border-input p-2">
+                    <div className="space-y-2 rounded-md border border-input p-2">
                       <input
                         key={`${field.name}-${fileResetKey}-${itemType}`}
                         id={field.name}
                         name={field.name}
                         type="file"
                         onChange={onChange}
-                        className="w-full cursor-pointer text-sm file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1.5 file:font-medium file:text-primary-foreground hover:file:bg-primary/90"
+                        className="hidden"
                       />
-                      <p className="mt-2 truncate text-xs text-muted-foreground">
-                        {fileNames[field.name] || "No file selected"}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <Button asChild type="button" variant="default">
+                          <label
+                            htmlFor={field.name}
+                            className="cursor-pointer"
+                          >
+                            Browse file
+                          </label>
+                        </Button>
+                        <Input
+                          value={fileNames[field.name] || "No file selected"}
+                          readOnly
+                          className="h-10"
+                        />
+                      </div>
                     </div>
+                  ) : field.name === "monetaryValue" ? (
+                    <InputGroup>
+                      <InputGroupAddon>
+                        <InputGroupText>$</InputGroupText>
+                      </InputGroupAddon>
+                      <InputGroupInput
+                        id={field.name}
+                        name={field.name}
+                        type="number"
+                        step={field.step || "0.01"}
+                        min="0"
+                        value={form[field.name] ?? ""}
+                        onChange={onChange}
+                        onBlur={onMonetaryBlur}
+                        aria-invalid={!!fieldErrors[field.name]}
+                      />
+                    </InputGroup>
                   ) : (
                     <Input
                       id={field.name}

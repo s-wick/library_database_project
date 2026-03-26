@@ -39,6 +39,24 @@ function parseNullableBlob(value) {
   }
 }
 
+function parseGenres(value) {
+  if (value === undefined) return undefined
+
+  const rawValues = Array.isArray(value) ? value : String(value).split(",")
+  const deduped = new Map()
+
+  for (const entry of rawValues) {
+    const normalized = String(entry || "").trim()
+    if (!normalized) continue
+    const key = normalized.toLowerCase()
+    if (!deduped.has(key)) {
+      deduped.set(key, normalized)
+    }
+  }
+
+  return Array.from(deduped.values())
+}
+
 async function getDefaultStaffId() {
   const rows = await query(
     `SELECT staff_id
@@ -137,6 +155,33 @@ async function handleSearchItems(_req, res, url) {
     sendJson(res, 500, {
       ok: false,
       message: "Failed to search items",
+      error: error.message,
+    })
+  }
+}
+
+async function handleSearchGenres(_req, res, url) {
+  try {
+    const q = String(url.searchParams.get("q") || "")
+      .trim()
+      .toLowerCase()
+    const rows = await query(
+      `SELECT genre_text
+       FROM genre
+       ORDER BY genre_text ASC
+       LIMIT 100`
+    )
+
+    const genres = rows
+      .map((row) => String(row.genre_text || "").trim())
+      .filter(Boolean)
+      .filter((genre) => !q || genre.toLowerCase().includes(q))
+
+    sendJson(res, 200, { ok: true, genres })
+  } catch (error) {
+    sendJson(res, 500, {
+      ok: false,
+      message: "Failed to search genres",
       error: error.message,
     })
   }
@@ -434,6 +479,74 @@ async function handleUpdateItem(req, res, id) {
       }
     }
 
+    const nextGenres = parseGenres(body.genres)
+    if (nextGenres !== undefined) {
+      const invalidGenre = nextGenres.find((genreText) => genreText.length > 15)
+      if (invalidGenre) {
+        sendJson(res, 400, {
+          ok: false,
+          message: `Genre "${invalidGenre}" is too long (max 15 characters).`,
+        })
+        return
+      }
+
+      await query(`DELETE FROM assigned_genres WHERE item_id = ?`, [itemId])
+
+      if (nextGenres.length) {
+        const loweredGenres = nextGenres.map((genreText) =>
+          genreText.toLowerCase()
+        )
+        const placeholders = loweredGenres.map(() => "?").join(",")
+        const existingGenres = await query(
+          `SELECT genre_id, genre_text
+           FROM genre
+           WHERE LOWER(genre_text) IN (${placeholders})`,
+          loweredGenres
+        )
+
+        const genreIdByText = new Map(
+          existingGenres.map((row) => [
+            String(row.genre_text).toLowerCase(),
+            row.genre_id,
+          ])
+        )
+
+        const missingGenres = nextGenres.filter(
+          (genreText) => !genreIdByText.has(genreText.toLowerCase())
+        )
+
+        if (missingGenres.length) {
+          const createdBy = await getDefaultStaffId()
+          if (!createdBy) {
+            sendJson(res, 400, {
+              ok: false,
+              message: "No staff account found to create new genres.",
+            })
+            return
+          }
+
+          for (const genreText of missingGenres) {
+            const result = await query(
+              `INSERT INTO genre (genre_text, created_by)
+               VALUES (?, ?)`,
+              [genreText, createdBy]
+            )
+            genreIdByText.set(genreText.toLowerCase(), result.insertId)
+          }
+        }
+
+        for (const genreText of nextGenres) {
+          const genreId = genreIdByText.get(genreText.toLowerCase())
+          if (!genreId) continue
+          await query(
+            `INSERT INTO assigned_genres (item_id, genre_id)
+             VALUES (?, ?)`,
+            [itemId, genreId]
+          )
+        }
+      }
+    }
+
     sendJson(res, 200, { ok: true, message: "Item updated successfully." })
   } catch (error) {
     sendJson(res, 500, {
@@ -484,6 +597,7 @@ module.exports = {
   handleGetItemsAll,
   handleGetItemById,
   handleSearchItems,
+  handleSearchGenres,
   handleCreateItem,
   handleUpdateItem,
   handleDeleteItem,

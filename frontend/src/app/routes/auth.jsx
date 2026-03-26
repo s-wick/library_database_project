@@ -8,6 +8,7 @@ import { Field, FieldLabel } from "@/components/ui/field"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 import { useCart } from "@/app/cart-provider"
+import { apiUrl } from "@/lib/api"
 
 const roles = [
   { id: "student", label: "Student & Faculty" },
@@ -35,8 +36,6 @@ export default function AuthPage() {
   const { syncCartWithServer } = useCart()
 
   const isSignUp = mode === "signup"
-  const apiBaseUrl =
-    import.meta.env.VITE_API_BASE_URL || "http://localhost:4000"
 
   const submitLabel = useMemo(() => {
     if (isSignUp) return "Create account"
@@ -114,7 +113,7 @@ export default function AuthPage() {
     setIsSubmitting(true)
     try {
       const endpoint = isSignUp ? "/api/auth/signup" : "/api/auth/signin"
-      const response = await fetch(`${apiBaseUrl}${endpoint}`, {
+      const response = await fetch(apiUrl(endpoint), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

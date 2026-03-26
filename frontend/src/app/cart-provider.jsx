@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react"
+import { apiUrl } from "@/lib/api"
 
 const CartContext = createContext()
 
@@ -16,9 +17,6 @@ export function CartProvider({ children }) {
     localStorage.setItem("cart", JSON.stringify(cartItems))
   }, [cartItems])
 
-  const apiBaseUrl =
-    import.meta.env.VITE_API_BASE_URL || "http://localhost:4000"
-
   const getUser = () => {
     try {
       const userStr = localStorage.getItem("user")
@@ -35,7 +33,7 @@ export function CartProvider({ children }) {
     }
 
     try {
-      const res = await fetch(`${apiBaseUrl}/api/cart?userId=${user.id}`)
+      const res = await fetch(apiUrl(`/api/cart?userId=${user.id}`))
       if (res.ok) {
         const data = await res.json()
         setCartItems(data.cart || [])
@@ -64,7 +62,7 @@ export function CartProvider({ children }) {
     const user = getUser()
     if (user) {
       try {
-        await fetch(`${apiBaseUrl}/api/cart`, {
+        await fetch(apiUrl("/api/cart"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -87,7 +85,7 @@ export function CartProvider({ children }) {
     const user = getUser()
     if (user) {
       try {
-        await fetch(`${apiBaseUrl}/api/cart`, {
+        await fetch(apiUrl("/api/cart"), {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ userId: user.id, itemType: type, itemId }),
@@ -104,7 +102,7 @@ export function CartProvider({ children }) {
     const user = getUser()
     if (user) {
       try {
-        await fetch(`${apiBaseUrl}/api/cart`, {
+        await fetch(apiUrl("/api/cart"), {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ userId: user.id, clearAll: true }),

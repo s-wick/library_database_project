@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge"
 
 import { Navbar } from "@/components/navbar"
 import { ItemCard } from "@/components/item-card"
+import { apiUrl } from "@/lib/api"
 
 export default function SearchPage() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -48,16 +49,15 @@ export default function SearchPage() {
   const [allLibraryItems, setAllLibraryItems] = useState([])
   const [loading, setLoading] = useState(true)
 
-  const apiBaseUrl =
-    import.meta.env.VITE_API_BASE_URL || "http://localhost:4000"
-
   const fetchItems = async () => {
     try {
       setLoading(true)
       const q = searchParams.get("q") || ""
       const type = searchParams.get("type") || "All"
       const res = await fetch(
-        `${apiBaseUrl}/api/items/search?q=${encodeURIComponent(q)}&type=${encodeURIComponent(type)}`
+        apiUrl(
+          `/api/items/search?q=${encodeURIComponent(q)}&type=${encodeURIComponent(type)}`
+        )
       )
       if (res.ok) {
         const data = await res.json()

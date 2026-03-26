@@ -20,12 +20,22 @@ const {
   handleRemoveFromCart,
 } = require("./api/cart")
 
+const host = process.env.HOST || "0.0.0.0"
 const port = Number(process.env.PORT || 4000)
+const defaultAllowedOrigins = [
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+  "http://localhost:4173",
+  "http://127.0.0.1:4173",
+]
 const envOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(",")
-  : ["http://localhost:5173", "http://127.0.0.1:5173"]
+      .map((origin) => origin.trim())
+      .filter(Boolean)
+  : defaultAllowedOrigins
 
 const allowedOrigins = new Set(envOrigins)
+const allowAllOrigins = allowedOrigins.has("*")
 
 function normalizeRoleGroup(roleGroup = "") {
   const value = String(roleGroup).trim()
@@ -134,8 +144,11 @@ function generateStudentId() {
 
 function writeCorsHeaders(req, res) {
   const origin = req.headers.origin
-  if (origin && allowedOrigins.has(origin)) {
+  if (allowAllOrigins) {
+    res.setHeader("Access-Control-Allow-Origin", "*")
+  } else if (origin && allowedOrigins.has(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin)
+    res.setHeader("Vary", "Origin")
   }
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS")
   res.setHeader("Access-Control-Allow-Headers", "Content-Type")
@@ -404,6 +417,7 @@ const server = http.createServer(async (req, res) => {
   sendJson(res, 404, { ok: false, message: "Route not found." })
 })
 
-server.listen(port, () => {
-  console.log(`Backend running on http://localhost:${port}`)
+server.listen(port, host, () => {
+  const logHost = host === "0.0.0.0" ? "localhost" : host
+  console.log(`Backend running on http://${logHost}:${port}`)
 })

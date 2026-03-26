@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card"
 import { Navbar } from "@/components/navbar"
 import { useCart } from "@/app/cart-provider"
+import { apiUrl } from "@/lib/api"
 
 export default function CheckoutPage() {
   const navigate = useNavigate()
@@ -35,8 +36,6 @@ export default function CheckoutPage() {
 
     try {
       setIsCheckingOut(true)
-      const apiBaseUrl =
-        import.meta.env.VITE_API_BASE_URL || "http://localhost:4000"
 
       const userStr = localStorage.getItem("user")
       if (!userStr) {
@@ -46,7 +45,7 @@ export default function CheckoutPage() {
       }
       const user = JSON.parse(userStr)
 
-      const res = await fetch(`${apiBaseUrl}/api/checkout`, {
+      const res = await fetch(apiUrl("/api/checkout"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -10,6 +10,7 @@ import {
   CardContent,
 } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { apiUrl } from "@/lib/api"
 
 export default function ItemPage() {
   const { id } = useParams()
@@ -27,8 +28,6 @@ export default function ItemPage() {
 
   const isFaculty = false // Change according to user type logic if needed
   const borrowDuration = isFaculty ? 14 : 7 // days
-  const apiBaseUrl =
-    import.meta.env.VITE_API_BASE_URL || "http://localhost:4000"
 
   useEffect(() => {
     // In a real app this would fetch from your backend (e.g., /api/items/:type/:id)
@@ -36,9 +35,7 @@ export default function ItemPage() {
     const fetchItem = async () => {
       try {
         setLoading(true)
-        const res = await fetch(
-          `${apiBaseUrl}/api/items/${itemTypeParam}/${id}`
-        )
+        const res = await fetch(apiUrl(`/api/items/${itemTypeParam}/${id}`))
         if (res.ok) {
           const data = await res.json()
           setBook(data.item)
@@ -70,7 +67,7 @@ export default function ItemPage() {
 
     try {
       if (availability === "Available") {
-        await fetch(`${apiBaseUrl}/api/borrow`, {
+        await fetch(apiUrl("/api/borrow"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -80,7 +77,7 @@ export default function ItemPage() {
         })
         alert("Item successfully borrowed!")
       } else {
-        await fetch(`${apiBaseUrl}/api/hold`, {
+        await fetch(apiUrl("/api/hold"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

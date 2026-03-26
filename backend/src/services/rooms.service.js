@@ -72,7 +72,9 @@ async function handleBookRoom(req, res) {
     }
 
     const now = new Date()
-    const maxAdvance = new Date(now.getTime() + MAX_ADVANCE_HOURS * 60 * 60 * 1000)
+    const maxAdvance = new Date(
+      now.getTime() + MAX_ADVANCE_HOURS * 60 * 60 * 1000
+    )
 
     if (startTime <= now) {
       sendJson(res, 400, {
@@ -90,7 +92,9 @@ async function handleBookRoom(req, res) {
       return
     }
 
-    const minutes = Math.round((endTime.getTime() - startTime.getTime()) / 60000)
+    const minutes = Math.round(
+      (endTime.getTime() - startTime.getTime()) / 60000
+    )
     if (minutes <= 0 || minutes > MAX_BOOKING_MINUTES) {
       sendJson(res, 400, {
         ok: false,

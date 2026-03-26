@@ -321,7 +321,8 @@ function RoomBookingSection({ rooms = [] }) {
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">Study Rooms</h2>
           <p className="mt-1 text-muted-foreground">
-            Reserve rooms up to 1 day in advance, one room at a time, max 3 hours.
+            Reserve rooms up to 1 day in advance, one room at a time, max 3
+            hours.
           </p>
         </div>
         <Button variant="ghost" asChild>
@@ -342,8 +343,12 @@ function RoomBookingSection({ rooms = [] }) {
               <CardContent className="flex-1 text-sm text-muted-foreground">
                 <ul className="space-y-1">
                   <li>TV: {room.features?.hasTv ? "Yes" : "No"}</li>
-                  <li>Whiteboard: {room.features?.hasWhiteboard ? "Yes" : "No"}</li>
-                  <li>Projector: {room.features?.hasProjector ? "Yes" : "No"}</li>
+                  <li>
+                    Whiteboard: {room.features?.hasWhiteboard ? "Yes" : "No"}
+                  </li>
+                  <li>
+                    Projector: {room.features?.hasProjector ? "Yes" : "No"}
+                  </li>
                 </ul>
               </CardContent>
               <CardFooter>

@@ -24,7 +24,8 @@ function FeatureRow({ label, enabled }) {
 }
 
 export default function RoomBookingPage() {
-  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:4000"
+  const apiBaseUrl =
+    import.meta.env.VITE_API_BASE_URL || "http://localhost:4000"
 
   const [rooms, setRooms] = useState([])
   const [activeBooking, setActiveBooking] = useState(null)
@@ -40,8 +41,14 @@ export default function RoomBookingPage() {
   const [success, setSuccess] = useState("")
 
   const now = useMemo(() => new Date(), [])
-  const minStart = useMemo(() => formatDateTimeLocal(new Date(now.getTime() + 5 * 60 * 1000)), [now])
-  const maxStart = useMemo(() => formatDateTimeLocal(new Date(now.getTime() + 24 * 60 * 60 * 1000)), [now])
+  const minStart = useMemo(
+    () => formatDateTimeLocal(new Date(now.getTime() + 5 * 60 * 1000)),
+    [now]
+  )
+  const maxStart = useMemo(
+    () => formatDateTimeLocal(new Date(now.getTime() + 24 * 60 * 60 * 1000)),
+    [now]
+  )
 
   const user = useMemo(() => {
     try {
@@ -140,7 +147,8 @@ export default function RoomBookingPage() {
         <section className="space-y-2">
           <h1 className="text-3xl font-bold tracking-tight">Room Booking</h1>
           <p className="text-muted-foreground">
-            Book a study room with clear limits: up to 1 day in advance, only one active room booking, and a maximum of 3 hours.
+            Book a study room with clear limits: up to 1 day in advance, only
+            one active room booking, and a maximum of 3 hours.
           </p>
         </section>
 
@@ -150,7 +158,9 @@ export default function RoomBookingPage() {
               <CardTitle className="text-lg">Your Active Booking</CardTitle>
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground">
-              Room {activeBooking.roomNumber} from {new Date(activeBooking.startTime).toLocaleString()} to {new Date(activeBooking.endTime).toLocaleString()}
+              Room {activeBooking.roomNumber} from{" "}
+              {new Date(activeBooking.startTime).toLocaleString()} to{" "}
+              {new Date(activeBooking.endTime).toLocaleString()}
             </CardContent>
           </Card>
         )}
@@ -176,7 +186,9 @@ export default function RoomBookingPage() {
             </label>
 
             <label className="text-sm md:col-span-2">
-              <span className="mb-1 block text-muted-foreground">Start time</span>
+              <span className="mb-1 block text-muted-foreground">
+                Start time
+              </span>
               <input
                 type="datetime-local"
                 className="h-10 w-full rounded-md border px-3"
@@ -204,19 +216,28 @@ export default function RoomBookingPage() {
             </label>
           </CardContent>
           <CardContent className="pt-0">
-            <Button onClick={handleBookRoom} disabled={submitting || !selectedRoom || !!activeBooking}>
+            <Button
+              onClick={handleBookRoom}
+              disabled={submitting || !selectedRoom || !!activeBooking}
+            >
               {submitting ? "Booking..." : "Book Room"}
             </Button>
             {!!error && <p className="mt-2 text-sm text-rose-600">{error}</p>}
-            {!!success && <p className="mt-2 text-sm text-emerald-600">{success}</p>}
+            {!!success && (
+              <p className="mt-2 text-sm text-emerald-600">{success}</p>
+            )}
           </CardContent>
         </Card>
 
         <section>
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-semibold tracking-tight">Rooms by Floor</h2>
-              <p className="mt-1 text-muted-foreground">Browse room capacity and features before booking.</p>
+              <h2 className="text-2xl font-semibold tracking-tight">
+                Rooms by Floor
+              </h2>
+              <p className="mt-1 text-muted-foreground">
+                Browse room capacity and features before booking.
+              </p>
             </div>
             <Button variant="ghost" asChild>
               <Link to="/">Back to catalog</Link>
@@ -224,9 +245,13 @@ export default function RoomBookingPage() {
           </div>
 
           {loading ? (
-            <div className="rounded-lg border border-dashed py-10 text-center text-muted-foreground">Loading rooms...</div>
+            <div className="rounded-lg border border-dashed py-10 text-center text-muted-foreground">
+              Loading rooms...
+            </div>
           ) : rooms.length === 0 ? (
-            <div className="rounded-lg border border-dashed py-10 text-center text-muted-foreground">No rooms available.</div>
+            <div className="rounded-lg border border-dashed py-10 text-center text-muted-foreground">
+              No rooms available.
+            </div>
           ) : (
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {rooms.map((room) => (
@@ -235,16 +260,36 @@ export default function RoomBookingPage() {
                     <CardTitle className="flex items-center gap-2 text-xl">
                       <DoorOpen className="h-5 w-5" /> Room {room.roomNumber}
                     </CardTitle>
-                    <p className="text-sm text-muted-foreground">Floor {room.floor} | Capacity {room.capacity}</p>
+                    <p className="text-sm text-muted-foreground">
+                      Floor {room.floor} | Capacity {room.capacity}
+                    </p>
                   </CardHeader>
                   <CardContent>
                     <ul className="space-y-2">
-                      <FeatureRow label="Contains TV" enabled={room.features.hasTv} />
-                      <FeatureRow label="Contains projector" enabled={room.features.hasProjector} />
-                      <FeatureRow label="Contains whiteboard" enabled={room.features.hasWhiteboard} />
-                      <FeatureRow label="Wi-Fi available" enabled={room.features.hasWifi} />
-                      <FeatureRow label="Power outlets" enabled={room.features.hasPowerOutlets} />
-                      <FeatureRow label="Quiet-zone friendly" enabled={room.features.quietZone} />
+                      <FeatureRow
+                        label="Contains TV"
+                        enabled={room.features.hasTv}
+                      />
+                      <FeatureRow
+                        label="Contains projector"
+                        enabled={room.features.hasProjector}
+                      />
+                      <FeatureRow
+                        label="Contains whiteboard"
+                        enabled={room.features.hasWhiteboard}
+                      />
+                      <FeatureRow
+                        label="Wi-Fi available"
+                        enabled={room.features.hasWifi}
+                      />
+                      <FeatureRow
+                        label="Power outlets"
+                        enabled={room.features.hasPowerOutlets}
+                      />
+                      <FeatureRow
+                        label="Quiet-zone friendly"
+                        enabled={room.features.quietZone}
+                      />
                     </ul>
                   </CardContent>
                 </Card>

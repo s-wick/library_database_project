@@ -650,8 +650,8 @@ export default function UserDashboard() {
               <div className="space-y-4">
                 <FinesPanel fines={fines} />
                 <p className="text-center text-xs text-muted-foreground">
-                  Fines accrue at $5/day per overdue item and stop at the
-                  item value.
+                  Fines accrue at $5/day per overdue item and stop at the item
+                  value.
                 </p>
               </div>
             </TabsContent>

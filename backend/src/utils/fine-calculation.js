@@ -5,7 +5,11 @@ function toNumber(value) {
   return Number.isFinite(parsed) ? parsed : 0
 }
 
-function calculateCappedFine(daysOverdue, itemValue, dailyRate = DAILY_FINE_RATE) {
+function calculateCappedFine(
+  daysOverdue,
+  itemValue,
+  dailyRate = DAILY_FINE_RATE
+) {
   const overdueDays = Math.max(Math.floor(toNumber(daysOverdue)), 0)
   const maxValue = Math.max(toNumber(itemValue), 0)
   const rate = Math.max(toNumber(dailyRate), 0)

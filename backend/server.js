@@ -345,6 +345,18 @@ async function handleHealth(_req, res) {
   }
 }
 
+async function handleAuthMe(req, res) {
+  const user = getSessionUser(req)
+  if (!user) {
+    sendJson(res, 401, { ok: false, message: "Unauthorized." })
+    return
+  }
+
+  sendJson(res, 200, {
+    ok: true,
+    user,
+  })
+}
 const server = http.createServer(async (req, res) => {
   writeCorsHeaders(req, res)
 
@@ -369,6 +381,11 @@ const server = http.createServer(async (req, res) => {
 
   if (req.method === "POST" && pathname === "/api/auth/signin") {
     await handleSignin(req, res)
+    return
+  }
+
+  if (req.method === "GET" && pathname === "/api/auth/me") {
+    await handleAuthMe(req, res)
     return
   }
 

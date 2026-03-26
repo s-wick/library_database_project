@@ -45,35 +45,21 @@ function createAddItemHandler({
         typeSchema.table,
         typeSchema.idColumn
       )
-      const parsedGenreId = parseNullableNumber(body.genreId)
-      const genreId =
-        itemType === "RENTAL_EQUIPMENT"
-          ? null
-          : Number.isInteger(parsedGenreId)
-            ? parsedGenreId
-            : null
+      const genresInput = Array.isArray(body.genres) ? body.genres : []
 
-      if (itemType !== "RENTAL_EQUIPMENT" && !genreId) {
-        sendJson(res, 400, { ok: false, message: "genreId is required." })
+      if (itemType === "BOOK" && genresInput.length === 0) {
+        sendJson(res, 400, {
+          ok: false,
+          message: "At least one genre is required for books.",
+        })
         return
       }
-      if (genreId) {
-        const genreRows = await query(
-          "SELECT genre_id FROM genre WHERE genre_id = ? LIMIT 1",
-          [genreId]
-        )
-        if (!genreRows.length) {
-          sendJson(res, 400, {
-            ok: false,
-            message: "Selected genre not found.",
-          })
-          return
-        }
-      }
+
+      // We will handle genre lookups/inserts inside the BOOK transaction below
 
       if (itemType === "BOOK") {
         await query(
-          "INSERT INTO book (book_id, title, author, edition, publication, publication_date, thumbnail_image, monetary_value, books_in_stock, genre_id, created_at, created_by, item_type_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          "INSERT INTO book (book_id, title, author, edition, publication, publication_date, thumbnail_image, monetary_value, books_in_stock, created_at, created_by, item_type_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
           [
             createdId,
             parseNullableString(body.title),
@@ -84,15 +70,45 @@ function createAddItemHandler({
             parseNullableBlob(body.thumbnailImage),
             parseNullableNumber(body.monetaryValue),
             parseNullableNumber(body.booksInStock),
-            genreId,
             createdAt,
             parseNullableString(body.createdBy),
             itemTypeCode,
           ]
         )
+        // Process genres
+        for (const genreText of genresInput) {
+          const cleanText = genreText.trim()
+          if (!cleanText) continue
+
+          let gId
+          const existing = await query(
+            "SELECT genre_id FROM genre WHERE genre_text = ?",
+            [cleanText]
+          )
+          if (existing.length > 0) {
+            gId = existing[0].genre_id
+          } else {
+            const insertRes = await query(
+              "INSERT INTO genre (genre_text, created_at, created_by) VALUES (?, ?, ?)",
+              [cleanText, createdAt, 1]
+            ) // Fallback 1 for created_by
+            gId = insertRes.insertId
+          }
+          // Avoid duplicate assignment
+          const assigned = await query(
+            "SELECT 1 FROM assigned_genres WHERE book_id = ? AND genre_id = ?",
+            [createdId, gId]
+          )
+          if (assigned.length === 0) {
+            await query(
+              "INSERT INTO assigned_genres (book_id, genre_id, assigned_at) VALUES (?, ?, ?)",
+              [createdId, gId, createdAt]
+            )
+          }
+        }
       } else if (itemType === "VIDEO") {
         await query(
-          "INSERT INTO video (video_id, video_name, thumbnail_image, video_length_seconds, video_file, monetary_value, videos_in_stock, genre_id, created_at, created_by, item_type_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          "INSERT INTO video (video_id, video_name, thumbnail_image, video_length_seconds, video_file, monetary_value, videos_in_stock, created_at, created_by, item_type_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
           [
             createdId,
             parseNullableString(body.videoName),
@@ -101,7 +117,6 @@ function createAddItemHandler({
             parseNullableBlob(body.videoFile),
             parseNullableNumber(body.monetaryValue),
             parseNullableNumber(body.videosInStock),
-            genreId,
             createdAt,
             parseNullableString(body.createdBy),
             itemTypeCode,
@@ -109,7 +124,7 @@ function createAddItemHandler({
         )
       } else if (itemType === "AUDIO") {
         await query(
-          "INSERT INTO audio (audio_id, audio_name, thumbnail_image, audio_length_seconds, audio_file, monetary_value, audios_in_stock, genre_id, created_at, created_by, item_type_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          "INSERT INTO audio (audio_id, audio_name, thumbnail_image, audio_length_seconds, audio_file, monetary_value, audios_in_stock, created_at, created_by, item_type_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
           [
             createdId,
             parseNullableString(body.audioName),
@@ -118,7 +133,6 @@ function createAddItemHandler({
             parseNullableBlob(body.audioFile),
             parseNullableNumber(body.monetaryValue),
             parseNullableNumber(body.audiosInStock),
-            genreId,
             createdAt,
             parseNullableString(body.createdBy),
             itemTypeCode,

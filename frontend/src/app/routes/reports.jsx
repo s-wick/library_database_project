@@ -49,7 +49,7 @@ export default function ReportsPage() {
     const { name, value } = event.target
     setFilters((prev) => {
       if (name === "itemType") {
-        if (value === "RENTAL_EQUIPMENT") {
+        if (value !== "" && value !== "BOOK") {
           return { ...prev, itemType: value, genre: "NOT_APPLICABLE" }
         }
         if (prev.genre === "NOT_APPLICABLE") {
@@ -105,7 +105,7 @@ export default function ReportsPage() {
     return date.toLocaleDateString()
   }
 
-  const isRentalEquipment = filters.itemType === "RENTAL_EQUIPMENT"
+  const isBookOrAll = filters.itemType === "" || filters.itemType === "BOOK"
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -197,10 +197,10 @@ export default function ReportsPage() {
                   name="genre"
                   value={filters.genre}
                   onChange={onChange}
-                  disabled={isRentalEquipment}
+                  disabled={!isBookOrAll}
                   className="h-9 w-full rounded-md border border-input bg-transparent px-2.5 py-1 text-sm"
                 >
-                  {isRentalEquipment ? (
+                  {!isBookOrAll ? (
                     <option value="NOT_APPLICABLE">Not applicable</option>
                   ) : (
                     <>

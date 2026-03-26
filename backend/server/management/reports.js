@@ -103,7 +103,7 @@ function createManagementReportsHandler({
              b.checkout_date AS checkoutDate,
              b.due_date AS dueDate,
              COALESCE(book.title, video.video_name, audio.audio_name, rental.rental_name) AS itemName,
-             COALESCE(g.genre_name, 'Not applicable') AS genreName,
+             COALESCE(g.genre_text, 'Not applicable') AS genreName,
              COALESCE(
                CONCAT_WS(' ', su.first_name, su.middle_name, su.last_name),
                CONCAT_WS(' ', fu.first_name, fu.middle_name, fu.last_name)
@@ -116,7 +116,8 @@ function createManagementReportsHandler({
            LEFT JOIN video ON b.item_type_code = 2 AND b.item_id = video.video_id
            LEFT JOIN audio ON b.item_type_code = 3 AND b.item_id = audio.audio_id
            LEFT JOIN rental_equipment rental ON b.item_type_code = 4 AND b.item_id = rental.equipment_id
-           LEFT JOIN genre g ON g.genre_id = COALESCE(book.genre_id, video.genre_id, audio.genre_id)
+           LEFT JOIN assigned_genres ag ON ag.book_id = book.book_id
+           LEFT JOIN genre g ON g.genre_id = ag.genre_id
            LEFT JOIN student_user su ON b.borrower_type = 1 AND b.borrower_id = su.student_id
            LEFT JOIN faculty_user fu ON b.borrower_type = 2 AND b.borrower_id = fu.faculty_id
            WHERE ${whereSql}
@@ -153,7 +154,7 @@ function createManagementReportsHandler({
            ut.user_type AS userType,
            b.borrower_id AS borrowerId,
            COALESCE(book.title, video.video_name, audio.audio_name, rental.rental_name) AS itemName,
-           COALESCE(g.genre_name, 'Not applicable') AS genreName,
+           COALESCE(g.genre_text, 'Not applicable') AS genreName,
            COALESCE(
              CONCAT_WS(' ', su.first_name, su.middle_name, su.last_name),
              CONCAT_WS(' ', fu.first_name, fu.middle_name, fu.last_name)
@@ -167,7 +168,8 @@ function createManagementReportsHandler({
          LEFT JOIN video ON b.item_type_code = 2 AND b.item_id = video.video_id
          LEFT JOIN audio ON b.item_type_code = 3 AND b.item_id = audio.audio_id
          LEFT JOIN rental_equipment rental ON b.item_type_code = 4 AND b.item_id = rental.equipment_id
-         LEFT JOIN genre g ON g.genre_id = COALESCE(book.genre_id, video.genre_id, audio.genre_id)
+         LEFT JOIN assigned_genres ag ON ag.book_id = book.book_id
+         LEFT JOIN genre g ON g.genre_id = ag.genre_id
          LEFT JOIN student_user su ON b.borrower_type = 1 AND b.borrower_id = su.student_id
          LEFT JOIN faculty_user fu ON b.borrower_type = 2 AND b.borrower_id = fu.faculty_id
          WHERE ${whereSql}

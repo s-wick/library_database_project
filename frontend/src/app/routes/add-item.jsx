@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, X } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Field, FieldLabel } from "@/components/ui/field"
+import { Badge } from "@/components/ui/badge"
 import { API_BASE_URL } from "@/lib/api-config"
 
 const itemFields = {
@@ -89,6 +90,7 @@ export default function AddItemPage() {
   const [genres, setGenres] = useState([])
   const [itemType, setItemType] = useState("")
   const [form, setForm] = useState({})
+  const [genreInput, setGenreInput] = useState("")
   const [fileNames, setFileNames] = useState({})
   const [fileResetKey, setFileResetKey] = useState(0)
   const [error, setError] = useState("")
@@ -97,7 +99,7 @@ export default function AddItemPage() {
   const todayDate = useMemo(() => new Date().toISOString().slice(0, 10), [])
 
   const fields = useMemo(() => itemFields[itemType] || [], [itemType])
-  const isRentalEquipment = itemType === "RENTAL_EQUIPMENT"
+  const isBook = itemType === "BOOK"
 
   useEffect(() => {
     let mounted = true
@@ -118,8 +120,7 @@ export default function AddItemPage() {
           setItemType(types[0].itemType)
           setForm({
             ...defaultForm(types[0].itemType),
-            genreId:
-              types[0].itemType === "RENTAL_EQUIPMENT" ? "NOT_APPLICABLE" : "",
+            genres: types[0].itemType !== "BOOK" ? ["NOT_APPLICABLE"] : [],
           })
         }
       } catch {}
@@ -135,7 +136,7 @@ export default function AddItemPage() {
     setItemType(nextType)
     setForm({
       ...defaultForm(nextType),
-      genreId: nextType === "RENTAL_EQUIPMENT" ? "NOT_APPLICABLE" : "",
+      genres: nextType !== "BOOK" ? ["NOT_APPLICABLE"] : [],
     })
     setFileNames({})
     setFileResetKey((prev) => prev + 1)
@@ -176,7 +177,7 @@ export default function AddItemPage() {
         return
       }
     }
-    if (!isRentalEquipment && !String(form.genreId || "").trim()) {
+    if (!!isBook && (!form.genres || form.genres.length === 0)) {
       setError("Genre is required.")
       return
     }
@@ -194,7 +195,7 @@ export default function AddItemPage() {
           itemType,
           createdAt: todayDate,
           ...form,
-          genreId: isRentalEquipment ? null : Number(form.genreId),
+          genres: !isBook ? ["NOT_APPLICABLE"] : form.genres,
         }),
       })
       const data = await response.json().catch(() => ({}))
@@ -209,7 +210,7 @@ export default function AddItemPage() {
       setSuccess("Item added successfully.")
       setForm({
         ...defaultForm(itemType),
-        genreId: isRentalEquipment ? "NOT_APPLICABLE" : "",
+        genres: !isBook ? ["NOT_APPLICABLE"] : [],
       })
       setFileNames({})
       setFileResetKey((prev) => prev + 1)
@@ -256,30 +257,100 @@ export default function AddItemPage() {
                 <Input id="createdAt" type="date" value={todayDate} readOnly />
               </Field>
               <Field>
-                <FieldLabel htmlFor="genreId">Genre</FieldLabel>
-                <select
-                  id="genreId"
-                  name="genreId"
-                  value={
-                    form.genreId ?? (isRentalEquipment ? "NOT_APPLICABLE" : "")
-                  }
-                  onChange={onChange}
-                  disabled={isRentalEquipment}
-                  className="h-9 w-full rounded-md border border-input bg-transparent px-2.5 py-1 text-sm"
-                >
-                  {isRentalEquipment ? (
-                    <option value="NOT_APPLICABLE">Not applicable</option>
-                  ) : (
-                    <>
-                      <option value="">Select genre</option>
-                      {genres.map((genre) => (
-                        <option key={genre.genreId} value={genre.genreId}>
-                          {genre.genreName}
-                        </option>
+                <FieldLabel>Genres</FieldLabel>
+                {!isBook ? (
+                  <Input value="Not applicable" disabled className="h-9" />
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap gap-2">
+                      {(form.genres || []).map((g) => (
+                        <Badge
+                          key={g}
+                          variant="secondary"
+                          className="px-2 py-1"
+                        >
+                          {g}
+                          <button
+                            type="button"
+                            className="ml-2 text-muted-foreground hover:text-foreground"
+                            onClick={() => {
+                              setForm((prev) => ({
+                                ...prev,
+                                genres: (prev.genres || []).filter(
+                                  (x) => x !== g
+                                ),
+                              }))
+                            }}
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
                       ))}
-                    </>
-                  )}
-                </select>
+                    </div>
+                    <div className="relative">
+                      <Input
+                        value={genreInput}
+                        onChange={(e) => setGenreInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault()
+                            const val = genreInput.trim()
+                            if (val && !(form.genres || []).includes(val)) {
+                              setForm((prev) => ({
+                                ...prev,
+                                genres: [...(prev.genres || []), val],
+                              }))
+                              setGenreInput("")
+                            }
+                          }
+                        }}
+                        placeholder="Type a genre and press Enter..."
+                      />
+                      {genreInput.trim() && Object.keys(genres).length > 0 && (
+                        <div className="absolute top-full left-0 z-10 mt-1 flex max-h-40 w-full flex-col gap-1 overflow-auto rounded-md border bg-background p-1 shadow-md">
+                          {genres
+                            .filter(
+                              (g) =>
+                                g.genreName
+                                  .toLowerCase()
+                                  .includes(genreInput.trim().toLowerCase()) &&
+                                !(form.genres || []).includes(g.genreName)
+                            )
+                            .map((g) => (
+                              <button
+                                key={g.genreName}
+                                type="button"
+                                className="rounded-sm px-2 py-1.5 text-left text-sm hover:bg-muted"
+                                onClick={() => {
+                                  setForm((prev) => ({
+                                    ...prev,
+                                    genres: [
+                                      ...(prev.genres || []),
+                                      g.genreName,
+                                    ],
+                                  }))
+                                  setGenreInput("")
+                                }}
+                              >
+                                {g.genreName}
+                              </button>
+                            ))}
+                          {genres.filter(
+                            (g) =>
+                              g.genreName
+                                .toLowerCase()
+                                .includes(genreInput.trim().toLowerCase()) &&
+                              !(form.genres || []).includes(g.genreName)
+                          ).length === 0 && (
+                            <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                              Press enter to add "{genreInput.trim()}"
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </Field>
 
               {fields.map((field) => (

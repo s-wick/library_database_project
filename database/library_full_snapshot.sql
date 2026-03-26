@@ -16,6 +16,33 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
+-- Table structure for table `assigned_genres`
+--
+
+DROP TABLE IF EXISTS `assigned_genres`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `assigned_genres` (
+  `item_id` int unsigned NOT NULL,
+  `genre_id` int unsigned NOT NULL,
+  `assigned_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`item_id`,`genre_id`),
+  KEY `genre_id` (`genre_id`),
+  CONSTRAINT `assigned_genres_ibfk_1` FOREIGN KEY (`item_id`) REFERENCES `item` (`item_id`),
+  CONSTRAINT `assigned_genres_ibfk_2` FOREIGN KEY (`genre_id`) REFERENCES `genre` (`genre_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `assigned_genres`
+--
+
+LOCK TABLES `assigned_genres` WRITE;
+/*!40000 ALTER TABLE `assigned_genres` DISABLE KEYS */;
+/*!40000 ALTER TABLE `assigned_genres` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `audio`
 --
 
@@ -23,22 +50,11 @@ DROP TABLE IF EXISTS `audio`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `audio` (
-  `audio_id` int unsigned NOT NULL,
-  `audio_name` varchar(512) NOT NULL,
-  `thumbnail_image` blob,
+  `item_id` int unsigned NOT NULL,
   `audio_length_seconds` int unsigned DEFAULT NULL,
-  `audio_file` blob,
-  `monetary_value` decimal(10,2) DEFAULT NULL,
-  `audios_in_stock` tinyint unsigned DEFAULT NULL,
-  `genre_id` int unsigned DEFAULT NULL,
-  `created_at` date DEFAULT NULL,
-  `created_by` varchar(64) DEFAULT NULL,
-  `item_type_code` tinyint unsigned DEFAULT NULL,
-  PRIMARY KEY (`audio_id`),
-  KEY `idx_audio_item_type_code` (`item_type_code`),
-  KEY `idx_audio_genre_id` (`genre_id`),
-  CONSTRAINT `audio_ibfk_1` FOREIGN KEY (`item_type_code`) REFERENCES `item_type` (`item_code`),
-  CONSTRAINT `audio_ibfk_2` FOREIGN KEY (`genre_id`) REFERENCES `genre` (`genre_id`)
+  `audio_file` blob NOT NULL,
+  PRIMARY KEY (`item_id`),
+  CONSTRAINT `fk_audio_item` FOREIGN KEY (`item_id`) REFERENCES `item` (`item_id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -48,7 +64,7 @@ CREATE TABLE `audio` (
 
 LOCK TABLES `audio` WRITE;
 /*!40000 ALTER TABLE `audio` DISABLE KEYS */;
-INSERT INTO `audio` VALUES (201,'The Pragmatic Programmer Audiobook',NULL,54000,NULL,24.99,5,2,'2026-03-22','sysadmin1',3),(202,'Deep Learning with Python Audiobook',NULL,46800,NULL,27.50,4,4,'2026-03-22','sysadmin1',3),(203,'Dune Audiobook',NULL,79200,NULL,29.99,6,9,'2026-03-22','sysadmin1',3),(204,'Dracula Audiobook',NULL,50400,NULL,21.99,3,7,'2026-03-22','sysadmin1',3),(205,'Gone Girl Audiobook',NULL,57600,NULL,23.50,2,10,'2026-03-22','sysadmin1',3),(206,'Cosmos Audiobook',NULL,43200,NULL,19.99,7,8,'2026-03-22','sysadmin1',3),(207,'Project Hail Mary Audiobook',NULL,57600,NULL,26.99,4,9,'2026-03-22','sysadmin1',3),(208,'Atomic Habits Audiobook',NULL,19800,NULL,18.75,8,6,'2026-03-22','sysadmin1',3),(209,'Data Science for Business Audiobook',NULL,32400,NULL,22.95,3,5,'2026-03-22','sysadmin1',3),(210,'Frankenstein Audiobook',NULL,28800,NULL,17.99,5,7,'2026-03-22','sysadmin1',3);
+INSERT INTO `audio` VALUES (11,1800,_binary '\0'),(12,2100,_binary '\0'),(13,2400,_binary '\0'),(14,2700,_binary '\0'),(15,3000,_binary '\0'),(16,3300,_binary '\0'),(17,3600,_binary '\0'),(18,3900,_binary '\0'),(19,4200,_binary '\0'),(20,4500,_binary '\0');
 /*!40000 ALTER TABLE `audio` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -60,24 +76,13 @@ DROP TABLE IF EXISTS `book`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `book` (
-  `book_id` int unsigned NOT NULL,
-  `title` varchar(512) NOT NULL,
-  `author` varchar(64) NOT NULL,
-  `edition` varchar(32) DEFAULT NULL,
-  `publication` varchar(64) DEFAULT NULL,
-  `publication_date` date DEFAULT NULL,
-  `thumbnail_image` blob,
-  `monetary_value` decimal(10,2) DEFAULT NULL,
-  `books_in_stock` tinyint unsigned DEFAULT NULL,
-  `genre_id` int unsigned DEFAULT NULL,
-  `created_at` date DEFAULT NULL,
-  `created_by` varchar(64) DEFAULT NULL,
-  `item_type_code` tinyint unsigned DEFAULT NULL,
-  PRIMARY KEY (`book_id`),
-  KEY `idx_book_item_type_code` (`item_type_code`),
-  KEY `idx_book_genre_id` (`genre_id`),
-  CONSTRAINT `book_ibfk_1` FOREIGN KEY (`item_type_code`) REFERENCES `item_type` (`item_code`),
-  CONSTRAINT `book_ibfk_2` FOREIGN KEY (`genre_id`) REFERENCES `genre` (`genre_id`)
+  `item_id` int unsigned NOT NULL,
+  `author` varchar(50) NOT NULL,
+  `edition` varchar(25) DEFAULT NULL,
+  `publication` varchar(50) NOT NULL,
+  `publication_date` date NOT NULL,
+  PRIMARY KEY (`item_id`),
+  CONSTRAINT `fk_book_item` FOREIGN KEY (`item_id`) REFERENCES `item` (`item_id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -87,8 +92,36 @@ CREATE TABLE `book` (
 
 LOCK TABLES `book` WRITE;
 /*!40000 ALTER TABLE `book` DISABLE KEYS */;
-INSERT INTO `book` VALUES (1,'Database Systems Concepts','Abraham Silberschatz','7th','McGraw-Hill','2019-01-15',NULL,89.99,6,1,'2026-03-22','sysadmin1',1),(2,'Operating System Concepts','Abraham Silberschatz','10th','Wiley','2018-03-05',NULL,94.50,4,1,'2026-03-22','sysadmin1',1),(3,'Computer Networks','Andrew S. Tanenbaum','5th','Pearson','2016-10-10',NULL,84.25,5,1,'2026-03-22','sysadmin1',1),(4,'Clean Code','Robert C. Martin','1st','Prentice Hall','2008-08-11',NULL,49.99,7,2,'2026-03-22','sysadmin1',1),(5,'Design Patterns','Erich Gamma','1st','Addison-Wesley','1994-10-21',NULL,54.95,3,2,'2026-03-22','sysadmin1',1),(6,'Introduction to Algorithms','Thomas H. Cormen','4th','MIT Press','2022-04-05',NULL,99.95,5,3,'2026-03-22','sysadmin1',1),(7,'Artificial Intelligence: A Modern Approach','Stuart Russell','4th','Pearson','2020-04-28',NULL,109.99,2,4,'2026-03-22','sysadmin1',1),(8,'Python Crash Course','Eric Matthes','3rd','No Starch Press','2023-01-10',NULL,39.95,8,2,'2026-03-22','sysadmin1',1),(9,'The Pragmatic Programmer','Andrew Hunt','2nd','Addison-Wesley','2019-09-13',NULL,47.99,6,2,'2026-03-22','sysadmin1',1),(10,'SQL for Data Analysis','Cathy Tanimura','1st','OReilly Media','2021-12-21',NULL,44.99,0,5,'2026-03-22','sysadmin1',1);
+INSERT INTO `book` VALUES (1,'Author One','1st','Campus Press','2015-01-15'),(2,'Author Two','2nd','Northgate Publishing','2016-03-10'),(3,'Author Three','1st','Cityline Books','2017-05-22'),(4,'Author Four','3rd','Oak Tree House','2018-07-09'),(5,'Author Five','1st','Harbor Editions','2019-02-13'),(6,'Author Six','4th','Prairie Publishing','2020-10-01'),(7,'Author Seven','1st','Delta Press','2021-12-14'),(8,'Author Eight','2nd','Summit House','2022-06-18'),(9,'Author Nine','1st','Blue Leaf Media','2023-08-27'),(10,'Author Ten','5th','Lumen Works','2024-11-05');
 /*!40000 ALTER TABLE `book` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `book_room`
+--
+
+DROP TABLE IF EXISTS `book_room`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `book_room` (
+  `room_number` varchar(10) NOT NULL,
+  `user_id` int unsigned NOT NULL,
+  `start_time` datetime NOT NULL,
+  `end_time` datetime NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`room_number`,`user_id`,`start_time`,`end_time`),
+  KEY `user_id` (`user_id`),
+  CONSTRAINT `book_room_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `user_account` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `book_room`
+--
+
+LOCK TABLES `book_room` WRITE;
+/*!40000 ALTER TABLE `book_room` DISABLE KEYS */;
+/*!40000 ALTER TABLE `book_room` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -99,20 +132,16 @@ DROP TABLE IF EXISTS `borrow`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `borrow` (
-  `borrow_transaction_id` int unsigned NOT NULL AUTO_INCREMENT,
-  `item_type_code` tinyint unsigned DEFAULT NULL,
-  `item_id` int unsigned DEFAULT NULL,
-  `borrower_type` tinyint unsigned DEFAULT NULL,
-  `borrower_id` int unsigned DEFAULT NULL,
-  `checkout_date` datetime DEFAULT NULL,
-  `due_date` datetime DEFAULT NULL,
+  `item_id` int unsigned NOT NULL,
+  `user_id` int unsigned NOT NULL,
+  `checkout_date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `due_date` datetime NOT NULL,
   `return_date` datetime DEFAULT NULL,
-  PRIMARY KEY (`borrow_transaction_id`),
-  KEY `idx_borrow_item_type_code` (`item_type_code`),
-  KEY `idx_borrow_borrower_type` (`borrower_type`),
-  CONSTRAINT `borrow_ibfk_1` FOREIGN KEY (`item_type_code`) REFERENCES `item_type` (`item_code`),
-  CONSTRAINT `borrow_ibfk_2` FOREIGN KEY (`borrower_type`) REFERENCES `user_type` (`user_code`)
-) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  PRIMARY KEY (`item_id`,`user_id`,`checkout_date`),
+  KEY `user_id` (`user_id`),
+  CONSTRAINT `borrow_ibfk_1` FOREIGN KEY (`item_id`) REFERENCES `item` (`item_id`),
+  CONSTRAINT `borrow_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `user_account` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -121,7 +150,6 @@ CREATE TABLE `borrow` (
 
 LOCK TABLES `borrow` WRITE;
 /*!40000 ALTER TABLE `borrow` DISABLE KEYS */;
-INSERT INTO `borrow` VALUES (1,1,1,1,1001,'2026-03-01 10:00:00','2026-03-15 10:00:00','2026-03-14 16:30:00'),(2,1,2,1,1002,'2026-03-03 11:15:00','2026-03-17 11:15:00','2026-03-18 09:00:00'),(3,1,6,1,1004,'2026-03-05 09:20:00','2026-03-19 09:20:00',NULL),(4,2,101,2,2001,'2026-03-06 14:00:00','2026-03-20 14:00:00','2026-03-18 10:10:00'),(5,4,301,1,1005,'2026-03-07 13:45:00','2026-03-10 13:45:00','2026-03-10 12:00:00'),(6,1,8,2,2002,'2026-03-08 15:10:00','2026-03-22 15:10:00',NULL),(7,3,201,1,1003,'2026-03-09 16:30:00','2026-03-16 16:30:00','2026-03-16 09:00:00'),(8,1,10,1,1001,'2026-03-10 10:25:00','2026-03-24 10:25:00',NULL),(9,4,302,2,2003,'2026-03-11 12:00:00','2026-03-14 12:00:00',NULL),(10,2,108,1,1004,'2026-03-13 09:30:00','2026-03-20 09:30:00',NULL),(11,4,309,2,2001,'2026-03-14 10:00:00','2026-03-17 10:00:00',NULL),(12,1,2,1,1001,'2026-03-25 12:30:26','2026-04-01 12:30:26',NULL),(13,1,3,1,1001,'2026-03-25 12:30:26','2026-04-01 12:30:26',NULL),(14,1,4,1,1001,'2026-03-25 12:30:26','2026-04-01 12:30:26',NULL);
 /*!40000 ALTER TABLE `borrow` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -135,11 +163,12 @@ DROP TABLE IF EXISTS `cart_items`;
 CREATE TABLE `cart_items` (
   `cart_id` int unsigned NOT NULL AUTO_INCREMENT,
   `user_id` int unsigned NOT NULL,
-  `item_type` tinyint unsigned NOT NULL,
   `item_id` int unsigned NOT NULL,
-  `added_to_cart` datetime NOT NULL,
-  PRIMARY KEY (`cart_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `added_to_cart` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`cart_id`),
+  KEY `item_id` (`item_id`),
+  CONSTRAINT `cart_items_ibfk_1` FOREIGN KEY (`item_id`) REFERENCES `item` (`item_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -148,42 +177,7 @@ CREATE TABLE `cart_items` (
 
 LOCK TABLES `cart_items` WRITE;
 /*!40000 ALTER TABLE `cart_items` DISABLE KEYS */;
-INSERT INTO `cart_items` VALUES (4,1001,3,202,'2026-03-25 12:30:33'),(5,1001,3,203,'2026-03-25 12:30:34');
 /*!40000 ALTER TABLE `cart_items` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Table structure for table `faculty_user`
---
-
-DROP TABLE IF EXISTS `faculty_user`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `faculty_user` (
-  `faculty_id` int unsigned NOT NULL,
-  `email` varchar(64) NOT NULL,
-  `password` varchar(128) NOT NULL,
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  `first_name` varchar(50) DEFAULT NULL,
-  `middle_name` varchar(50) DEFAULT NULL,
-  `last_name` varchar(50) DEFAULT NULL,
-  `borrowed_items` int unsigned DEFAULT '0',
-  `fines` decimal(10,2) DEFAULT '0.00',
-  `user_type_code` tinyint unsigned DEFAULT '2',
-  PRIMARY KEY (`faculty_id`),
-  KEY `idx_faculty_user_type_code` (`user_type_code`),
-  CONSTRAINT `faculty_user_ibfk_1` FOREIGN KEY (`user_type_code`) REFERENCES `user_type` (`user_code`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `faculty_user`
---
-
-LOCK TABLES `faculty_user` WRITE;
-/*!40000 ALTER TABLE `faculty_user` DISABLE KEYS */;
-INSERT INTO `faculty_user` VALUES (2001,'daniel.anderson@uni.edu','pass123','2026-03-23 05:34:41','Daniel',NULL,'Anderson',2,0.00,2),(2002,'mia.thomas@uni.edu','pass123','2026-03-23 05:34:41','Mia',NULL,'Thomas',1,0.00,2),(2003,'william.jackson@uni.edu','pass123','2026-03-23 05:34:41','William','R.','Jackson',0,0.00,2);
-/*!40000 ALTER TABLE `faculty_user` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -194,16 +188,14 @@ DROP TABLE IF EXISTS `fined_for`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `fined_for` (
-  `fine_id` int unsigned NOT NULL AUTO_INCREMENT,
-  `borrow_transaction_id` int unsigned DEFAULT NULL,
-  `amount` decimal(10,2) DEFAULT NULL,
-  `fine_reason` varchar(256) DEFAULT NULL,
-  `date_assigned` datetime DEFAULT NULL,
-  `is_paid` tinyint(1) DEFAULT NULL,
-  PRIMARY KEY (`fine_id`),
-  KEY `idx_fined_for_borrow_transaction_id` (`borrow_transaction_id`),
-  CONSTRAINT `fined_for_ibfk_1` FOREIGN KEY (`borrow_transaction_id`) REFERENCES `borrow` (`borrow_transaction_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `item_id` int unsigned NOT NULL,
+  `user_id` int unsigned NOT NULL,
+  `checkout_date` datetime NOT NULL,
+  `amount` decimal(8,2) DEFAULT NULL,
+  `amount_paid` decimal(8,2) DEFAULT NULL,
+  PRIMARY KEY (`item_id`,`user_id`,`checkout_date`),
+  CONSTRAINT `fined_for_ibfk_1` FOREIGN KEY (`item_id`, `user_id`, `checkout_date`) REFERENCES `borrow` (`item_id`, `user_id`, `checkout_date`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -212,7 +204,6 @@ CREATE TABLE `fined_for` (
 
 LOCK TABLES `fined_for` WRITE;
 /*!40000 ALTER TABLE `fined_for` DISABLE KEYS */;
-INSERT INTO `fined_for` VALUES (1,2,5.00,'Late return','2026-03-18 12:00:00',1),(2,9,25.00,'Equipment returned late','2026-03-15 09:00:00',0),(3,11,40.00,'High-value equipment overdue','2026-03-18 10:30:00',0);
 /*!40000 ALTER TABLE `fined_for` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -224,10 +215,13 @@ DROP TABLE IF EXISTS `genre`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `genre` (
-  `genre_id` int unsigned NOT NULL,
-  `genre_name` varchar(100) NOT NULL,
+  `genre_id` int unsigned NOT NULL AUTO_INCREMENT,
+  `genre_text` varchar(15) NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `created_by` int unsigned NOT NULL,
   PRIMARY KEY (`genre_id`),
-  UNIQUE KEY `uk_genre_name` (`genre_name`)
+  KEY `created_by` (`created_by`),
+  CONSTRAINT `genre_ibfk_1` FOREIGN KEY (`created_by`) REFERENCES `staff_account` (`staff_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -237,7 +231,6 @@ CREATE TABLE `genre` (
 
 LOCK TABLES `genre` WRITE;
 /*!40000 ALTER TABLE `genre` DISABLE KEYS */;
-INSERT INTO `genre` VALUES (3,'Algorithms'),(4,'Artificial Intelligence'),(5,'Data Science'),(8,'Documentary'),(6,'Education'),(7,'Horror'),(9,'Science Fiction'),(2,'Software Engineering'),(1,'Technology'),(10,'Thriller');
 /*!40000 ALTER TABLE `genre` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -249,17 +242,14 @@ DROP TABLE IF EXISTS `hold_item`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `hold_item` (
-  `hold_id` int unsigned NOT NULL AUTO_INCREMENT,
-  `item_id` int unsigned DEFAULT NULL,
-  `user_type` tinyint unsigned DEFAULT NULL,
-  `user_id` int unsigned DEFAULT NULL,
-  `request_date` datetime DEFAULT CURRENT_TIMESTAMP,
-  `hold_status` enum('active','fulfilled','cancelled') DEFAULT NULL,
-  `queue_position` tinyint unsigned DEFAULT NULL,
-  PRIMARY KEY (`hold_id`),
-  KEY `idx_hold_item_user_type` (`user_type`),
-  CONSTRAINT `hold_item_ibfk_1` FOREIGN KEY (`user_type`) REFERENCES `user_type` (`user_code`)
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `item_id` int unsigned NOT NULL,
+  `user_id` int unsigned NOT NULL,
+  `request_date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`item_id`,`user_id`,`request_date`),
+  KEY `user_id` (`user_id`),
+  CONSTRAINT `hold_item_ibfk_1` FOREIGN KEY (`item_id`) REFERENCES `item` (`item_id`),
+  CONSTRAINT `hold_item_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `user_account` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -268,40 +258,41 @@ CREATE TABLE `hold_item` (
 
 LOCK TABLES `hold_item` WRITE;
 /*!40000 ALTER TABLE `hold_item` DISABLE KEYS */;
-INSERT INTO `hold_item` VALUES (1,4,1,1003,'2026-03-10 09:00:00','active',1),(2,6,1,1005,'2026-03-11 10:15:00','active',1),(3,6,2,2001,'2026-03-11 10:45:00','active',2),(4,6,1,1002,'2026-03-11 11:10:00','active',3),(5,301,1,1001,'2026-03-12 14:00:00','fulfilled',1),(6,10,2,2002,'2026-03-13 08:20:00','cancelled',1),(7,108,1,1004,'2026-03-15 13:30:00','active',1);
 /*!40000 ALTER TABLE `hold_item` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
--- Table structure for table `image`
+-- Table structure for table `item`
 --
 
-DROP TABLE IF EXISTS `image`;
+DROP TABLE IF EXISTS `item`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `image` (
-  `image_id` int unsigned NOT NULL,
-  `image_name` varchar(512) NOT NULL,
+CREATE TABLE `item` (
+  `item_id` int unsigned NOT NULL AUTO_INCREMENT,
+  `item_type_code` tinyint unsigned NOT NULL,
+  `title` varchar(100) NOT NULL,
   `thumbnail_image` blob,
-  `image_file` blob,
-  `monetary_value` decimal(5,2) DEFAULT NULL,
-  `images_in_stock` tinyint unsigned DEFAULT NULL,
-  `created_at` date DEFAULT NULL,
-  `created_by` varchar(64) DEFAULT NULL,
-  `item_type_code` tinyint unsigned DEFAULT NULL,
-  PRIMARY KEY (`image_id`),
-  KEY `item_type_code` (`item_type_code`),
-  CONSTRAINT `image_ibfk_1` FOREIGN KEY (`item_type_code`) REFERENCES `item_type` (`Item_code`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `monetary_value` decimal(8,2) NOT NULL,
+  `items_in_stock` tinyint unsigned NOT NULL DEFAULT '0',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `created_by` int unsigned NOT NULL,
+  PRIMARY KEY (`item_id`),
+  KEY `fk_item_type` (`item_type_code`),
+  KEY `fk_item_created_by` (`created_by`),
+  CONSTRAINT `fk_item_created_by` FOREIGN KEY (`created_by`) REFERENCES `staff_account` (`staff_id`),
+  CONSTRAINT `fk_item_type` FOREIGN KEY (`item_type_code`) REFERENCES `item_type` (`item_code`)
+) ENGINE=InnoDB AUTO_INCREMENT=41 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `image`
+-- Dumping data for table `item`
 --
 
-LOCK TABLES `image` WRITE;
-/*!40000 ALTER TABLE `image` DISABLE KEYS */;
-/*!40000 ALTER TABLE `image` ENABLE KEYS */;
+LOCK TABLES `item` WRITE;
+/*!40000 ALTER TABLE `item` DISABLE KEYS */;
+INSERT INTO `item` VALUES (1,1,'Book Seed 01',NULL,19.99,6,'2026-03-26 03:53:06',1),(2,1,'Book Seed 02',NULL,21.50,4,'2026-03-26 03:53:06',1),(3,1,'Book Seed 03',NULL,24.00,5,'2026-03-26 03:53:06',1),(4,1,'Book Seed 04',NULL,17.75,3,'2026-03-26 03:53:06',1),(5,1,'Book Seed 05',NULL,29.99,7,'2026-03-26 03:53:06',1),(6,1,'Book Seed 06',NULL,15.25,8,'2026-03-26 03:53:06',1),(7,1,'Book Seed 07',NULL,32.40,2,'2026-03-26 03:53:06',1),(8,1,'Book Seed 08',NULL,18.80,6,'2026-03-26 03:53:06',1),(9,1,'Book Seed 09',NULL,26.35,5,'2026-03-26 03:53:06',1),(10,1,'Book Seed 10',NULL,22.10,4,'2026-03-26 03:53:06',1),(11,3,'Audio Seed 01',NULL,12.99,9,'2026-03-26 03:53:06',1),(12,3,'Audio Seed 02',NULL,11.49,7,'2026-03-26 03:53:06',1),(13,3,'Audio Seed 03',NULL,14.25,6,'2026-03-26 03:53:06',1),(14,3,'Audio Seed 04',NULL,16.00,5,'2026-03-26 03:53:06',1),(15,3,'Audio Seed 05',NULL,13.75,8,'2026-03-26 03:53:06',1),(16,3,'Audio Seed 06',NULL,15.10,6,'2026-03-26 03:53:06',1),(17,3,'Audio Seed 07',NULL,10.95,10,'2026-03-26 03:53:06',1),(18,3,'Audio Seed 08',NULL,17.35,4,'2026-03-26 03:53:06',1),(19,3,'Audio Seed 09',NULL,18.20,3,'2026-03-26 03:53:06',1),(20,3,'Audio Seed 10',NULL,19.99,2,'2026-03-26 03:53:06',1),(21,2,'Video Seed 01',NULL,23.99,4,'2026-03-26 03:53:06',1),(22,2,'Video Seed 02',NULL,21.25,5,'2026-03-26 03:53:06',1),(23,2,'Video Seed 03',NULL,25.00,3,'2026-03-26 03:53:06',1),(24,2,'Video Seed 04',NULL,27.50,2,'2026-03-26 03:53:06',1),(25,2,'Video Seed 05',NULL,19.80,6,'2026-03-26 03:53:06',1),(26,2,'Video Seed 06',NULL,24.40,4,'2026-03-26 03:53:06',1),(27,2,'Video Seed 07',NULL,29.10,3,'2026-03-26 03:53:06',1),(28,2,'Video Seed 08',NULL,31.60,2,'2026-03-26 03:53:06',1),(29,2,'Video Seed 09',NULL,26.75,5,'2026-03-26 03:53:06',1),(30,2,'Video Seed 10',NULL,22.30,6,'2026-03-26 03:53:06',1),(31,4,'Rental Seed 01',NULL,45.00,2,'2026-03-26 03:53:06',1),(32,4,'Rental Seed 02',NULL,60.00,1,'2026-03-26 03:53:06',1),(33,4,'Rental Seed 03',NULL,38.50,3,'2026-03-26 03:53:06',1),(34,4,'Rental Seed 04',NULL,72.25,1,'2026-03-26 03:53:06',1),(35,4,'Rental Seed 05',NULL,55.10,2,'2026-03-26 03:53:06',1),(36,4,'Rental Seed 06',NULL,80.00,1,'2026-03-26 03:53:06',1),(37,4,'Rental Seed 07',NULL,49.75,2,'2026-03-26 03:53:06',1),(38,4,'Rental Seed 08',NULL,67.40,1,'2026-03-26 03:53:06',1),(39,4,'Rental Seed 09',NULL,58.90,2,'2026-03-26 03:53:06',1),(40,4,'Rental Seed 10',NULL,73.60,1,'2026-03-26 03:53:06',1);
+/*!40000 ALTER TABLE `item` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -312,10 +303,10 @@ DROP TABLE IF EXISTS `item_type`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `item_type` (
-  `item_code` tinyint unsigned NOT NULL,
-  `item_type` varchar(32) NOT NULL,
+  `item_code` tinyint unsigned NOT NULL AUTO_INCREMENT,
+  `item_type` varchar(20) NOT NULL,
   PRIMARY KEY (`item_code`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -329,36 +320,6 @@ INSERT INTO `item_type` VALUES (1,'BOOK'),(2,'VIDEO'),(3,'AUDIO'),(4,'RENTAL_EQU
 UNLOCK TABLES;
 
 --
--- Table structure for table `librarian`
---
-
-DROP TABLE IF EXISTS `librarian`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `librarian` (
-  `librarian_id` int unsigned NOT NULL,
-  `email` varchar(64) NOT NULL,
-  `password` varchar(128) NOT NULL,
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  `first_name` varchar(50) DEFAULT NULL,
-  `middle_name` varchar(50) DEFAULT NULL,
-  `last_name` varchar(50) DEFAULT NULL,
-  `phone_number` char(15) DEFAULT NULL,
-  PRIMARY KEY (`librarian_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `librarian`
---
-
-LOCK TABLES `librarian` WRITE;
-/*!40000 ALTER TABLE `librarian` DISABLE KEYS */;
-INSERT INTO `librarian` VALUES (3001,'maria.garcia@library.com','admin123','2026-03-23 05:34:41','Maria','Beth','Garcia','555-210-3001'),(3002,'henry.martin@library.com','admin123','2026-03-23 05:34:41','Henry','John','Martin','555-210-3002');
-/*!40000 ALTER TABLE `librarian` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
 -- Table structure for table `meeting_room`
 --
 
@@ -366,10 +327,10 @@ DROP TABLE IF EXISTS `meeting_room`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `meeting_room` (
-  `room_number` varchar(50) NOT NULL,
-  `capacity` int unsigned DEFAULT NULL,
-  `has_projector` tinyint(1) DEFAULT NULL,
-  `has_whiteboard` tinyint(1) DEFAULT NULL,
+  `room_number` varchar(10) NOT NULL,
+  `capacity` smallint unsigned DEFAULT NULL,
+  `has_projector` tinyint(1) DEFAULT '0',
+  `has_whiteboard` tinyint(1) DEFAULT '0',
   PRIMARY KEY (`room_number`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -380,7 +341,6 @@ CREATE TABLE `meeting_room` (
 
 LOCK TABLES `meeting_room` WRITE;
 /*!40000 ALTER TABLE `meeting_room` DISABLE KEYS */;
-INSERT INTO `meeting_room` VALUES ('R101',2,0,1),('R102',4,1,1),('R201',8,1,1),('R202',12,1,0),('R301',20,1,1),('R302',30,0,1);
 /*!40000 ALTER TABLE `meeting_room` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -392,17 +352,9 @@ DROP TABLE IF EXISTS `rental_equipment`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `rental_equipment` (
-  `equipment_id` int unsigned NOT NULL,
-  `rental_name` varchar(512) NOT NULL,
-  `thumbnail_image` blob,
-  `monetary_value` decimal(10,2) DEFAULT NULL,
-  `equipment_in_stock` tinyint unsigned DEFAULT NULL,
-  `created_at` date DEFAULT NULL,
-  `created_by` varchar(64) DEFAULT NULL,
-  `item_type_code` tinyint unsigned DEFAULT NULL,
-  PRIMARY KEY (`equipment_id`),
-  KEY `idx_rental_equipment_item_type_code` (`item_type_code`),
-  CONSTRAINT `rental_equipment_ibfk_1` FOREIGN KEY (`item_type_code`) REFERENCES `item_type` (`item_code`)
+  `item_id` int unsigned NOT NULL,
+  PRIMARY KEY (`item_id`),
+  CONSTRAINT `fk_equipment_item` FOREIGN KEY (`item_id`) REFERENCES `item` (`item_id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -412,130 +364,69 @@ CREATE TABLE `rental_equipment` (
 
 LOCK TABLES `rental_equipment` WRITE;
 /*!40000 ALTER TABLE `rental_equipment` DISABLE KEYS */;
-INSERT INTO `rental_equipment` VALUES (301,'Dell Latitude Laptop',NULL,999.99,4,'2026-03-22','sysadmin1',4),(302,'Canon DSLR Camera',NULL,899.99,2,'2026-03-22','sysadmin1',4),(303,'Portable Projector',NULL,420.00,3,'2026-03-22','sysadmin1',4),(304,'Audio Recorder Zoom H1n',NULL,129.99,5,'2026-03-22','sysadmin1',4),(305,'Tripod Stand',NULL,45.00,8,'2026-03-22','sysadmin1',4),(306,'Wireless Microphone Kit',NULL,210.00,3,'2026-03-22','sysadmin1',4),(307,'MacBook Air',NULL,999.99,1,'2026-03-22','sysadmin1',4),(308,'HD Webcam',NULL,79.99,6,'2026-03-22','sysadmin1',4),(309,'USB-C Docking Station',NULL,149.99,0,'2026-03-22','sysadmin1',4),(310,'Graphing Calculator',NULL,119.95,7,'2026-03-22','sysadmin1',4);
+INSERT INTO `rental_equipment` VALUES (31),(32),(33),(34),(35),(36),(37),(38),(39),(40);
 /*!40000 ALTER TABLE `rental_equipment` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
--- Table structure for table `reserve_room`
+-- Table structure for table `staff_account`
 --
 
-DROP TABLE IF EXISTS `reserve_room`;
+DROP TABLE IF EXISTS `staff_account`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `reserve_room` (
-  `booking_id` int unsigned NOT NULL AUTO_INCREMENT,
-  `room_number` varchar(50) DEFAULT NULL,
-  `reserve_user_type` tinyint unsigned DEFAULT NULL,
-  `reserved_by` int unsigned DEFAULT NULL,
-  `start_datetime` datetime DEFAULT NULL,
-  `end_datetime` datetime DEFAULT NULL,
-  `booking_status` enum('active','cancelled','completed') DEFAULT NULL,
-  `created_at` datetime DEFAULT NULL,
-  PRIMARY KEY (`booking_id`),
-  KEY `idx_reserve_room_room_number` (`room_number`),
-  KEY `idx_reserve_room_user_type` (`reserve_user_type`),
-  CONSTRAINT `reserve_room_ibfk_1` FOREIGN KEY (`room_number`) REFERENCES `meeting_room` (`room_number`),
-  CONSTRAINT `reserve_room_ibfk_2` FOREIGN KEY (`reserve_user_type`) REFERENCES `user_type` (`user_code`)
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `reserve_room`
---
-
-LOCK TABLES `reserve_room` WRITE;
-/*!40000 ALTER TABLE `reserve_room` DISABLE KEYS */;
-INSERT INTO `reserve_room` VALUES (1,'R101',1,1001,'2026-03-23 09:00:00','2026-03-23 10:30:00','active','2026-03-20 12:00:00'),(2,'R102',1,1004,'2026-03-23 13:00:00','2026-03-23 15:00:00','active','2026-03-20 12:05:00'),(3,'R201',2,2001,'2026-03-24 10:00:00','2026-03-24 11:30:00','active','2026-03-20 12:10:00'),(4,'R202',2,2003,'2026-03-24 14:00:00','2026-03-24 16:00:00','completed','2026-03-18 09:00:00'),(5,'R301',1,1002,'2026-03-25 16:00:00','2026-03-25 18:00:00','cancelled','2026-03-20 12:20:00'),(6,'R302',2,2002,'2026-03-26 08:00:00','2026-03-26 12:00:00','active','2026-03-21 10:00:00');
-/*!40000 ALTER TABLE `reserve_room` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Table structure for table `student_user`
---
-
-DROP TABLE IF EXISTS `student_user`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `student_user` (
-  `student_id` int unsigned NOT NULL,
-  `email` varchar(64) NOT NULL,
-  `password` varchar(128) NOT NULL,
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  `first_name` varchar(50) DEFAULT NULL,
+CREATE TABLE `staff_account` (
+  `staff_id` int unsigned NOT NULL AUTO_INCREMENT,
+  `email` varchar(50) NOT NULL,
+  `password` varchar(100) NOT NULL,
+  `first_name` varchar(50) NOT NULL,
   `middle_name` varchar(50) DEFAULT NULL,
-  `last_name` varchar(50) DEFAULT NULL,
-  `borrowed_items` int unsigned DEFAULT '0',
-  `fines` decimal(10,2) DEFAULT '0.00',
-  `user_type_code` tinyint unsigned DEFAULT '1',
-  PRIMARY KEY (`student_id`),
-  KEY `idx_student_user_type_code` (`user_type_code`),
-  CONSTRAINT `student_user_ibfk_1` FOREIGN KEY (`user_type_code`) REFERENCES `user_type` (`user_code`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `last_name` varchar(50) NOT NULL,
+  `phone_number` char(15) NOT NULL,
+  `is_admin` tinyint(1) NOT NULL DEFAULT '0',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`staff_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `student_user`
+-- Dumping data for table `staff_account`
 --
 
-LOCK TABLES `student_user` WRITE;
-/*!40000 ALTER TABLE `student_user` DISABLE KEYS */;
-INSERT INTO `student_user` VALUES (1001,'emma.johnson@uni.edu','pass123','2026-03-23 05:34:41','Emma',NULL,'Johnson',2,0.00,1),(1002,'liam.smith@uni.edu','pass123','2026-03-23 05:34:41','Liam',NULL,'Smith',1,1.00,1),(1003,'olivia.brown@uni.edu','pass123','2026-03-23 05:34:41','Olivia','Grace','Brown',0,0.00,1),(1004,'noah.davis@uni.edu','pass123','2026-03-23 05:34:41','Noah',NULL,'Davis',3,0.00,1),(1005,'ava.miller@uni.edu','pass123','2026-03-23 05:34:41','Ava',NULL,'Miller',1,0.00,1);
-/*!40000 ALTER TABLE `student_user` ENABLE KEYS */;
+LOCK TABLES `staff_account` WRITE;
+/*!40000 ALTER TABLE `staff_account` DISABLE KEYS */;
+INSERT INTO `staff_account` VALUES (1,'admin.staff@lib.com','admin123','Ada',NULL,'Librarian','555000000000001',1,'2026-03-26 07:47:31'),(2,'staff@lib.com','admin123','Sam',NULL,'Assistant','555000000000002',0,'2026-03-26 07:47:31');
+/*!40000 ALTER TABLE `staff_account` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
--- Table structure for table `system_administrator`
+-- Table structure for table `user_account`
 --
 
-DROP TABLE IF EXISTS `system_administrator`;
+DROP TABLE IF EXISTS `user_account`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `system_administrator` (
-  `administrator_id` int unsigned NOT NULL,
-  `email` varchar(64) NOT NULL,
-  `password` varchar(128) NOT NULL,
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  `first_name` varchar(50) DEFAULT NULL,
+CREATE TABLE `user_account` (
+  `user_id` int unsigned NOT NULL AUTO_INCREMENT,
+  `email` varchar(50) NOT NULL,
+  `password` varchar(100) NOT NULL,
+  `first_name` varchar(50) NOT NULL,
   `middle_name` varchar(50) DEFAULT NULL,
-  `last_name` varchar(50) DEFAULT NULL,
-  `phone_number` char(15) DEFAULT NULL,
-  PRIMARY KEY (`administrator_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `last_name` varchar(50) NOT NULL,
+  `is_faculty` tinyint(1) NOT NULL DEFAULT '0',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`user_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `system_administrator`
+-- Dumping data for table `user_account`
 --
 
-LOCK TABLES `system_administrator` WRITE;
-/*!40000 ALTER TABLE `system_administrator` DISABLE KEYS */;
-INSERT INTO `system_administrator` VALUES (4001,'sysadmin1@library.com','admin123','2026-03-23 05:34:41','System','Admin','Admin1','555-900-4001'),(4002,'sysadmin2@library.com','admin123','2026-03-23 05:34:41','System','Admin','Admin2','555-900-4002');
-/*!40000 ALTER TABLE `system_administrator` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Table structure for table `user_type`
---
-
-DROP TABLE IF EXISTS `user_type`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `user_type` (
-  `user_code` tinyint unsigned NOT NULL,
-  `user_type` varchar(16) NOT NULL,
-  PRIMARY KEY (`user_code`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `user_type`
---
-
-LOCK TABLES `user_type` WRITE;
-/*!40000 ALTER TABLE `user_type` DISABLE KEYS */;
-INSERT INTO `user_type` VALUES (1,'STUDENT'),(2,'FACULTY');
-/*!40000 ALTER TABLE `user_type` ENABLE KEYS */;
+LOCK TABLES `user_account` WRITE;
+/*!40000 ALTER TABLE `user_account` DISABLE KEYS */;
+INSERT INTO `user_account` VALUES (1,'faculty.user@lib.com','pass123','Fiona',NULL,'Faculty',1,'2026-03-26 07:47:31'),(2,'student.user@lib.com','pass123','Ulysses',NULL,'User',0,'2026-03-26 07:47:31');
+/*!40000 ALTER TABLE `user_account` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -546,22 +437,11 @@ DROP TABLE IF EXISTS `video`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `video` (
-  `video_id` int unsigned NOT NULL,
-  `video_name` varchar(512) NOT NULL,
-  `thumbnail_image` blob,
+  `item_id` int unsigned NOT NULL,
   `video_length_seconds` int unsigned DEFAULT NULL,
-  `video_file` blob,
-  `monetary_value` decimal(10,2) DEFAULT NULL,
-  `videos_in_stock` tinyint unsigned DEFAULT NULL,
-  `genre_id` int unsigned DEFAULT NULL,
-  `created_at` date DEFAULT NULL,
-  `created_by` varchar(64) DEFAULT NULL,
-  `item_type_code` tinyint unsigned DEFAULT NULL,
-  PRIMARY KEY (`video_id`),
-  KEY `idx_video_item_type_code` (`item_type_code`),
-  KEY `idx_video_genre_id` (`genre_id`),
-  CONSTRAINT `video_ibfk_1` FOREIGN KEY (`item_type_code`) REFERENCES `item_type` (`item_code`),
-  CONSTRAINT `video_ibfk_2` FOREIGN KEY (`genre_id`) REFERENCES `genre` (`genre_id`)
+  `video_file` blob NOT NULL,
+  PRIMARY KEY (`item_id`),
+  CONSTRAINT `fk_video_item` FOREIGN KEY (`item_id`) REFERENCES `item` (`item_id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -571,7 +451,7 @@ CREATE TABLE `video` (
 
 LOCK TABLES `video` WRITE;
 /*!40000 ALTER TABLE `video` DISABLE KEYS */;
-INSERT INTO `video` VALUES (101,'Scream',NULL,6660,NULL,19.99,3,7,'2026-03-22','sysadmin1',2),(102,'The Social Dilemma',NULL,5640,NULL,17.99,2,8,'2026-03-22','sysadmin1',2),(103,'Interstellar',NULL,10140,NULL,21.50,4,9,'2026-03-22','sysadmin1',2),(104,'Zodiac',NULL,9420,NULL,18.75,2,10,'2026-03-22','sysadmin1',2),(105,'Planet Earth II',NULL,3600,NULL,24.99,5,8,'2026-03-22','sysadmin1',2),(106,'Alien',NULL,7020,NULL,20.25,1,7,'2026-03-22','sysadmin1',2),(107,'Blade Runner 2049',NULL,9840,NULL,22.00,6,9,'2026-03-22','sysadmin1',2),(108,'Blackfish',NULL,4980,NULL,16.50,0,8,'2026-03-22','sysadmin1',2),(109,'Se7en',NULL,7620,NULL,18.95,4,10,'2026-03-22','sysadmin1',2),(110,'Get Out',NULL,6240,NULL,19.49,3,7,'2026-03-22','sysadmin1',2);
+INSERT INTO `video` VALUES (21,3600,_binary '\0'),(22,4200,_binary '\0'),(23,4800,_binary '\0'),(24,5400,_binary '\0'),(25,6000,_binary '\0'),(26,6600,_binary '\0'),(27,7200,_binary '\0'),(28,7800,_binary '\0'),(29,8400,_binary '\0'),(30,9000,_binary '\0');
 /*!40000 ALTER TABLE `video` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -584,4 +464,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-03-25 12:46:25
+-- Dump completed on 2026-03-26  3:54:42

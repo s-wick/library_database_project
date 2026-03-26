@@ -11,6 +11,7 @@ import ReportsPage from "./routes/reports"
 import CheckoutPage from "./routes/checkout"
 import ItemPage from "./routes/item"
 import { NotFoundRoute } from "./routes/not-found"
+import PaymentPage from "./routes/Payment_Page"
 
 function getStoredUser() {
   try {
@@ -145,6 +146,11 @@ export const router = createBrowserRouter([
         <ItemPage />
       </RedirectStaffToManagement>
     ),
+    errorElement: <NotFoundRoute />,
+  },
+  {
+    path: "/payment",
+    element: <PaymentPage />,
     errorElement: <NotFoundRoute />,
   },
 ])

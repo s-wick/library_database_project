@@ -24,6 +24,22 @@ const emptyForm = {
   confirmPassword: "",
 }
 
+const API_BASE_URL =
+  (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL) ||
+  (typeof process !== "undefined" && process.env?.REACT_APP_API_URL) ||
+  "http://localhost:4000/api"
+
+const SIGNIN_ATTEMPTS = {
+  admin: [
+    { roleGroup: "adminStaff", role: "admin" },
+    { roleGroup: "adminStaff", role: "staff" },
+  ],
+  student: [
+    { roleGroup: "studentFaculty", role: "student" },
+    { roleGroup: "studentFaculty", role: "faculty" },
+  ],
+}
+
 export default function AuthPage() {
   const navigate = useNavigate()
   const [selectedRole, setSelectedRole] = useState("user")
@@ -31,12 +47,15 @@ export default function AuthPage() {
   const [form, setForm] = useState(emptyForm)
   const [errors, setErrors] = useState({})
   const [success, setSuccess] = useState("")
+
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const { syncCartWithServer } = useCart()
 
   const isSignUp = mode === "signup"
+
   const apiBaseUrl = API_BASE_URL
+
 
   const submitLabel = useMemo(() => {
     if (isSignUp) return "Create account"
@@ -50,9 +69,11 @@ export default function AuthPage() {
 
   function switchMode(nextMode) {
     setMode(nextMode)
+
     if (nextMode === "signup") {
       setSelectedRole("user")
     }
+
     setErrors({})
     setSuccess("")
     setForm(emptyForm)
@@ -62,6 +83,7 @@ export default function AuthPage() {
     event.preventDefault()
     setErrors({})
     setSuccess("")
+
     const nextErrors = {}
 
     if (!form.email.trim()) {
@@ -80,6 +102,14 @@ export default function AuthPage() {
       if (form.password !== form.confirmPassword) {
         nextErrors.confirmPassword = "Passwords do not match."
       }
+
+      if (!form.firstName.trim()) {
+        nextErrors.firstName = "First name is required."
+      }
+
+      if (!form.lastName.trim()) {
+        nextErrors.lastName = "Last name is required."
+      }
     }
 
     if (Object.keys(nextErrors).length > 0) {
@@ -87,75 +117,88 @@ export default function AuthPage() {
       return
     }
 
-    const payload = isSignUp
-      ? {
-          firstName: form.firstName.trim(),
-          middleName: form.middleName.trim(),
-          lastName: form.lastName.trim(),
-          email: form.email.trim(),
-          password: form.password,
-          isFaculty: false,
-        }
-      : selectedRole === "staff"
-        ? {
-            accountType: "staff",
-            email: form.email.trim(),
-            password: form.password,
-          }
-        : {
-            accountType: "user",
-            email: form.email.trim(),
-            password: form.password,
-          }
 
     setIsSubmitting(true)
     try {
-      const endpoint = isSignUp ? "/api/auth/signup" : "/api/auth/signin"
-      const response = await fetch(`${apiBaseUrl}${endpoint}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      })
-      const data = await response.json().catch(() => ({}))
+      if (isSignUp) {
+        const response = await fetch(`${API_BASE_URL}/auth/signup`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            roleGroup: "studentFaculty",
+            role: "student",
+            firstName: form.firstName.trim(),
+            middleName: form.middleName.trim(),
+            lastName: form.lastName.trim(),
+            email: form.email.trim(),
+            password: form.password,
+          }),
+        })
 
-      if (!response.ok) {
-        if (!isSignUp && response.status === 401) {
-          // setErrors({ general: "Account does not exist. Create an account." })
+
+        const payload = await response.json().catch(() => ({}))
+        if (!response.ok) {
           setErrors({
-            general: `Account does not exist. ${selectedRole === "staff" ? "Contact your administrator." : "Create an account."}`,
+            general: payload?.message || "Failed to create account.",
+
           })
           return
         }
-        setErrors({
-          general:
-            data.message ||
-            (isSignUp ? "Failed to create account." : "Failed to sign in."),
-        })
+
+        setMode("signin")
+        setSelectedRole("student")
+        setErrors({})
+        setForm(emptyForm)
+        setSuccess("Account created successfully. Sign in to continue.")
         return
       }
 
-      if (isSignUp) {
-        setSuccess("Account created successfully.")
-      } else {
-        localStorage.setItem("isLoggedIn", "true")
-        localStorage.setItem("authToken", data?.token || "")
-        localStorage.setItem("authUser", JSON.stringify(data?.user || {}))
-        localStorage.setItem("user", JSON.stringify(data?.user || {}))
+      const attempts = SIGNIN_ATTEMPTS[selectedRole] || []
+      let lastFailureMessage = "Invalid credentials."
 
-        await syncCartWithServer()
+      for (const attempt of attempts) {
+        const response = await fetch(`${API_BASE_URL}/auth/signin`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            roleGroup: attempt.roleGroup,
+            role: attempt.role,
+            email: form.email.trim(),
+            password: form.password,
+          }),
+        })
 
-        if (
-          data?.user?.accountType === "staff" ||
-          data?.user?.roleGroup === "adminStaff"
-        ) {
-          navigate("/management-dashboard")
-        } else {
-          navigate("/user-dashboard")
+        const payload = await response.json().catch(() => ({}))
+
+        if (!response.ok) {
+          lastFailureMessage = payload?.message || "Invalid credentials."
+          continue
         }
+
+        localStorage.setItem("isLoggedIn", "true")
+
+        localStorage.setItem("userId", String(payload.user.id))
+        localStorage.setItem("userRole", payload.user.role)
+        localStorage.setItem("userRoleGroup", payload.user.roleGroup)
+
+        if (payload.user.userTypeCode) {
+          localStorage.setItem(
+            "userTypeCode",
+            String(payload.user.userTypeCode)
+          )
+        } else {
+          localStorage.removeItem("userTypeCode")
+        }
+
+        navigate("/")
+        return
+
       }
+
+      setErrors({ general: lastFailureMessage })
     } catch {
       setErrors({
-        general: "Unable to connect to server.",
+        general: "Unable to reach the server. Please try again.",
       })
     } finally {
       setIsSubmitting(false)
@@ -211,7 +254,18 @@ export default function AuthPage() {
                       placeholder="First name"
                       value={form.firstName}
                       onChange={handleChange}
+                      aria-invalid={!!errors.firstName}
+                      className={
+                        errors.firstName
+                          ? "border-destructive text-destructive focus-visible:ring-destructive"
+                          : ""
+                      }
                     />
+                    {errors.firstName && (
+                      <p className="text-sm font-medium text-destructive">
+                        {errors.firstName}
+                      </p>
+                    )}
                   </Field>
 
                   <Field className="space-y-0">
@@ -235,11 +289,21 @@ export default function AuthPage() {
                       placeholder="Last name"
                       value={form.lastName}
                       onChange={handleChange}
+                      aria-invalid={!!errors.lastName}
+                      className={
+                        errors.lastName
+                          ? "border-destructive text-destructive focus-visible:ring-destructive"
+                          : ""
+                      }
                     />
+                    {errors.lastName && (
+                      <p className="text-sm font-medium text-destructive">
+                        {errors.lastName}
+                      </p>
+                    )}
                   </Field>
                 </>
               )}
-
               <Field className="space-y-0">
                 <FieldLabel htmlFor={errors.email ? "input-invalid" : "email"}>
                   Email
@@ -345,18 +409,18 @@ export default function AuthPage() {
               </Button>
             </form>
 
-            {(isSignUp || selectedRole !== "staff") && (
-              <div className="text-center text-sm text-muted-foreground">
-                {isSignUp ? "Already have an account?" : "Need an account?"}{" "}
-                <button
-                  type="button"
-                  onClick={() => switchMode(isSignUp ? "signin" : "signup")}
-                  className="font-semibold text-primary underline-offset-4 hover:underline"
-                >
-                  {isSignUp ? "Sign in" : "Create an account"}
-                </button>
-              </div>
-            )}
+
+            <div className="text-center text-sm text-muted-foreground">
+              {isSignUp ? "Already have an account?" : "Need an account?"}{" "}
+              <button
+                type="button"
+                onClick={() => switchMode(isSignUp ? "signin" : "signup")}
+                className="font-semibold text-primary underline-offset-4 hover:underline"
+              >
+                {isSignUp ? "Sign in" : "Create an account"}
+              </button>
+            </div>
+
           </CardContent>
         </Card>
       </div>

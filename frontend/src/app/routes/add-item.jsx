@@ -38,7 +38,6 @@ const itemFields = {
       label: "Video length seconds",
       type: "number",
     },
-    { name: "videoFile", label: "Video file", type: "file" },
     {
       name: "monetaryValue",
       label: "Monetary value",
@@ -55,7 +54,6 @@ const itemFields = {
       label: "Audio length seconds",
       type: "number",
     },
-    { name: "audioFile", label: "Audio file", type: "file" },
     {
       name: "monetaryValue",
       label: "Monetary value",

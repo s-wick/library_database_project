@@ -632,6 +632,7 @@ async function handleDeleteItem(_req, res, id) {
     }
 
     try {
+      await query(`DELETE FROM assigned_genres WHERE item_id = ?`, [itemId])
       const result = await query(`DELETE FROM item WHERE item_id = ?`, [itemId])
       if (!result.affectedRows) {
         sendJson(res, 404, { ok: false, message: "Item not found." })

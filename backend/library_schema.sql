@@ -16,6 +16,24 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
+-- Table structure for table `assigned_genres`
+--
+
+DROP TABLE IF EXISTS `assigned_genres`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `assigned_genres` (
+  `book_id` int unsigned NOT NULL,
+  `genre_id` int unsigned NOT NULL,
+  `assigned_at` datetime NOT NULL,
+  PRIMARY KEY (`book_id`,`genre_id`),
+  KEY `genre_id` (`genre_id`),
+  CONSTRAINT `assigned_genres_ibfk_1` FOREIGN KEY (`book_id`) REFERENCES `book` (`book_id`),
+  CONSTRAINT `assigned_genres_ibfk_2` FOREIGN KEY (`genre_id`) REFERENCES `genre` (`genre_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `audio`
 --
 
@@ -100,11 +118,13 @@ DROP TABLE IF EXISTS `cart_items`;
 CREATE TABLE `cart_items` (
   `cart_id` int unsigned NOT NULL AUTO_INCREMENT,
   `user_id` int unsigned NOT NULL,
-  `item_type` tinyint unsigned NOT NULL,
+  `item_type_code` tinyint unsigned NOT NULL,
   `item_id` int unsigned NOT NULL,
   `added_to_cart` datetime NOT NULL,
-  PRIMARY KEY (`cart_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  PRIMARY KEY (`cart_id`),
+  KEY `item_type_code` (`item_type_code`),
+  CONSTRAINT `cart_items_ibfk_1` FOREIGN KEY (`item_type_code`) REFERENCES `item_type` (`item_code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -149,6 +169,24 @@ CREATE TABLE `fined_for` (
   KEY `borrow_transaction_id` (`borrow_transaction_id`),
   CONSTRAINT `fined_for_ibfk_1` FOREIGN KEY (`borrow_transaction_id`) REFERENCES `borrow` (`borrow_transaction_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `genre`
+--
+
+DROP TABLE IF EXISTS `genre`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `genre` (
+  `genre_id` int unsigned NOT NULL AUTO_INCREMENT,
+  `genre_text` varchar(15) NOT NULL,
+  `created_at` datetime NOT NULL,
+  `created_by` int unsigned NOT NULL,
+  PRIMARY KEY (`genre_id`),
+  KEY `created_by` (`created_by`),
+  CONSTRAINT `genre_ibfk_1` FOREIGN KEY (`created_by`) REFERENCES `librarian` (`librarian_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -382,4 +420,4 @@ CREATE TABLE `video` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-03-25 12:47:11
+-- Dump completed on 2026-03-25 22:10:01

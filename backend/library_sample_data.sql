@@ -16,6 +16,15 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
+-- Dumping data for table `assigned_genres`
+--
+
+LOCK TABLES `assigned_genres` WRITE;
+/*!40000 ALTER TABLE `assigned_genres` DISABLE KEYS */;
+/*!40000 ALTER TABLE `assigned_genres` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Dumping data for table `audio`
 --
 
@@ -51,7 +60,6 @@ UNLOCK TABLES;
 
 LOCK TABLES `cart_items` WRITE;
 /*!40000 ALTER TABLE `cart_items` DISABLE KEYS */;
-INSERT INTO `cart_items` VALUES (4,1001,3,202,'2026-03-25 12:30:33'),(5,1001,3,203,'2026-03-25 12:30:34');
 /*!40000 ALTER TABLE `cart_items` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -73,6 +81,15 @@ LOCK TABLES `fined_for` WRITE;
 /*!40000 ALTER TABLE `fined_for` DISABLE KEYS */;
 INSERT INTO `fined_for` VALUES (1,2,5,'Late return','2026-03-18 12:00:00',1),(2,9,25,'Equipment returned late','2026-03-15 09:00:00',0),(3,11,40,'High-value equipment overdue','2026-03-18 10:30:00',0);
 /*!40000 ALTER TABLE `fined_for` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Dumping data for table `genre`
+--
+
+LOCK TABLES `genre` WRITE;
+/*!40000 ALTER TABLE `genre` DISABLE KEYS */;
+/*!40000 ALTER TABLE `genre` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -193,4 +210,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-03-25 12:47:23
+-- Dump completed on 2026-03-25 22:09:50

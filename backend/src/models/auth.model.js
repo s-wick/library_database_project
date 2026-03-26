@@ -1,7 +1,9 @@
 const { query } = require("../database")
 
 async function findUserByEmail(table, idColumn, email) {
-  return query(`SELECT ${idColumn} FROM ${table} WHERE email = ? LIMIT 1`, [email])
+  return query(`SELECT ${idColumn} FROM ${table} WHERE email = ? LIMIT 1`, [
+    email,
+  ])
 }
 
 async function findUserByEmailAndPassword(table, idColumn, email, password) {
@@ -21,7 +23,14 @@ async function getNextNumericId(tableName, columnName) {
 async function createUser(table, idColumn, user) {
   await query(
     `INSERT INTO ${table} (${idColumn}, email, password, first_name, middle_name, last_name) VALUES (?, ?, ?, ?, ?, ?)`,
-    [user.id, user.email, user.password, user.firstName, user.middleName, user.lastName]
+    [
+      user.id,
+      user.email,
+      user.password,
+      user.firstName,
+      user.middleName,
+      user.lastName,
+    ]
   )
 }
 

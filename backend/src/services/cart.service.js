@@ -11,7 +11,9 @@ const {
 function getItemTypeCode(itemType) {
   if (typeof itemType === "number") return itemType
 
-  const normalized = String(itemType || "").trim().toLowerCase()
+  const normalized = String(itemType || "")
+    .trim()
+    .toLowerCase()
   if (normalized === "video") return 2
   if (normalized === "audiobook" || normalized === "audio") return 3
   if (normalized === "equipment") return 4

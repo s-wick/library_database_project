@@ -58,12 +58,16 @@ async function getBookById(id) {
 }
 
 async function getAudioById(id) {
-  const rows = await query(`SELECT * FROM audio WHERE audio_id = ? LIMIT 1`, [id])
+  const rows = await query(`SELECT * FROM audio WHERE audio_id = ? LIMIT 1`, [
+    id,
+  ])
   return rows[0] || null
 }
 
 async function getVideoById(id) {
-  const rows = await query(`SELECT * FROM video WHERE video_id = ? LIMIT 1`, [id])
+  const rows = await query(`SELECT * FROM video WHERE video_id = ? LIMIT 1`, [
+    id,
+  ])
   return rows[0] || null
 }
 

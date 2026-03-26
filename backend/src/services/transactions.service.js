@@ -1,10 +1,15 @@
 const { sendJson, parseJsonBody } = require("../utils")
-const { createBorrowTransaction, createHold } = require("../models/transactions.model")
+const {
+  createBorrowTransaction,
+  createHold,
+} = require("../models/transactions.model")
 const { deleteCartItem } = require("../models/cart.model")
 const { getItemTypeCode } = require("./cart.service")
 
 function getBorrowerTypeCode(userType) {
-  const normalized = String(userType || "").trim().toLowerCase()
+  const normalized = String(userType || "")
+    .trim()
+    .toLowerCase()
   if (normalized === "faculty") return 2
   if (normalized === "staff" || normalized === "librarian") return 3
   if (normalized === "admin") return 4
@@ -91,7 +96,12 @@ async function handleCheckout(req, res) {
 
     for (const item of items) {
       const typeCode = getItemTypeCode(item.itemType)
-      await createBorrowTransaction(typeCode, item.itemId, borrowerTypeCode, userId)
+      await createBorrowTransaction(
+        typeCode,
+        item.itemId,
+        borrowerTypeCode,
+        userId
+      )
       await deleteCartItem(userId, typeCode, item.itemId)
     }
 

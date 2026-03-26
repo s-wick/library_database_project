@@ -142,7 +142,11 @@ async function handleSignup(req, res) {
 
     const { roleGroup, roleConfig } = roleContext
 
-    const existing = await findUserByEmail(roleConfig.table, roleConfig.idColumn, email)
+    const existing = await findUserByEmail(
+      roleConfig.table,
+      roleConfig.idColumn,
+      email
+    )
     if (existing.length) {
       sendJson(res, 409, { ok: false, message: roleConfig.duplicateMessage })
       return

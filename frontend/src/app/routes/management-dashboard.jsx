@@ -5,7 +5,6 @@ import {
   Pencil,
   Trash2,
   FileBarChart2,
-  ArrowLeft,
   LogOut,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -57,13 +56,7 @@ export default function ManagementDashboardPage() {
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="mx-auto max-w-5xl space-y-6">
-        <div className="flex items-center justify-between">
-          <Button asChild variant="outline">
-            <Link to="/management-dashboard">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Dashboard Home
-            </Link>
-          </Button>
+        <div className="flex items-center justify-end">
           <Button
             variant="ghost"
             onClick={() => {

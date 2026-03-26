@@ -63,8 +63,6 @@ export default function AddLibrarianPage() {
   function getFieldError(name, value, currentForm) {
     if (name === "firstName" && !String(value || "").trim())
       return "First name is required."
-    if (name === "middleName" && !String(value || "").trim())
-      return "Middle name is required."
     if (name === "lastName" && !String(value || "").trim())
       return "Last name is required."
     if (name === "email" && !String(value || "").trim())
@@ -201,7 +199,9 @@ export default function AddLibrarianPage() {
                 <FieldError>{fieldErrors.firstName}</FieldError>
               </Field>
               <Field data-invalid={!!fieldErrors.middleName}>
-                <FieldLabel htmlFor="middleName">Middle name</FieldLabel>
+                <FieldLabel htmlFor="middleName">
+                  Middle name (optional)
+                </FieldLabel>
                 <Input
                   id="middleName"
                   name="middleName"
@@ -210,7 +210,6 @@ export default function AddLibrarianPage() {
                   onChange={onChange}
                   onBlur={onBlur}
                   aria-invalid={!!fieldErrors.middleName}
-                  required
                 />
                 <FieldError>{fieldErrors.middleName}</FieldError>
               </Field>

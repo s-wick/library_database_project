@@ -6,6 +6,7 @@ import UserDashboardPage from "./routes/user-dashboard"
 import ManagementDashboardPage from "./routes/management-dashboard"
 import AddLibrarianPage from "./routes/add-librarian"
 import AddItemPage from "./routes/add-item"
+import ManageItemsPage from "./routes/manage-items"
 import ReportsPage from "./routes/reports"
 import CheckoutPage from "./routes/checkout"
 import ItemPage from "./routes/item"
@@ -102,6 +103,15 @@ export const router = createBrowserRouter([
     element: (
       <RequireManagementAccess>
         <AddItemPage />
+      </RequireManagementAccess>
+    ),
+    errorElement: <NotFoundRoute />,
+  },
+  {
+    path: "/management-dashboard/manage-items",
+    element: (
+      <RequireManagementAccess>
+        <ManageItemsPage />
       </RequireManagementAccess>
     ),
     errorElement: <NotFoundRoute />,

@@ -2,6 +2,8 @@ import { Link, useNavigate } from "react-router-dom"
 import {
   Users,
   PackagePlus,
+  Pencil,
+  Trash2,
   FileBarChart2,
   ArrowLeft,
   LogOut,
@@ -23,6 +25,18 @@ const actions = [
     icon: PackagePlus,
   },
   {
+    title: "Edit item",
+    description: "Update existing catalog item details.",
+    to: "/management-dashboard/manage-items?mode=edit",
+    icon: Pencil,
+  },
+  {
+    title: "Remove item",
+    description: "Delete catalog items that are no longer needed.",
+    to: "/management-dashboard/manage-items?mode=remove",
+    icon: Trash2,
+  },
+  {
     title: "Reports page",
     description: "Open reports tools and analytics.",
     to: "/management-dashboard/reports",
@@ -35,9 +49,7 @@ export default function ManagementDashboardPage() {
   const authUser = JSON.parse(localStorage.getItem("authUser") || "{}")
   const visibleActions =
     authUser.role === "admin"
-      ? actions.filter(
-          (action) => action.to !== "/management-dashboard/add-item"
-        )
+      ? actions
       : actions.filter(
           (action) => action.to !== "/management-dashboard/add-librarian"
         )

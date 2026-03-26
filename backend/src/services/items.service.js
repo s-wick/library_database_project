@@ -13,6 +13,12 @@ function parseNullableNumber(value, fallback = 0) {
   return Number.isFinite(parsed) ? parsed : fallback
 }
 
+function parseOptionalString(value) {
+  if (value === undefined) return undefined
+  const normalized = String(value || "").trim()
+  return normalized || null
+}
+
 function parseNullableBlob(value) {
   const raw = String(value || "").trim()
   if (!raw) return null
@@ -256,9 +262,229 @@ async function handleCreateItem(req, res) {
   }
 }
 
+async function handleUpdateItem(req, res, id) {
+  try {
+    const body = await parseJsonBody(req)
+    const itemId = Number(id)
+
+    if (!Number.isFinite(itemId)) {
+      sendJson(res, 400, { ok: false, message: "Invalid item id." })
+      return
+    }
+
+    const existingRows = await query(
+      `SELECT item_id, item_type_code
+       FROM item
+       WHERE item_id = ?
+       LIMIT 1`,
+      [itemId]
+    )
+
+    if (!existingRows.length) {
+      sendJson(res, 404, { ok: false, message: "Item not found." })
+      return
+    }
+
+    const itemTypeCode = existingRows[0].item_type_code
+    const isBook = itemTypeCode === 1
+    const isVideo = itemTypeCode === 2
+    const isAudio = itemTypeCode === 3
+
+    const itemSet = []
+    const itemParams = []
+
+    const nextTitle =
+      body.title !== undefined
+        ? String(body.title || "").trim()
+        : isVideo && body.videoName !== undefined
+          ? String(body.videoName || "").trim()
+          : isAudio && body.audioName !== undefined
+            ? String(body.audioName || "").trim()
+            : body.rentalName !== undefined
+              ? String(body.rentalName || "").trim()
+              : undefined
+
+    if (nextTitle !== undefined) {
+      if (!nextTitle) {
+        sendJson(res, 400, { ok: false, message: "Item title is required." })
+        return
+      }
+      itemSet.push("title = ?")
+      itemParams.push(nextTitle)
+    }
+
+    if (body.monetaryValue !== undefined) {
+      itemSet.push("monetary_value = ?")
+      itemParams.push(parseNullableNumber(body.monetaryValue, 0))
+    }
+
+    if (
+      body.itemsInStock !== undefined ||
+      body.booksInStock !== undefined ||
+      body.videosInStock !== undefined ||
+      body.audiosInStock !== undefined ||
+      body.equipmentInStock !== undefined
+    ) {
+      const stockValue =
+        body.itemsInStock !== undefined
+          ? body.itemsInStock
+          : isBook
+            ? body.booksInStock
+            : isVideo
+              ? body.videosInStock
+              : isAudio
+                ? body.audiosInStock
+                : body.equipmentInStock
+
+      itemSet.push("items_in_stock = ?")
+      itemParams.push(parseNullableNumber(stockValue, 0))
+    }
+
+    if (body.thumbnailImage !== undefined) {
+      itemSet.push("thumbnail_image = ?")
+      itemParams.push(parseNullableBlob(body.thumbnailImage))
+    }
+
+    if (itemSet.length) {
+      await query(
+        `UPDATE item
+         SET ${itemSet.join(", ")}
+         WHERE item_id = ?`,
+        [...itemParams, itemId]
+      )
+    }
+
+    if (isBook) {
+      const bookSet = []
+      const bookParams = []
+
+      if (body.author !== undefined) {
+        bookSet.push("author = ?")
+        bookParams.push(String(body.author || "").trim() || "Unknown")
+      }
+      if (body.edition !== undefined) {
+        bookSet.push("edition = ?")
+        bookParams.push(parseOptionalString(body.edition))
+      }
+      if (body.publication !== undefined) {
+        bookSet.push("publication = ?")
+        bookParams.push(String(body.publication || "").trim() || "Unknown")
+      }
+      if (body.publicationDate !== undefined) {
+        bookSet.push("publication_date = ?")
+        bookParams.push(
+          String(body.publicationDate || "").trim() ||
+            new Date().toISOString().slice(0, 10)
+        )
+      }
+
+      if (bookSet.length) {
+        await query(
+          `UPDATE book
+           SET ${bookSet.join(", ")}
+           WHERE item_id = ?`,
+          [...bookParams, itemId]
+        )
+      }
+    }
+
+    if (isVideo) {
+      const videoSet = []
+      const videoParams = []
+
+      if (body.videoLengthSeconds !== undefined) {
+        videoSet.push("video_length_seconds = ?")
+        videoParams.push(parseNullableNumber(body.videoLengthSeconds, 0))
+      }
+      if (body.videoFile !== undefined) {
+        videoSet.push("video_file = ?")
+        videoParams.push(parseNullableBlob(body.videoFile) || Buffer.alloc(0))
+      }
+
+      if (videoSet.length) {
+        await query(
+          `UPDATE video
+           SET ${videoSet.join(", ")}
+           WHERE item_id = ?`,
+          [...videoParams, itemId]
+        )
+      }
+    }
+
+    if (isAudio) {
+      const audioSet = []
+      const audioParams = []
+
+      if (body.audioLengthSeconds !== undefined) {
+        audioSet.push("audio_length_seconds = ?")
+        audioParams.push(parseNullableNumber(body.audioLengthSeconds, 0))
+      }
+      if (body.audioFile !== undefined) {
+        audioSet.push("audio_file = ?")
+        audioParams.push(parseNullableBlob(body.audioFile) || Buffer.alloc(0))
+      }
+
+      if (audioSet.length) {
+        await query(
+          `UPDATE audio
+           SET ${audioSet.join(", ")}
+           WHERE item_id = ?`,
+          [...audioParams, itemId]
+        )
+      }
+    }
+
+    sendJson(res, 200, { ok: true, message: "Item updated successfully." })
+  } catch (error) {
+    sendJson(res, 500, {
+      ok: false,
+      message: "Failed to update item",
+      error: error.message,
+    })
+  }
+}
+
+async function handleDeleteItem(_req, res, id) {
+  try {
+    const itemId = Number(id)
+    if (!Number.isFinite(itemId)) {
+      sendJson(res, 400, { ok: false, message: "Invalid item id." })
+      return
+    }
+
+    try {
+      const result = await query(`DELETE FROM item WHERE item_id = ?`, [itemId])
+      if (!result.affectedRows) {
+        sendJson(res, 404, { ok: false, message: "Item not found." })
+        return
+      }
+    } catch (error) {
+      if (error.code === "ER_ROW_IS_REFERENCED_2") {
+        sendJson(res, 409, {
+          ok: false,
+          message:
+            "Item cannot be removed because it is referenced by existing records.",
+        })
+        return
+      }
+      throw error
+    }
+
+    sendJson(res, 200, { ok: true, message: "Item removed successfully." })
+  } catch (error) {
+    sendJson(res, 500, {
+      ok: false,
+      message: "Failed to remove item",
+      error: error.message,
+    })
+  }
+}
+
 module.exports = {
   handleGetItemsAll,
   handleGetItemById,
   handleSearchItems,
   handleCreateItem,
+  handleUpdateItem,
+  handleDeleteItem,
 }

@@ -63,6 +63,17 @@ async function createHold(itemId, userId) {
   return true
 }
 
+async function cancelHold(itemId, userId) {
+  const result = await query(
+    `
+    DELETE FROM hold_item
+    WHERE item_id = ? AND user_id = ?
+  `,
+    [itemId, userId]
+  )
+  return Number(result.affectedRows || 0) > 0
+}
+
 async function getUserAccountById(userId) {
   const rows = await query(
     `SELECT user_id, is_faculty
@@ -78,6 +89,7 @@ async function getUserAccountById(userId) {
 module.exports = {
   createBorrowTransaction,
   createHold,
+  cancelHold,
   getUserAccountById,
   OutOfStockError,
 }

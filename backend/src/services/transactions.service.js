@@ -2,6 +2,7 @@ const { sendJson, parseJsonBody } = require("../utils")
 const {
   createBorrowTransaction,
   createHold,
+  cancelHold,
   getUserAccountById,
   OutOfStockError,
 } = require("../models/transactions.model")
@@ -142,8 +143,44 @@ async function handleCheckout(req, res) {
   }
 }
 
+async function handleCancelHold(req, res) {
+  try {
+    const body = await parseJsonBody(req)
+    const { itemId, userId, requestDate } = body
+
+    if (!itemId || !userId) {
+      sendJson(res, 400, {
+        ok: false,
+        message: "itemId and userId are required",
+      })
+      return
+    }
+
+    const user = await getUserAccountById(userId)
+    if (!user) {
+      sendJson(res, 404, { ok: false, message: "User account not found" })
+      return
+    }
+
+    const removed = await cancelHold(itemId, user.user_id, requestDate || null)
+    if (!removed) {
+      sendJson(res, 404, { ok: false, message: "Hold entry not found" })
+      return
+    }
+
+    sendJson(res, 200, { ok: true, message: "Hold canceled successfully" })
+  } catch (error) {
+    sendJson(res, 500, {
+      ok: false,
+      message: "Failed to cancel hold",
+      error: error.message,
+    })
+  }
+}
+
 module.exports = {
   handleCheckout,
   handleBorrow,
   handleHold,
+  handleCancelHold,
 }

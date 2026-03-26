@@ -1,10 +1,15 @@
 const { sendJson } = require("../utils")
 const {
+  syncOverdueFines,
   getBorrowedBooks,
   getActiveHolds,
   getUnpaidFines,
   getBorrowHistory,
 } = require("../models/dashboard.model")
+const {
+  calculateOutstandingFine,
+  hasReachedItemValueCap,
+} = require("../utils/fine-calculation")
 
 function toDateString(value) {
   if (!value) return null
@@ -21,13 +26,6 @@ function getBorrowStatus(dueDate) {
   return "on_time"
 }
 
-function computeDaysOverdue(dueDate, returnDate) {
-  const endDate = returnDate ? new Date(returnDate) : new Date()
-  const due = new Date(dueDate)
-  const diff = Math.ceil((endDate - due) / (1000 * 60 * 60 * 24))
-  return diff > 0 ? diff : 0
-}
-
 async function handleGetDashboard(_req, res, url) {
   try {
     const userId = url.searchParams.get("userId")
@@ -35,6 +33,8 @@ async function handleGetDashboard(_req, res, url) {
       sendJson(res, 400, { ok: false, message: "userId is required" })
       return
     }
+
+    await syncOverdueFines(userId)
 
     const [borrowedBooks, holds, finesData, borrowHistory] = await Promise.all([
       getBorrowedBooks(userId),
@@ -53,6 +53,8 @@ async function handleGetDashboard(_req, res, url) {
 
     const formattedHolds = holds.map((hold) => ({
       id: `${hold.item_id}-${new Date(hold.request_date).toISOString()}`,
+      itemId: hold.item_id,
+      requestDate: new Date(hold.request_date).toISOString(),
       title: hold.title || "Unknown Item",
       author: hold.author || "",
       status: "active",
@@ -62,10 +64,12 @@ async function handleGetDashboard(_req, res, url) {
 
     const formattedFines = finesData.map((fine) => ({
       id: `${fine.item_id}-${new Date(fine.checkout_date).toISOString()}`,
-      amount: Number(fine.amount || 0) - Number(fine.amount_paid || 0),
+      amount: calculateOutstandingFine(fine.amount, fine.amount_paid),
       status: "unpaid",
       book: fine.title || "Unknown Item",
-      daysOverdue: computeDaysOverdue(fine.due_date, fine.return_date),
+      daysOverdue: Math.max(Number(fine.days_overdue || 0), 0),
+      isAtMaxValue: hasReachedItemValueCap(fine.amount, fine.item_value),
+      itemValue: Number(fine.item_value || 0),
     }))
 
     const formattedHistory = borrowHistory.map((book) => ({

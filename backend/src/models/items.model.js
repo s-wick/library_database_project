@@ -54,6 +54,10 @@ async function searchItems({ queryText = "", itemType = "All", limit = 50 }) {
   const typeCode = normalizeItemTypeCode(itemType)
   const trimmedQuery = String(queryText || "").trim()
   const likeQuery = `%${trimmedQuery}%`
+  const parsedLimit = Number.parseInt(limit, 10)
+  const safeLimit = Number.isFinite(parsedLimit)
+    ? Math.min(Math.max(parsedLimit, 1), 200)
+    : 50
 
   const filters = []
   const params = []
@@ -109,8 +113,8 @@ async function searchItems({ queryText = "", itemType = "All", limit = 50 }) {
        a.audio_length_seconds,
        v.video_length_seconds
      ORDER BY i.created_at DESC
-     LIMIT ?`,
-    [...params, Number(limit) || 50]
+     LIMIT ${safeLimit}`,
+    params
   )
 
   return rows.map(mapItemRow)

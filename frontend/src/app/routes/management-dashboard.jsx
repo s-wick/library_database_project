@@ -35,7 +35,9 @@ export default function ManagementDashboardPage() {
   const authUser = JSON.parse(localStorage.getItem("authUser") || "{}")
   const visibleActions =
     authUser.role === "admin"
-      ? actions
+      ? actions.filter(
+          (action) => action.to !== "/management-dashboard/add-item"
+        )
       : actions.filter(
           (action) => action.to !== "/management-dashboard/add-librarian"
         )

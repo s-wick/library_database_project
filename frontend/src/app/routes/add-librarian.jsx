@@ -148,7 +148,7 @@ export default function AddLibrarianPage() {
       const data = await response.json().catch(() => ({}))
       if (!response.ok) {
         if (response.status === 401) {
-          setError("Session expired. Please sign in again.")
+          setError("Unauthorized access. Please sign in again.")
           return
         }
         setError(data.message || "Failed to add librarian.")

@@ -23,7 +23,6 @@ const itemFields = {
       step: "0.01",
     },
     { name: "booksInStock", label: "Books in stock", type: "number" },
-    { name: "createdBy", label: "Created by" },
   ],
   VIDEO: [
     { name: "videoName", label: "Video name", required: true },
@@ -41,7 +40,6 @@ const itemFields = {
       step: "0.01",
     },
     { name: "videosInStock", label: "Videos in stock", type: "number" },
-    { name: "createdBy", label: "Created by" },
   ],
   AUDIO: [
     { name: "audioName", label: "Audio name", required: true },
@@ -59,7 +57,6 @@ const itemFields = {
       step: "0.01",
     },
     { name: "audiosInStock", label: "Audios in stock", type: "number" },
-    { name: "createdBy", label: "Created by" },
   ],
   RENTAL_EQUIPMENT: [
     { name: "rentalName", label: "Rental name", required: true },
@@ -71,7 +68,6 @@ const itemFields = {
       step: "0.01",
     },
     { name: "equipmentInStock", label: "Equipment in stock", type: "number" },
-    { name: "createdBy", label: "Created by" },
   ],
 }
 
@@ -201,7 +197,7 @@ export default function AddItemPage() {
       const data = await response.json().catch(() => ({}))
       if (!response.ok) {
         if (response.status === 401) {
-          setError("Session expired. Please sign in again.")
+          setError("Unauthorized access. Please sign in again.")
           return
         }
         setError(data.message || "Failed to add item.")

@@ -303,6 +303,18 @@ function getSessionUser(req) {
   return session.user
 }
 
+function requireLibrarianUser(req, res) {
+  const user = getSessionUser(req)
+  if (!user || user.roleGroup !== "adminStaff" || user.role !== "staff") {
+    sendJson(res, 401, {
+      ok: false,
+      message: "Unauthorized. Only librarians can perform this action.",
+    })
+    return null
+  }
+  return user
+}
+
 function requireManagementUser(req, res) {
   const user = getSessionUser(req)
   if (!user || user.roleGroup !== "adminStaff") {
@@ -377,7 +389,9 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.method === "POST" && pathname === "/api/management/items") {
-    if (!requireManagementUser(req, res)) return
+    const user = requireLibrarianUser(req, res)
+    if (!user) return
+    req.user = user // Pass user down
     await handleAddItem(req, res)
     return
   }

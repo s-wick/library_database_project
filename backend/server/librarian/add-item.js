@@ -12,6 +12,7 @@ function createAddItemHandler({
   return async function handleAddItem(req, res) {
     try {
       const body = await parseJsonBody(req)
+      const librarianId = req.user ? req.user.id : null
       const itemType = normalizeItemType(body.itemType)
       const typeSchema = getItemSchemas()[itemType]
       const createdAt = new Date().toISOString().slice(0, 10)
@@ -71,7 +72,7 @@ function createAddItemHandler({
             parseNullableNumber(body.monetaryValue),
             parseNullableNumber(body.booksInStock),
             createdAt,
-            parseNullableString(body.createdBy),
+            librarianId,
             itemTypeCode,
           ]
         )
@@ -90,8 +91,8 @@ function createAddItemHandler({
           } else {
             const insertRes = await query(
               "INSERT INTO genre (genre_text, created_at, created_by) VALUES (?, ?, ?)",
-              [cleanText, createdAt, 1]
-            ) // Fallback 1 for created_by
+              [cleanText, createdAt, librarianId]
+            )
             gId = insertRes.insertId
           }
           // Avoid duplicate assignment
@@ -118,7 +119,7 @@ function createAddItemHandler({
             parseNullableNumber(body.monetaryValue),
             parseNullableNumber(body.videosInStock),
             createdAt,
-            parseNullableString(body.createdBy),
+            librarianId,
             itemTypeCode,
           ]
         )
@@ -134,7 +135,7 @@ function createAddItemHandler({
             parseNullableNumber(body.monetaryValue),
             parseNullableNumber(body.audiosInStock),
             createdAt,
-            parseNullableString(body.createdBy),
+            librarianId,
             itemTypeCode,
           ]
         )
@@ -148,7 +149,7 @@ function createAddItemHandler({
             parseNullableNumber(body.monetaryValue),
             parseNullableNumber(body.equipmentInStock),
             createdAt,
-            parseNullableString(body.createdBy),
+            librarianId,
             itemTypeCode,
           ]
         )

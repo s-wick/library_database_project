@@ -37,7 +37,7 @@ async function handleApiRoute(req, res, url) {
   }
 
   if (req.method === "GET" && pathname === "/api/dashboard") {
-    await handleGetDashboard(req, res)
+    await handleGetDashboard(req, res, url)
     return
   }
 
@@ -52,11 +52,19 @@ async function handleApiRoute(req, res, url) {
   }
 
   if (req.method === "GET" && pathname.startsWith("/api/items/")) {
-    const parts = pathname.split("/")
-    if (parts.length === 5) {
-      const type = parts[3]
-      const id = parts[4]
-      await handleGetItemById(req, res, type, id)
+    const parts = pathname.split("/").filter(Boolean)
+
+    // New route shape: /api/items/:id
+    if (parts.length === 3) {
+      const id = parts[2]
+      await handleGetItemById(req, res, id)
+      return
+    }
+
+    // Backward compatibility for old route shape: /api/items/:type/:id
+    if (parts.length === 4) {
+      const id = parts[3]
+      await handleGetItemById(req, res, id)
       return
     }
   }

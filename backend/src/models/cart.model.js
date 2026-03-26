@@ -2,61 +2,63 @@ const { query } = require("../database")
 
 async function getCartRowsByUserId(userId) {
   return query(
-    `SELECT c.cart_id, c.user_id, c.item_type, c.item_id, c.added_to_cart
+    `SELECT c.cart_id, c.user_id, c.item_id, c.added_to_cart
      FROM cart_items c
      WHERE c.user_id = ?`,
     [userId]
   )
 }
 
-async function getStandardItemForCart(itemTypeCode, itemId) {
-  if (itemTypeCode === 1) {
-    const rows = await query(
-      `SELECT book_id as item_id, title, author as creator, 'Book' as standard_type, thumbnail_image, books_in_stock as in_stock FROM book WHERE book_id = ? LIMIT 1`,
-      [itemId]
-    )
-    return rows[0] || null
-  }
+async function getStandardItemForCart(itemId) {
+  const rows = await query(
+    `SELECT
+       i.item_id,
+       i.item_type_code,
+       i.title,
+       i.thumbnail_image,
+       i.items_in_stock AS in_stock,
+       b.author
+     FROM item i
+     LEFT JOIN book b ON b.item_id = i.item_id
+     WHERE i.item_id = ?
+     LIMIT 1`,
+    [itemId]
+  )
 
-  if (itemTypeCode === 2) {
-    const rows = await query(
-      `SELECT video_id as item_id, video_name as title, '' as creator, 'Video' as standard_type, thumbnail_image, videos_in_stock as in_stock FROM video WHERE video_id = ? LIMIT 1`,
-      [itemId]
-    )
-    return rows[0] || null
-  }
+  if (!rows.length) return null
 
-  if (itemTypeCode === 3) {
-    const rows = await query(
-      `SELECT audio_id as item_id, audio_name as title, '' as creator, 'Audiobook' as standard_type, thumbnail_image, audios_in_stock as in_stock FROM audio WHERE audio_id = ? LIMIT 1`,
-      [itemId]
-    )
-    return rows[0] || null
-  }
+  const row = rows[0]
+  const standardType =
+    row.item_type_code === 1
+      ? "Book"
+      : row.item_type_code === 2
+        ? "Video"
+        : row.item_type_code === 3
+          ? "Audiobook"
+          : "Equipment"
 
-  if (itemTypeCode === 4) {
-    const rows = await query(
-      `SELECT equipment_id as item_id, rental_name as title, '' as creator, 'Equipment' as standard_type, thumbnail_image, equipment_in_stock as in_stock FROM rental_equipment WHERE equipment_id = ? LIMIT 1`,
-      [itemId]
-    )
-    return rows[0] || null
+  return {
+    item_id: row.item_id,
+    title: row.title,
+    creator: row.item_type_code === 1 ? row.author || "" : "",
+    standard_type: standardType,
+    thumbnail_image: row.thumbnail_image,
+    in_stock: row.in_stock,
   }
-
-  return null
 }
 
-async function findCartItem(userId, itemType, itemId) {
+async function findCartItem(userId, itemId) {
   return query(
-    `SELECT cart_id FROM cart_items WHERE user_id = ? AND item_type = ? AND item_id = ?`,
-    [userId, itemType, itemId]
+    `SELECT cart_id FROM cart_items WHERE user_id = ? AND item_id = ?`,
+    [userId, itemId]
   )
 }
 
-async function insertCartItem(userId, itemType, itemId) {
+async function insertCartItem(userId, itemId) {
   await query(
-    `INSERT INTO cart_items (user_id, item_type, item_id, added_to_cart)
-     VALUES (?, ?, ?, NOW())`,
-    [userId, itemType, itemId]
+    `INSERT INTO cart_items (user_id, item_id, added_to_cart)
+     VALUES (?, ?, NOW())`,
+    [userId, itemId]
   )
 }
 
@@ -64,11 +66,11 @@ async function clearCartByUserId(userId) {
   await query(`DELETE FROM cart_items WHERE user_id = ?`, [userId])
 }
 
-async function deleteCartItem(userId, itemType, itemId) {
-  await query(
-    `DELETE FROM cart_items WHERE user_id = ? AND item_type = ? AND item_id = ?`,
-    [userId, itemType, itemId]
-  )
+async function deleteCartItem(userId, itemId) {
+  await query(`DELETE FROM cart_items WHERE user_id = ? AND item_id = ?`, [
+    userId,
+    itemId,
+  ])
 }
 
 module.exports = {

@@ -2,38 +2,46 @@ const { sendJson, parseJsonBody } = require("../utils")
 const {
   createBorrowTransaction,
   createHold,
+  getUserAccountById,
+  OutOfStockError,
 } = require("../models/transactions.model")
 const { deleteCartItem } = require("../models/cart.model")
-const { getItemTypeCode } = require("./cart.service")
-
-function getBorrowerTypeCode(userType) {
-  const normalized = String(userType || "")
-    .trim()
-    .toLowerCase()
-  if (normalized === "faculty") return 2
-  if (normalized === "staff" || normalized === "librarian") return 3
-  if (normalized === "admin") return 4
-  return 1
-}
 
 async function handleBorrow(req, res) {
   try {
     const body = await parseJsonBody(req)
-    const { itemId, itemType } = body
+    const { itemId, userId } = body
 
-    if (!itemId || !itemType) {
+    if (!itemId || !userId) {
       sendJson(res, 400, {
         ok: false,
-        message: "itemId and itemType are required",
+        message: "itemId and userId are required",
       })
       return
     }
 
-    const typeCode = getItemTypeCode(itemType)
-    await createBorrowTransaction(typeCode, itemId, 1, 1)
+    const user = await getUserAccountById(userId)
+    if (!user) {
+      sendJson(res, 404, { ok: false, message: "User account not found" })
+      return
+    }
 
-    sendJson(res, 200, { ok: true, message: "Item borrowed successfully" })
+    const borrowDays = user.is_faculty ? 14 : 7
+    await createBorrowTransaction(user.user_id, itemId, borrowDays)
+
+    sendJson(res, 200, {
+      ok: true,
+      message: `Item borrowed successfully for ${borrowDays} days.`,
+    })
   } catch (error) {
+    if (error instanceof OutOfStockError) {
+      sendJson(res, 409, {
+        ok: false,
+        message: "Item is currently not available.",
+      })
+      return
+    }
+
     sendJson(res, 500, {
       ok: false,
       message: "Failed to borrow item",
@@ -45,17 +53,28 @@ async function handleBorrow(req, res) {
 async function handleHold(req, res) {
   try {
     const body = await parseJsonBody(req)
-    const { itemId, itemType } = body
+    const { itemId, userId } = body
 
-    if (!itemId || !itemType) {
+    if (!itemId || !userId) {
       sendJson(res, 400, {
         ok: false,
-        message: "itemId and itemType are required",
+        message: "itemId and userId are required",
       })
       return
     }
 
-    await createHold(itemId, 1, 1, 1)
+    const user = await getUserAccountById(userId)
+    if (!user) {
+      sendJson(res, 404, { ok: false, message: "User account not found" })
+      return
+    }
+
+    const created = await createHold(itemId, user.user_id)
+    if (!created) {
+      sendJson(res, 200, { ok: true, message: "Hold already exists." })
+      return
+    }
+
     sendJson(res, 200, { ok: true, message: "Hold placed successfully" })
   } catch (error) {
     sendJson(res, 500, {
@@ -69,9 +88,9 @@ async function handleHold(req, res) {
 async function handleCheckout(req, res) {
   try {
     const body = await parseJsonBody(req)
-    const { items, userId, userType } = body
+    const { items, userId } = body
 
-    if (!userId || !userType) {
+    if (!userId) {
       sendJson(res, 400, {
         ok: false,
         message: "User context is required for checkout",
@@ -92,21 +111,29 @@ async function handleCheckout(req, res) {
       return
     }
 
-    const borrowerTypeCode = getBorrowerTypeCode(userType)
+    const user = await getUserAccountById(userId)
+    if (!user) {
+      sendJson(res, 404, { ok: false, message: "User account not found" })
+      return
+    }
+
+    const borrowDays = user.is_faculty ? 14 : 7
 
     for (const item of items) {
-      const typeCode = getItemTypeCode(item.itemType)
-      await createBorrowTransaction(
-        typeCode,
-        item.itemId,
-        borrowerTypeCode,
-        userId
-      )
-      await deleteCartItem(userId, typeCode, item.itemId)
+      await createBorrowTransaction(user.user_id, item.itemId, borrowDays)
+      await deleteCartItem(user.user_id, item.itemId)
     }
 
     sendJson(res, 200, { ok: true, message: "Successfully checked out items" })
   } catch (error) {
+    if (error instanceof OutOfStockError) {
+      sendJson(res, 409, {
+        ok: false,
+        message: "One or more selected items are currently unavailable.",
+      })
+      return
+    }
+
     sendJson(res, 500, {
       ok: false,
       message: "Failed to checkout",

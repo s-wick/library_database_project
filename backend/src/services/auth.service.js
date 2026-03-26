@@ -1,113 +1,54 @@
 const { sendJson, parseJsonBody } = require("../utils")
 const {
-  findUserByEmail,
-  findUserByEmailAndPassword,
-  getNextNumericId,
-  createUser,
-  createUserWithType,
+  findUserAccountByEmail,
+  findStaffAccountByEmail,
+  findUserAccountByCredentials,
+  findStaffAccountByCredentials,
+  createUserAccount,
 } = require("../models/auth.model")
 
-function normalizeRoleGroup(roleGroup = "") {
-  const value = String(roleGroup).trim()
-  if (value === "adminStaff" || value === "studentFaculty") return value
+function normalizeAccountType(accountType = "") {
+  const normalized = String(accountType || "")
+    .trim()
+    .toLowerCase()
+
+  if (normalized === "staff" || normalized === "admin") return "staff"
+  if (
+    normalized === "user" ||
+    normalized === "student" ||
+    normalized === "faculty"
+  ) {
+    return "user"
+  }
+
   return ""
 }
 
-function normalizeRole(role = "") {
-  const value = String(role).trim().toLowerCase()
-  if (value === "system_administrator") return "admin"
-  return value
-}
+function inferAccountTypeFromLegacyPayload(payload) {
+  const roleGroup = String(payload.roleGroup || "")
+    .trim()
+    .toLowerCase()
+  const role = String(payload.role || "")
+    .trim()
+    .toLowerCase()
 
-const ROLE_DEFINITIONS = {
-  adminStaff: {
-    roles: {
-      admin: {
-        aliases: ["system_administrator"],
-        responseRole: "admin",
-        hierarchy: 2,
-        table: "system_administrator",
-        idColumn: "administrator_id",
-        duplicateMessage: "Email already exists for admin.",
-        createdMessage: "Admin account created.",
-        invalidCredentialsMessage: "Invalid admin credentials.",
-      },
-      staff: {
-        aliases: ["librarian"],
-        responseRole: "staff",
-        hierarchy: 1,
-        table: "librarian",
-        idColumn: "librarian_id",
-        duplicateMessage: "Email already exists for staff.",
-        createdMessage: "Staff account created.",
-        invalidCredentialsMessage: "Invalid staff credentials.",
-      },
-    },
-  },
-  studentFaculty: {
-    roles: {
-      student: {
-        aliases: [],
-        responseRole: "student",
-        hierarchy: 1,
-        table: "student_user",
-        idColumn: "student_id",
-        duplicateMessage: "Email already exists for student.",
-        createdMessage: "Student account created.",
-        invalidCredentialsMessage: "Invalid student credentials.",
-        userTypeCode: 1,
-        idStrategy: "student",
-      },
-      faculty: {
-        aliases: [],
-        responseRole: "faculty",
-        hierarchy: 1,
-        table: "faculty_user",
-        idColumn: "faculty_id",
-        duplicateMessage: "Email already exists for faculty.",
-        createdMessage: "Faculty account created.",
-        invalidCredentialsMessage: "Invalid faculty credentials.",
-        userTypeCode: 2,
-      },
-    },
-  },
-}
-
-function resolveRoleContext(roleGroupInput, roleInput) {
-  const roleGroup = normalizeRoleGroup(roleGroupInput)
-  const groupConfig = ROLE_DEFINITIONS[roleGroup]
-  if (!groupConfig) return null
-
-  const normalizedRole = normalizeRole(roleInput)
-  let roleKey = normalizedRole
-
-  if (!groupConfig.roles[roleKey]) {
-    const matchedKey = Object.keys(groupConfig.roles).find((key) =>
-      groupConfig.roles[key].aliases.includes(normalizedRole)
-    )
-    if (matchedKey) roleKey = matchedKey
+  if (roleGroup === "adminstaff" || role === "admin" || role === "staff") {
+    return "staff"
   }
 
-  const roleConfig = groupConfig.roles[roleKey]
-  if (!roleConfig) return null
-
-  return {
-    roleGroup,
-    roleConfig,
-  }
+  return "user"
 }
 
-function generateStudentId() {
-  const randomPart = Math.floor(Math.random() * 1_000_000_000_000)
-    .toString()
-    .padStart(12, "0")
-  return `S${randomPart}`.slice(0, 15)
+function parseBoolean(value, fallback = false) {
+  if (typeof value === "boolean") return value
+  if (value === "1" || value === 1 || value === "true") return true
+  if (value === "0" || value === 0 || value === "false") return false
+  return fallback
 }
 
 async function handleSignup(req, res) {
   try {
     const body = await parseJsonBody(req)
-    const roleContext = resolveRoleContext(body.roleGroup, body.role)
     const email = String(body.email || "")
       .trim()
       .toLowerCase()
@@ -115,6 +56,7 @@ async function handleSignup(req, res) {
     const firstName = String(body.firstName || "").trim() || null
     const middleName = String(body.middleName || "").trim() || null
     const lastName = String(body.lastName || "").trim() || null
+    const isFaculty = parseBoolean(body.isFaculty, false)
 
     if (!email || !password) {
       sendJson(res, 400, {
@@ -124,73 +66,41 @@ async function handleSignup(req, res) {
       return
     }
 
-    if (!roleContext) {
-      sendJson(res, 400, {
-        ok: false,
-        message: "Invalid roleGroup/role combination.",
-      })
+    const existingUser = await findUserAccountByEmail(email)
+    if (existingUser) {
+      sendJson(res, 409, { ok: false, message: "Email already exists." })
       return
     }
 
-    if (roleContext.roleGroup === "adminStaff") {
-      sendJson(res, 403, {
-        ok: false,
-        message: "Admin and staff accounts cannot be created from this page.",
-      })
+    const existingStaff = await findStaffAccountByEmail(email)
+    if (existingStaff) {
+      sendJson(res, 409, { ok: false, message: "Email already exists." })
       return
     }
 
-    const { roleGroup, roleConfig } = roleContext
-
-    const existing = await findUserByEmail(
-      roleConfig.table,
-      roleConfig.idColumn,
-      email
-    )
-    if (existing.length) {
-      sendJson(res, 409, { ok: false, message: roleConfig.duplicateMessage })
-      return
-    }
-
-    let createdId
-    if (roleConfig.idStrategy === "student") {
-      createdId = generateStudentId()
-    } else {
-      createdId = await getNextNumericId(roleConfig.table, roleConfig.idColumn)
-    }
-
-    const user = {
-      id: createdId,
+    await createUserAccount({
       email,
       password,
       firstName,
       middleName,
       lastName,
-    }
+      isFaculty,
+    })
 
-    if (typeof roleConfig.userTypeCode === "number") {
-      await createUserWithType(
-        roleConfig.table,
-        roleConfig.idColumn,
-        user,
-        roleConfig.userTypeCode
-      )
-    } else {
-      await createUser(roleConfig.table, roleConfig.idColumn, user)
-    }
+    const createdUser = await findUserAccountByEmail(email)
 
     sendJson(res, 201, {
       ok: true,
-      message: roleConfig.createdMessage,
+      message: "Account created.",
       user: {
-        roleGroup,
-        role: roleConfig.responseRole,
-        hierarchy: roleConfig.hierarchy,
-        id: createdId,
-        email,
-        firstName,
-        middleName,
-        lastName,
+        id: createdUser.user_id,
+        accountType: "user",
+        role: createdUser.is_faculty ? "faculty" : "student",
+        email: createdUser.email,
+        firstName: createdUser.first_name,
+        middleName: createdUser.middle_name,
+        lastName: createdUser.last_name,
+        isFaculty: Boolean(createdUser.is_faculty),
       },
     })
   } catch (error) {
@@ -205,11 +115,13 @@ async function handleSignup(req, res) {
 async function handleSignin(req, res) {
   try {
     const body = await parseJsonBody(req)
-    const roleContext = resolveRoleContext(body.roleGroup, body.role)
     const email = String(body.email || "")
       .trim()
       .toLowerCase()
     const password = String(body.password || "")
+    const accountType =
+      normalizeAccountType(body.accountType) ||
+      inferAccountTypeFromLegacyPayload(body)
 
     if (!email || !password) {
       sendJson(res, 400, {
@@ -219,26 +131,36 @@ async function handleSignin(req, res) {
       return
     }
 
-    if (!roleContext) {
-      sendJson(res, 400, {
+    let account = null
+
+    if (accountType === "staff") {
+      account = await findStaffAccountByCredentials(email, password)
+    } else {
+      account = await findUserAccountByCredentials(email, password)
+    }
+
+    if (!account) {
+      sendJson(res, 401, {
         ok: false,
-        message: "Invalid roleGroup/role combination.",
+        message: "Invalid credentials.",
       })
       return
     }
 
-    const { roleGroup, roleConfig } = roleContext
-    const rows = await findUserByEmailAndPassword(
-      roleConfig.table,
-      roleConfig.idColumn,
-      email,
-      password
-    )
-
-    if (!rows.length) {
-      sendJson(res, 401, {
-        ok: false,
-        message: roleConfig.invalidCredentialsMessage,
+    if (accountType === "staff") {
+      sendJson(res, 200, {
+        ok: true,
+        message: "Sign in successful.",
+        user: {
+          id: account.staff_id,
+          accountType: "staff",
+          role: account.is_admin ? "admin" : "staff",
+          email: account.email,
+          firstName: account.first_name,
+          middleName: account.middle_name,
+          lastName: account.last_name,
+          isAdmin: Boolean(account.is_admin),
+        },
       })
       return
     }
@@ -247,11 +169,14 @@ async function handleSignin(req, res) {
       ok: true,
       message: "Sign in successful.",
       user: {
-        roleGroup,
-        role: roleConfig.responseRole,
-        hierarchy: roleConfig.hierarchy,
-        id: rows[0].id,
-        email: rows[0].email,
+        id: account.user_id,
+        accountType: "user",
+        role: account.is_faculty ? "faculty" : "student",
+        email: account.email,
+        firstName: account.first_name,
+        middleName: account.middle_name,
+        lastName: account.last_name,
+        isFaculty: Boolean(account.is_faculty),
       },
     })
   } catch (error) {

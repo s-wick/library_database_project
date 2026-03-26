@@ -51,10 +51,8 @@ export default function CheckoutPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId: user.id,
-          userType: user.role,
           items: cartItems.map((i) => ({
             itemId: i.item_id,
-            itemType: i.standard_type || "book",
           })),
         }),
       })

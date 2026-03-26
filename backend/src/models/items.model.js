@@ -1,104 +1,176 @@
 const { query } = require("../database")
 
-async function getAllBooks() {
-  return query(
-    `SELECT book_id as item_id, title, author as creator, 'Book' as standard_type, thumbnail_image, books_in_stock as in_stock FROM book`
-  )
+const ITEM_TYPE_CODE_MAP = {
+  book: 1,
+  video: 2,
+  audiobook: 3,
+  audio: 3,
+  equipment: 4,
+  rental_equipment: 4,
 }
 
-async function getAllAudios() {
-  return query(
-    `SELECT audio_id as item_id, audio_name as title, '' as creator, 'Audiobook' as standard_type, thumbnail_image, audios_in_stock as in_stock FROM audio`
-  )
+const STANDARD_TYPE_BY_CODE = {
+  1: "Book",
+  2: "Video",
+  3: "Audiobook",
+  4: "Equipment",
 }
 
-async function getAllVideos() {
-  return query(
-    `SELECT video_id as item_id, video_name as title, '' as creator, 'Video' as standard_type, thumbnail_image, videos_in_stock as in_stock FROM video`
-  )
+function normalizeItemTypeCode(type) {
+  const normalized = String(type || "")
+    .trim()
+    .toLowerCase()
+  return ITEM_TYPE_CODE_MAP[normalized] || null
 }
 
-async function getAllEquipment() {
-  return query(
-    `SELECT equipment_id as item_id, rental_name as title, '' as creator, 'Equipment' as standard_type, thumbnail_image, equipment_in_stock as in_stock FROM rental_equipment`
-  )
+function mapItemRow(row) {
+  const standardType = STANDARD_TYPE_BY_CODE[row.item_type_code] || "Item"
+  const creator = row.item_type_code === 1 ? row.author || "" : ""
+
+  return {
+    item_id: row.item_id,
+    item_type_code: row.item_type_code,
+    title: row.title,
+    standard_type: standardType,
+    creator,
+    thumbnail_image: row.thumbnail_image,
+    in_stock: row.in_stock,
+    author: row.author,
+    edition: row.edition,
+    publication: row.publication,
+    publication_date: row.publication_date,
+    audio_length_seconds: row.audio_length_seconds,
+    video_length_seconds: row.video_length_seconds,
+    duration:
+      row.item_type_code === 3
+        ? row.audio_length_seconds
+        : row.item_type_code === 2
+          ? row.video_length_seconds
+          : null,
+  }
 }
 
-async function searchBooks(likeQuery) {
-  return query(
-    `SELECT book_id as item_id, title, author as creator, 'Book' as standard_type, thumbnail_image, books_in_stock as in_stock FROM book WHERE title LIKE ? OR author LIKE ? LIMIT 50`,
-    [likeQuery, likeQuery]
-  )
-}
+async function searchItems({ queryText = "", itemType = "All", limit = 50 }) {
+  const typeCode = normalizeItemTypeCode(itemType)
+  const trimmedQuery = String(queryText || "").trim()
+  const likeQuery = `%${trimmedQuery}%`
 
-async function searchAudios(likeQuery) {
-  return query(
-    `SELECT audio_id as item_id, audio_name as title, '' as creator, 'Audiobook' as standard_type, thumbnail_image, audios_in_stock as in_stock FROM audio WHERE audio_name LIKE ? LIMIT 50`,
-    [likeQuery]
-  )
-}
+  const filters = []
+  const params = []
 
-async function searchVideos(likeQuery) {
-  return query(
-    `SELECT video_id as item_id, video_name as title, '' as creator, 'Video' as standard_type, thumbnail_image, videos_in_stock as in_stock FROM video WHERE video_name LIKE ? LIMIT 50`,
-    [likeQuery]
-  )
-}
+  if (typeCode) {
+    filters.push("i.item_type_code = ?")
+    params.push(typeCode)
+  }
 
-async function searchEquipment(likeQuery) {
-  return query(
-    `SELECT equipment_id as item_id, rental_name as title, '' as creator, 'Equipment' as standard_type, thumbnail_image, equipment_in_stock as in_stock FROM rental_equipment WHERE rental_name LIKE ? LIMIT 50`,
-    [likeQuery]
-  )
-}
+  if (trimmedQuery) {
+    filters.push(`(
+      i.title LIKE ?
+      OR COALESCE(b.author, '') LIKE ?
+      OR COALESCE(b.publication, '') LIKE ?
+      OR COALESCE(g.genre_text, '') LIKE ?
+    )`)
+    params.push(likeQuery, likeQuery, likeQuery, likeQuery)
+  }
 
-async function getBookById(id) {
-  const rows = await query(`SELECT * FROM book WHERE book_id = ? LIMIT 1`, [id])
-  return rows[0] || null
-}
+  const whereClause = filters.length ? `WHERE ${filters.join(" AND ")}` : ""
 
-async function getAudioById(id) {
-  const rows = await query(`SELECT * FROM audio WHERE audio_id = ? LIMIT 1`, [
-    id,
-  ])
-  return rows[0] || null
-}
-
-async function getVideoById(id) {
-  const rows = await query(`SELECT * FROM video WHERE video_id = ? LIMIT 1`, [
-    id,
-  ])
-  return rows[0] || null
-}
-
-async function getEquipmentById(id) {
   const rows = await query(
-    `SELECT * FROM rental_equipment WHERE equipment_id = ? LIMIT 1`,
-    [id]
+    `SELECT
+       i.item_id,
+       i.item_type_code,
+       i.title,
+       i.thumbnail_image,
+       i.items_in_stock AS in_stock,
+       b.author,
+       b.edition,
+       b.publication,
+       b.publication_date,
+       a.audio_length_seconds,
+       v.video_length_seconds,
+       MAX(g.genre_text) AS genre_text
+     FROM item i
+     LEFT JOIN book b ON b.item_id = i.item_id
+     LEFT JOIN audio a ON a.item_id = i.item_id
+     LEFT JOIN video v ON v.item_id = i.item_id
+     LEFT JOIN assigned_genres ag ON ag.item_id = i.item_id
+     LEFT JOIN genre g ON g.genre_id = ag.genre_id
+     ${whereClause}
+     GROUP BY
+       i.item_id,
+       i.item_type_code,
+       i.title,
+       i.thumbnail_image,
+       i.items_in_stock,
+       b.author,
+       b.edition,
+       b.publication,
+       b.publication_date,
+       a.audio_length_seconds,
+       v.video_length_seconds
+     ORDER BY i.created_at DESC
+     LIMIT ?`,
+    [...params, Number(limit) || 50]
   )
-  return rows[0] || null
+
+  return rows.map(mapItemRow)
 }
 
-async function getActiveHoldCountByItemId(id) {
+async function getItemById(itemId) {
   const rows = await query(
-    `SELECT count(*) as count FROM hold_item WHERE item_id = ? AND hold_status = 'active'`,
-    [id]
+    `SELECT
+       i.item_id,
+       i.item_type_code,
+       i.title,
+       i.thumbnail_image,
+       i.items_in_stock AS in_stock,
+       b.author,
+       b.edition,
+       b.publication,
+       b.publication_date,
+       a.audio_length_seconds,
+       v.video_length_seconds
+     FROM item i
+     LEFT JOIN book b ON b.item_id = i.item_id
+     LEFT JOIN audio a ON a.item_id = i.item_id
+     LEFT JOIN video v ON v.item_id = i.item_id
+     LEFT JOIN rental_equipment re ON re.item_id = i.item_id
+     WHERE i.item_id = ?
+     LIMIT 1`,
+    [itemId]
+  )
+
+  if (!rows.length) return null
+  return mapItemRow(rows[0])
+}
+
+async function getItemGenres(itemId) {
+  const rows = await query(
+    `SELECT g.genre_text
+     FROM assigned_genres ag
+     INNER JOIN genre g ON g.genre_id = ag.genre_id
+     WHERE ag.item_id = ?
+     ORDER BY g.genre_text ASC`,
+    [itemId]
+  )
+
+  return rows.map((row) => row.genre_text)
+}
+
+async function getActiveHoldCountByItemId(itemId) {
+  const rows = await query(
+    `SELECT COUNT(*) AS count
+     FROM hold_item
+     WHERE item_id = ?`,
+    [itemId]
   )
   return rows[0]?.count || 0
 }
 
 module.exports = {
-  getAllBooks,
-  getAllAudios,
-  getAllVideos,
-  getAllEquipment,
-  searchBooks,
-  searchAudios,
-  searchVideos,
-  searchEquipment,
-  getBookById,
-  getAudioById,
-  getVideoById,
-  getEquipmentById,
+  searchItems,
+  getItemById,
+  getItemGenres,
   getActiveHoldCountByItemId,
+  normalizeItemTypeCode,
 }

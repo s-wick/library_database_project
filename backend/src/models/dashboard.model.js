@@ -1,50 +1,94 @@
 const { query } = require("../database")
 
-async function getBorrowedBooks() {
-  return query(`
-    SELECT b.borrow_transaction_id as id,
-           bk.title,
-           b.due_date as dueDate
+async function getBorrowedBooks(userId) {
+  return query(
+    `
+    SELECT b.item_id,
+           b.checkout_date,
+           b.due_date,
+           i.title,
+           bk.author
     FROM borrow b
-    LEFT JOIN book bk ON b.item_id = bk.book_id
-    WHERE b.item_type_code = 1
-    LIMIT 5
-  `)
+    INNER JOIN item i ON i.item_id = b.item_id
+    LEFT JOIN book bk ON bk.item_id = i.item_id
+    WHERE b.user_id = ?
+      AND b.return_date IS NULL
+    ORDER BY b.checkout_date DESC
+    LIMIT 25
+  `,
+    [userId]
+  )
 }
 
-async function getActiveHolds() {
-  return query(`
-    SELECT h.hold_id as id,
-           bk.title,
-           h.queue_position as position
+async function getActiveHolds(userId) {
+  return query(
+    `
+    SELECT h.item_id,
+           h.request_date,
+           i.title,
+           bk.author,
+           (
+             SELECT COUNT(*) + 1
+             FROM hold_item h2
+             WHERE h2.item_id = h.item_id
+               AND h2.request_date < h.request_date
+           ) AS queue_position
     FROM hold_item h
-    LEFT JOIN book bk ON h.item_id = bk.book_id
-    WHERE h.hold_status = 'active'
-    LIMIT 5
-  `)
+    INNER JOIN item i ON i.item_id = h.item_id
+    LEFT JOIN book bk ON bk.item_id = i.item_id
+    WHERE h.user_id = ?
+    ORDER BY h.request_date DESC
+    LIMIT 25
+  `,
+    [userId]
+  )
 }
 
-async function getUnpaidFines() {
-  return query(`
-    SELECT f.fine_id as id,
+async function getUnpaidFines(userId) {
+  return query(
+    `
+    SELECT f.item_id,
+           f.checkout_date,
+           i.title,
+           bk.author,
            f.amount,
-           f.fine_reason as reason
+           f.amount_paid,
+           b.due_date,
+           b.return_date
     FROM fined_for f
-    WHERE f.is_paid = 0
-    LIMIT 5
-  `)
+    INNER JOIN borrow b
+      ON b.item_id = f.item_id
+     AND b.user_id = f.user_id
+     AND b.checkout_date = f.checkout_date
+    INNER JOIN item i ON i.item_id = f.item_id
+    LEFT JOIN book bk ON bk.item_id = i.item_id
+    WHERE f.user_id = ?
+      AND (f.amount_paid IS NULL OR f.amount_paid < f.amount)
+    ORDER BY f.checkout_date DESC
+    LIMIT 25
+  `,
+    [userId]
+  )
 }
 
-async function getBorrowHistory() {
-  return query(`
-    SELECT b.borrow_transaction_id as id,
-           bk.title,
-           b.return_date as returnDate
+async function getBorrowHistory(userId) {
+  return query(
+    `
+    SELECT b.item_id,
+           b.checkout_date,
+           b.return_date,
+           i.title,
+           bk.author
     FROM borrow b
-    LEFT JOIN book bk ON b.item_id = bk.book_id
-    WHERE b.return_date IS NOT NULL
-    LIMIT 5
-  `)
+    INNER JOIN item i ON i.item_id = b.item_id
+    LEFT JOIN book bk ON bk.item_id = i.item_id
+    WHERE b.user_id = ?
+      AND b.return_date IS NOT NULL
+    ORDER BY b.return_date DESC
+    LIMIT 50
+  `,
+    [userId]
+  )
 }
 
 module.exports = {

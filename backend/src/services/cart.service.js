@@ -8,18 +8,6 @@ const {
   deleteCartItem,
 } = require("../models/cart.model")
 
-function getItemTypeCode(itemType) {
-  if (typeof itemType === "number") return itemType
-
-  const normalized = String(itemType || "")
-    .trim()
-    .toLowerCase()
-  if (normalized === "video") return 2
-  if (normalized === "audiobook" || normalized === "audio") return 3
-  if (normalized === "equipment") return 4
-  return 1
-}
-
 function formatThumbnail(thumbnail) {
   if (thumbnail && thumbnail instanceof Buffer) {
     return `data:image/jpeg;base64,${thumbnail.toString("base64")}`
@@ -39,7 +27,7 @@ async function handleGetCart(_req, res, url) {
     const cartItems = []
 
     for (const row of rows) {
-      const item = await getStandardItemForCart(row.item_type, row.item_id)
+      const item = await getStandardItemForCart(row.item_id)
       if (!item) continue
 
       cartItems.push({
@@ -64,9 +52,9 @@ async function handleGetCart(_req, res, url) {
 async function handleAddToCart(req, res) {
   try {
     const body = await parseJsonBody(req)
-    const { userId, itemType, itemId } = body
+    const { userId, itemId } = body
 
-    if (!userId || !itemType || !itemId) {
+    if (!userId || !itemId) {
       sendJson(res, 400, {
         ok: false,
         message: "Missing required fields",
@@ -74,15 +62,14 @@ async function handleAddToCart(req, res) {
       return
     }
 
-    const typeCode = getItemTypeCode(itemType)
-    const existing = await findCartItem(userId, typeCode, itemId)
+    const existing = await findCartItem(userId, itemId)
 
     if (existing.length > 0) {
       sendJson(res, 200, { ok: true, message: "Already in cart" })
       return
     }
 
-    await insertCartItem(userId, typeCode, itemId)
+    await insertCartItem(userId, itemId)
     sendJson(res, 200, { ok: true, message: "Item added to cart" })
   } catch (error) {
     sendJson(res, 500, {
@@ -96,7 +83,7 @@ async function handleAddToCart(req, res) {
 async function handleRemoveFromCart(req, res) {
   try {
     const body = await parseJsonBody(req)
-    const { userId, itemType, itemId, clearAll } = body
+    const { userId, itemId, clearAll } = body
 
     if (!userId) {
       sendJson(res, 400, { ok: false, message: "Missing userId" })
@@ -109,7 +96,7 @@ async function handleRemoveFromCart(req, res) {
       return
     }
 
-    if (!itemType || !itemId) {
+    if (!itemId) {
       sendJson(res, 400, {
         ok: false,
         message: "Missing required fields",
@@ -117,8 +104,7 @@ async function handleRemoveFromCart(req, res) {
       return
     }
 
-    const typeCode = getItemTypeCode(itemType)
-    await deleteCartItem(userId, typeCode, itemId)
+    await deleteCartItem(userId, itemId)
 
     sendJson(res, 200, { ok: true, message: "Item removed from cart" })
   } catch (error) {
@@ -134,5 +120,4 @@ module.exports = {
   handleGetCart,
   handleAddToCart,
   handleRemoveFromCart,
-  getItemTypeCode,
 }

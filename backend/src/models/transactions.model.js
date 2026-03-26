@@ -1,31 +1,83 @@
-const { query } = require("../database")
+const { pool, query } = require("../database")
 
-async function createBorrowTransaction(
-  itemTypeCode,
-  itemId,
-  borrowerType,
-  borrowerId
-) {
-  await query(
-    `
-    INSERT INTO borrow (item_type_code, item_id, borrower_type, borrower_id, checkout_date, due_date)
-    VALUES (?, ?, ?, ?, NOW(), DATE_ADD(NOW(), INTERVAL 7 DAY))
-    `,
-    [itemTypeCode, itemId, borrowerType, borrowerId]
-  )
+class OutOfStockError extends Error {}
+
+async function createBorrowTransaction(userId, itemId, borrowDays = 7) {
+  const connection = await pool.getConnection()
+
+  try {
+    await connection.beginTransaction()
+
+    const [stockRows] = await connection.execute(
+      `SELECT items_in_stock FROM item WHERE item_id = ? LIMIT 1`,
+      [itemId]
+    )
+
+    if (!stockRows.length) {
+      throw new Error("Item not found")
+    }
+
+    if (Number(stockRows[0].items_in_stock) <= 0) {
+      throw new OutOfStockError("Item is not available")
+    }
+
+    await connection.execute(
+      `INSERT INTO borrow (item_id, user_id, checkout_date, due_date)
+       VALUES (?, ?, NOW(), DATE_ADD(NOW(), INTERVAL ? DAY))`,
+      [itemId, userId, Number(borrowDays) || 7]
+    )
+
+    await connection.execute(
+      `UPDATE item
+       SET items_in_stock = items_in_stock - 1
+       WHERE item_id = ?`,
+      [itemId]
+    )
+
+    await connection.commit()
+  } catch (error) {
+    await connection.rollback()
+    throw error
+  } finally {
+    connection.release()
+  }
 }
 
-async function createHold(itemId, userType, userId, queuePosition = 1) {
-  await query(
-    `
-    INSERT INTO hold_item (item_id, user_type, user_id, hold_status, queue_position)
-    VALUES (?, ?, ?, 'active', ?)
-    `,
-    [itemId, userType, userId, queuePosition]
+async function createHold(itemId, userId) {
+  const existing = await query(
+    `SELECT item_id
+     FROM hold_item
+     WHERE item_id = ? AND user_id = ?
+     LIMIT 1`,
+    [itemId, userId]
   )
+
+  if (existing.length) return false
+
+  await query(
+    `INSERT INTO hold_item (item_id, user_id, request_date)
+     VALUES (?, ?, NOW())`,
+    [itemId, userId]
+  )
+
+  return true
+}
+
+async function getUserAccountById(userId) {
+  const rows = await query(
+    `SELECT user_id, is_faculty
+     FROM user_account
+     WHERE user_id = ?
+     LIMIT 1`,
+    [userId]
+  )
+
+  return rows[0] || null
 }
 
 module.exports = {
   createBorrowTransaction,
   createHold,
+  getUserAccountById,
+  OutOfStockError,
 }

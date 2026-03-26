@@ -158,6 +158,12 @@ export default function SearchPage() {
     return Math.round(amount)
   }
 
+  const parseMinutesToSeconds = (value) => {
+    const minutes = Number(String(value || "").trim())
+    if (!Number.isFinite(minutes) || minutes < 0) return null
+    return Math.round(minutes * 60)
+  }
+
   const containsCI = (value, needle) =>
     String(value || "")
       .toLowerCase()
@@ -201,7 +207,7 @@ export default function SearchPage() {
     }
 
     if (selectedType === "Video" && videoLength) {
-      const wanted = parseDurationToSeconds(videoLength)
+      const wanted = parseMinutesToSeconds(videoLength)
       const actual = Number(item.video_length_seconds || item.duration || 0)
       if (Number.isFinite(wanted) && wanted > 0 && actual < wanted) return false
     }
@@ -417,11 +423,12 @@ export default function SearchPage() {
               {selectedType === "Video" && (
                 <div className="flex flex-col gap-1 text-left">
                   <label className="text-xs font-semibold text-muted-foreground uppercase">
-                    Length
+                    Length (minutes)
                   </label>
                   <input
-                    type="text"
-                    placeholder="e.g. 120m"
+                    type="number"
+                    min="0"
+                    placeholder="e.g. 120"
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
                     value={videoLength}
                     onChange={(e) => {

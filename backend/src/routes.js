@@ -23,6 +23,11 @@ const {
   handleAddToCart,
   handleRemoveFromCart,
 } = require("./services/cart.service")
+const {
+  handleGetRooms,
+  handleGetMyRoomBooking,
+  handleBookRoom,
+} = require("./services/rooms.service")
 
 async function handleApiRoute(req, res, url) {
   const { pathname } = url
@@ -139,6 +144,21 @@ async function handleApiRoute(req, res, url) {
 
   if (req.method === "DELETE" && pathname === "/api/cart") {
     await handleRemoveFromCart(req, res)
+    return
+  }
+
+  if (req.method === "GET" && pathname === "/api/rooms") {
+    await handleGetRooms(req, res)
+    return
+  }
+
+  if (req.method === "GET" && pathname === "/api/rooms/my-booking") {
+    await handleGetMyRoomBooking(req, res, url)
+    return
+  }
+
+  if (req.method === "POST" && pathname === "/api/rooms/book") {
+    await handleBookRoom(req, res)
     return
   }
 

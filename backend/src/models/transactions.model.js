@@ -63,7 +63,7 @@ async function createHold(itemId, userId) {
   return true
 }
 
-async function cancelHold(itemId, userId, requestDate = null) {
+async function cancelHold(itemId, userId) {
   const result = await query(
     `
     DELETE FROM hold_item

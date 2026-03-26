@@ -36,6 +36,7 @@ export default function LandingSearchPage() {
   const [audios, setAudios] = useState([])
   const [videos, setVideos] = useState([])
   const [equipments, setEquipments] = useState([])
+  const [rooms, setRooms] = useState([])
   const [loading, setLoading] = useState(true)
 
   const navigate = useNavigate()
@@ -70,6 +71,17 @@ export default function LandingSearchPage() {
       setAudios(a)
       setVideos(v)
       setEquipments(e)
+
+      try {
+        const roomsRes = await fetch(`${apiBaseUrl}/api/rooms`)
+        if (roomsRes.ok) {
+          const roomData = await roomsRes.json()
+          setRooms(roomData.rooms || [])
+        }
+      } catch (err) {
+        console.error("Failed to fetch rooms", err)
+      }
+
       setLoading(false)
     }
 
@@ -295,8 +307,61 @@ export default function LandingSearchPage() {
           emptyMessage="No Equipment Found"
           viewAllLink="/search?type=Equipment"
         />
+
+        <RoomBookingSection rooms={rooms} />
       </main>
     </div>
+  )
+}
+
+function RoomBookingSection({ rooms = [] }) {
+  return (
+    <section>
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-semibold tracking-tight">Study Rooms</h2>
+          <p className="mt-1 text-muted-foreground">
+            Reserve rooms up to 1 day in advance, one room at a time, max 3 hours.
+          </p>
+        </div>
+        <Button variant="ghost" asChild>
+          <Link to="/rooms">View all</Link>
+        </Button>
+      </div>
+
+      {rooms.length > 0 ? (
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {rooms.slice(0, 4).map((room) => (
+            <Card key={room.roomNumber} className="flex h-full flex-col">
+              <CardHeader>
+                <CardTitle>Room {room.roomNumber}</CardTitle>
+                <CardDescription>
+                  Floor {room.floor} | Capacity {room.capacity}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex-1 text-sm text-muted-foreground">
+                <ul className="space-y-1">
+                  <li>TV: {room.features?.hasTv ? "Yes" : "No"}</li>
+                  <li>Whiteboard: {room.features?.hasWhiteboard ? "Yes" : "No"}</li>
+                  <li>Projector: {room.features?.hasProjector ? "Yes" : "No"}</li>
+                </ul>
+              </CardContent>
+              <CardFooter>
+                <Button asChild className="w-full">
+                  <Link to="/rooms">Book This Room</Link>
+                </Button>
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-lg border border-dashed bg-slate-50 py-12 text-center dark:bg-slate-900">
+          <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100">
+            Room booking coming soon
+          </h3>
+        </div>
+      )}
+    </section>
   )
 }
 

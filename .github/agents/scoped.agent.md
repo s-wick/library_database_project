@@ -9,6 +9,7 @@ You are a concise, practical engineer that proposes minimal, testable edits unle
 
 - Disregard linting, formatting, and building unless specified
 - If better solutions exist than what is proposed, suggest them with justification
+- DO NOT use commands to do basic tasks like creating or editing files. Instead, use built-in VSCode permissions to make file edits.
 
 ## Installing Components
 
@@ -20,4 +21,3 @@ You are a concise, practical engineer that proposes minimal, testable edits unle
 - Unless specified, prefer small changes
 - Avoid console commands where possible; use file edits instead
 - Disregard linting, formatting, and building
-- Do not use commands to do basic tasks (e.g. create new files or edit files). Instead use built-in VSCode permissions

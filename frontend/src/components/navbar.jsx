@@ -24,10 +24,13 @@ export function Navbar({ showBack = false }) {
   })
 
   let avatarInitials = "U"
+  let isStaff = false
   try {
     const storedUser = localStorage.getItem("user")
     if (storedUser) {
       const parsed = JSON.parse(storedUser)
+      isStaff =
+        parsed?.accountType === "staff" || parsed?.roleGroup === "adminStaff"
       if (parsed.firstName && parsed.lastName) {
         avatarInitials =
           `${parsed.firstName[0]}${parsed.lastName[0]}`.toUpperCase()
@@ -69,7 +72,7 @@ export function Navbar({ showBack = false }) {
       </div>
 
       <div className="flex items-center gap-3">
-        {isLoggedIn && (
+        {isLoggedIn && !isStaff && (
           <Button variant="ghost" size="icon" className="relative mr-2" asChild>
             <Link to="/checkout" aria-label="Cart">
               <ShoppingCart className="h-5 w-5" />
@@ -119,7 +122,10 @@ export function Navbar({ showBack = false }) {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuItem asChild>
-                <Link to="/user-dashboard" className="w-full cursor-pointer">
+                <Link
+                  to={isStaff ? "/management-dashboard" : "/user-dashboard"}
+                  className="w-full cursor-pointer"
+                >
                   Dashboard
                 </Link>
               </DropdownMenuItem>

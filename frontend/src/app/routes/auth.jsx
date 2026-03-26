@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { API_BASE_URL } from "@/lib/api-config"
 
 import { useCart } from "@/app/cart-provider"
 
@@ -35,8 +36,7 @@ export default function AuthPage() {
   const { syncCartWithServer } = useCart()
 
   const isSignUp = mode === "signup"
-  const apiBaseUrl =
-    import.meta.env.VITE_API_BASE_URL || "http://localhost:4000"
+  const apiBaseUrl = API_BASE_URL
 
   const submitLabel = useMemo(() => {
     if (isSignUp) return "Create account"
@@ -138,9 +138,20 @@ export default function AuthPage() {
         setSuccess("Account created successfully.")
       } else {
         localStorage.setItem("isLoggedIn", "true")
-        localStorage.setItem("user", JSON.stringify(data.user))
+        localStorage.setItem("authToken", data?.token || "")
+        localStorage.setItem("authUser", JSON.stringify(data?.user || {}))
+        localStorage.setItem("user", JSON.stringify(data?.user || {}))
+
         await syncCartWithServer()
-        navigate("/")
+
+        if (
+          data?.user?.accountType === "staff" ||
+          data?.user?.roleGroup === "adminStaff"
+        ) {
+          navigate("/management-dashboard")
+        } else {
+          navigate("/user-dashboard")
+        }
       }
     } catch {
       setErrors({

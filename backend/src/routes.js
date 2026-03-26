@@ -2,10 +2,15 @@ const { sendJson } = require("./utils")
 const { handleHealth } = require("./services/health.service")
 const { handleSignup, handleSignin } = require("./services/auth.service")
 const { handleGetDashboard } = require("./services/dashboard.service")
+const { handleGetReports } = require("./services/reports.service")
 const {
   handleGetItemsAll,
   handleGetItemById,
   handleSearchItems,
+  handleSearchGenres,
+  handleCreateItem,
+  handleUpdateItem,
+  handleDeleteItem,
 } = require("./services/items.service")
 const {
   handleBorrow,
@@ -41,14 +46,46 @@ async function handleApiRoute(req, res, url) {
     return
   }
 
+  if (req.method === "GET" && pathname === "/api/reports") {
+    await handleGetReports(req, res, url)
+    return
+  }
+
   if (req.method === "GET" && pathname === "/api/items/search") {
     await handleSearchItems(req, res, url)
+    return
+  }
+
+  if (req.method === "GET" && pathname === "/api/genres/search") {
+    await handleSearchGenres(req, res, url)
     return
   }
 
   if (req.method === "GET" && pathname === "/api/items/all") {
     await handleGetItemsAll(req, res)
     return
+  }
+
+  if (req.method === "POST" && pathname === "/api/items") {
+    await handleCreateItem(req, res)
+    return
+  }
+
+  if (
+    (req.method === "PUT" || req.method === "DELETE") &&
+    pathname.startsWith("/api/items/")
+  ) {
+    const parts = pathname.split("/").filter(Boolean)
+    if (parts.length === 3) {
+      const id = parts[2]
+      if (req.method === "PUT") {
+        await handleUpdateItem(req, res, id)
+        return
+      }
+
+      await handleDeleteItem(req, res, id)
+      return
+    }
   }
 
   if (req.method === "GET" && pathname.startsWith("/api/items/")) {

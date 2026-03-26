@@ -1,11 +1,9 @@
 {
   "name": "library-database-root",
   "private": true,
-  "workspaces": [
-    "frontend",
-    "backend"
-  ],
   "scripts": {
+    "install:apps": "npm install --prefix frontend && npm install --prefix backend",
+    "postinstall": "npm run install:apps",
     "dev:frontend": "npm run dev --prefix frontend",
     "dev:backend": "npm run dev --prefix backend",
     "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
@@ -17,6 +15,8 @@
   },
   "devDependencies": {
     "concurrently": "^8.0.0",
+    "prettier": "^3.8.1",
+    "prettier-plugin-tailwindcss": "^0.7.2",
     "simple-git-hooks": "^2.13.1"
   }
 }

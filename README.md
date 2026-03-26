@@ -20,6 +20,8 @@ cd library_database_project
 npm install
 ```
 
+The repo now installs `frontend/` and `backend/` as independent apps during the root `npm install`, so local setup stays one-command while each folder still supports its own standalone install for deployment.
+
 2. Duplicate `backend/.env.example` to `backend/.env`
 
 3. In `backend/.env`, replace the corresponding fields with the correct values for your SQL server setup

@@ -107,33 +107,20 @@ export default function AddItemPage() {
   const isBook = itemType === "BOOK"
 
   useEffect(() => {
-    let mounted = true
-    async function loadLookups() {
-      try {
-        const [typesResponse, genresResponse] = await Promise.all([
-          fetch(`${apiBaseUrl}/api/item-types`),
-          fetch(`${apiBaseUrl}/api/genres`),
-        ])
-        const data = await typesResponse.json().catch(() => ({}))
-        const genreData = await genresResponse.json().catch(() => ({}))
-        if (!typesResponse.ok) return
-        if (!mounted) return
-        const types = data.itemTypes || []
-        setItemTypes(types)
-        setGenres(genresResponse.ok ? genreData.genres || [] : [])
-        if (types.length > 0) {
-          setItemType(types[0].itemType)
-          setForm({
-            ...defaultForm(types[0].itemType),
-            genres: types[0].itemType !== "BOOK" ? ["NOT_APPLICABLE"] : [],
-          })
-        }
-      } catch {}
-    }
-    loadLookups()
-    return () => {
-      mounted = false
-    }
+    const types = [
+      { itemCode: 1, itemType: "BOOK" },
+      { itemCode: 2, itemType: "VIDEO" },
+      { itemCode: 3, itemType: "AUDIO" },
+      { itemCode: 4, itemType: "RENTAL_EQUIPMENT" },
+    ]
+
+    setItemTypes(types)
+    setGenres([])
+    setItemType(types[0].itemType)
+    setForm({
+      ...defaultForm(types[0].itemType),
+      genres: [],
+    })
   }, [apiBaseUrl])
 
   function onTypeChange(event) {
@@ -195,12 +182,10 @@ export default function AddItemPage() {
 
     setIsSubmitting(true)
     try {
-      const authToken = localStorage.getItem("authToken") || ""
-      const response = await fetch(`${apiBaseUrl}/api/management/items`, {
+      const response = await fetch(`${apiBaseUrl}/api/items`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${authToken}`,
         },
         body: JSON.stringify({
           itemType,

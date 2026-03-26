@@ -17,8 +17,18 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     const isLoggedIn = localStorage.getItem("isLoggedIn") === "true"
+    const userStr = localStorage.getItem("user")
+    const user = userStr ? JSON.parse(userStr) : null
+    const isStaff =
+      user?.accountType === "staff" || user?.roleGroup === "adminStaff"
+
     if (!isLoggedIn) {
       navigate("/")
+      return
+    }
+
+    if (isStaff) {
+      navigate("/management-dashboard")
     }
   }, [navigate])
 

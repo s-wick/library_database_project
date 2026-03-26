@@ -129,14 +129,14 @@ export default function AddLibrarianPage() {
 
     setIsSubmitting(true)
     try {
-      const authToken = localStorage.getItem("authToken") || ""
-      const response = await fetch(`${apiBaseUrl}/api/management/librarians`, {
+      const response = await fetch(`${apiBaseUrl}/api/auth/signup`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${authToken}`,
         },
         body: JSON.stringify({
+          accountType: "staff",
+          isAdmin: false,
           firstName: form.firstName.trim(),
           middleName: form.middleName.trim(),
           lastName: form.lastName.trim(),

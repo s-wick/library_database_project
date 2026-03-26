@@ -6,6 +6,7 @@ const {
   handleGetItemsAll,
   handleGetItemById,
   handleSearchItems,
+  handleCreateItem,
 } = require("./services/items.service")
 const {
   handleBorrow,
@@ -48,6 +49,11 @@ async function handleApiRoute(req, res, url) {
 
   if (req.method === "GET" && pathname === "/api/items/all") {
     await handleGetItemsAll(req, res)
+    return
+  }
+
+  if (req.method === "POST" && pathname === "/api/items") {
+    await handleCreateItem(req, res)
     return
   }
 

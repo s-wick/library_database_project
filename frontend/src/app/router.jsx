@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react"
 import { Navigate, createBrowserRouter } from "react-router-dom"
 import LandingSearchPage from "./routes/landing-search"
 import SearchPage from "./routes/search-results"
@@ -11,70 +10,59 @@ import ReportsPage from "./routes/reports"
 import CheckoutPage from "./routes/checkout"
 import ItemPage from "./routes/item"
 import { NotFoundRoute } from "./routes/not-found"
-import { API_BASE_URL } from "@/lib/api-config"
+
+function getStoredUser() {
+  try {
+    const raw = localStorage.getItem("user")
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
+
+function isStaffUser(user) {
+  return user?.accountType === "staff" || user?.roleGroup === "adminStaff"
+}
+
+function isLoggedIn() {
+  return localStorage.getItem("isLoggedIn") === "true"
+}
 
 function RequireManagementAccess({ children }) {
-  const [status, setStatus] = useState("loading")
-
-  useEffect(() => {
-    let active = true
-    async function checkAccess() {
-      const authToken = localStorage.getItem("authToken")
-      if (!authToken) {
-        if (active) setStatus("unauthorized")
-        return
-      }
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
-          headers: {
-            Authorization: `Bearer ${authToken}`,
-          },
-        })
-        const data = await response.json().catch(() => ({}))
-        if (!active) return
-
-        if (response.ok && data?.user?.roleGroup === "adminStaff") {
-          localStorage.setItem("authUser", JSON.stringify(data.user))
-          setStatus("authorized")
-          return
-        }
-        setStatus("unauthorized")
-      } catch {
-        if (active) setStatus("unauthorized")
-      }
-    }
-
-    checkAccess()
-    return () => {
-      active = false
-    }
-  }, [])
-
-  if (status === "loading") {
-    return (
-      <div className="p-6 text-sm text-muted-foreground">
-        Checking access...
-      </div>
-    )
-  }
-
-  if (status === "authorized") {
+  const user = getStoredUser()
+  if (isLoggedIn() && isStaffUser(user)) {
     return children
   }
 
   return <Navigate to="/auth" replace />
 }
 
+function RedirectStaffToManagement({ children }) {
+  const user = getStoredUser()
+  if (isLoggedIn() && isStaffUser(user)) {
+    return <Navigate to="/management-dashboard" replace />
+  }
+
+  return children
+}
+
 export const router = createBrowserRouter([
   {
     path: "/",
-    element: <LandingSearchPage />,
+    element: (
+      <RedirectStaffToManagement>
+        <LandingSearchPage />
+      </RedirectStaffToManagement>
+    ),
     errorElement: <NotFoundRoute />,
   },
   {
     path: "/search",
-    element: <SearchPage />,
+    element: (
+      <RedirectStaffToManagement>
+        <SearchPage />
+      </RedirectStaffToManagement>
+    ),
     errorElement: <NotFoundRoute />,
   },
   {
@@ -84,7 +72,11 @@ export const router = createBrowserRouter([
   },
   {
     path: "/user-dashboard",
-    element: <UserDashboardPage />,
+    element: (
+      <RedirectStaffToManagement>
+        <UserDashboardPage />
+      </RedirectStaffToManagement>
+    ),
     errorElement: <NotFoundRoute />,
   },
   {
@@ -125,12 +117,20 @@ export const router = createBrowserRouter([
   },
   {
     path: "/checkout",
-    element: <CheckoutPage />,
+    element: (
+      <RedirectStaffToManagement>
+        <CheckoutPage />
+      </RedirectStaffToManagement>
+    ),
     errorElement: <NotFoundRoute />,
   },
   {
     path: "/item/:id",
-    element: <ItemPage />,
+    element: (
+      <RedirectStaffToManagement>
+        <ItemPage />
+      </RedirectStaffToManagement>
+    ),
     errorElement: <NotFoundRoute />,
   },
 ])

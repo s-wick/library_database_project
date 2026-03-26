@@ -8,7 +8,12 @@ import { Field, FieldLabel } from "@/components/ui/field"
 import { API_BASE_URL } from "@/lib/api-config"
 
 export default function ReportsPage() {
-  const [itemTypes, setItemTypes] = useState([])
+  const [itemTypes, setItemTypes] = useState([
+    { itemCode: 1, itemType: "BOOK" },
+    { itemCode: 2, itemType: "VIDEO" },
+    { itemCode: 3, itemType: "AUDIO" },
+    { itemCode: 4, itemType: "RENTAL_EQUIPMENT" },
+  ])
   const [genres, setGenres] = useState([])
   const [filters, setFilters] = useState({
     reportType: "itemsCheckedOut",
@@ -25,24 +30,8 @@ export default function ReportsPage() {
   const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
-    let mounted = true
-    async function loadLookups() {
-      try {
-        const [typesResponse, genresResponse] = await Promise.all([
-          fetch(`${API_BASE_URL}/api/item-types`),
-          fetch(`${API_BASE_URL}/api/genres`),
-        ])
-        const data = await typesResponse.json().catch(() => ({}))
-        const genreData = await genresResponse.json().catch(() => ({}))
-        if (!typesResponse.ok || !mounted) return
-        setItemTypes(data.itemTypes || [])
-        setGenres(genresResponse.ok ? genreData.genres || [] : [])
-      } catch {}
-    }
-    loadLookups()
-    return () => {
-      mounted = false
-    }
+    // Genre lookup endpoint was removed in the new backend. Keep empty for now.
+    setGenres([])
   }, [])
 
   function onChange(event) {
@@ -65,30 +54,77 @@ export default function ReportsPage() {
     setError("")
     setIsLoading(true)
     try {
-      const authToken = localStorage.getItem("authToken") || ""
-      const response = await fetch(`${API_BASE_URL}/api/management/reports`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${authToken}`,
-        },
-        body: JSON.stringify(filters),
-      })
+      const user = JSON.parse(localStorage.getItem("user") || "{}")
+      if (!user?.id) {
+        setError("Please sign in to generate reports.")
+        setRows([])
+        setSummary(null)
+        return
+      }
+
+      const response = await fetch(
+        `${API_BASE_URL}/api/dashboard?userId=${user.id}`
+      )
       const data = await response.json().catch(() => ({}))
       if (!response.ok) {
-        if (response.status === 401) {
-          setError("Unauthorized access. Please sign in again.")
-          setRows([])
-          setSummary(null)
-          return
-        }
         setError(data.message || "Failed to generate report.")
         setRows([])
         setSummary(null)
         return
       }
-      setRows(data.rows || [])
-      setSummary(data.summary || null)
+
+      if (filters.reportType === "itemsCheckedOut") {
+        let checkedOutRows = (data.borrowedBooks || []).map((row) => ({
+          borrowTransactionId: row.id,
+          itemName: row.title,
+          itemType: filters.itemType || "-",
+          userType: user.role?.toUpperCase() || "USER",
+          borrowerName: user.email || "-",
+          checkoutDate: null,
+          dueDate: row.dueDate,
+          isOverdue: row.status === "overdue" ? 1 : 0,
+        }))
+
+        if (filters.overdue === "overdue") {
+          checkedOutRows = checkedOutRows.filter(
+            (row) => Number(row.isOverdue) === 1
+          )
+        }
+
+        if (filters.overdue === "notOverdue") {
+          checkedOutRows = checkedOutRows.filter(
+            (row) => Number(row.isOverdue) === 0
+          )
+        }
+
+        setRows(checkedOutRows)
+        setSummary({
+          totalRecords: checkedOutRows.length,
+          overdueCount: checkedOutRows.filter(
+            (row) => Number(row.isOverdue) === 1
+          ).length,
+        })
+      } else {
+        const fineRows = (data.fines || []).map((row) => ({
+          fineId: row.id,
+          itemName: row.book,
+          userType: user.role?.toUpperCase() || "USER",
+          borrowerName: user.email || "-",
+          amount: Number(row.amount || 0),
+          fineReason: "Overdue item",
+          dateAssigned: null,
+          isOverdue: Number(row.daysOverdue || 0) > 0 ? 1 : 0,
+        }))
+
+        setRows(fineRows)
+        setSummary({
+          totalRecords: fineRows.length,
+          totalAmount: fineRows.reduce(
+            (sum, row) => sum + Number(row.amount || 0),
+            0
+          ),
+        })
+      }
     } catch {
       setError("Unable to connect to server.")
       setRows([])

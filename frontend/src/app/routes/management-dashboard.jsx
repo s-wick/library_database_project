@@ -47,9 +47,9 @@ export default function ManagementDashboardPage() {
       <div className="mx-auto max-w-5xl space-y-6">
         <div className="flex items-center justify-between">
           <Button asChild variant="outline">
-            <Link to="/">
+            <Link to="/management-dashboard">
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to home
+              Dashboard Home
             </Link>
           </Button>
           <Button
@@ -58,7 +58,8 @@ export default function ManagementDashboardPage() {
               localStorage.setItem("isLoggedIn", "false")
               localStorage.removeItem("authToken")
               localStorage.removeItem("authUser")
-              navigate("/")
+              localStorage.removeItem("user")
+              navigate("/auth")
             }}
           >
             <LogOut className="mr-2 h-4 w-4" />

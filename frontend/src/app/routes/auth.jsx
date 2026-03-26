@@ -144,7 +144,10 @@ export default function AuthPage() {
 
         await syncCartWithServer()
 
-        if (data?.user?.roleGroup === "adminStaff") {
+        if (
+          data?.user?.accountType === "staff" ||
+          data?.user?.roleGroup === "adminStaff"
+        ) {
           navigate("/management-dashboard")
         } else {
           navigate("/user-dashboard")

@@ -5,6 +5,7 @@ const {
   findUserAccountByCredentials,
   findStaffAccountByCredentials,
   createUserAccount,
+  createStaffAccount,
 } = require("../models/auth.model")
 
 function normalizeAccountType(accountType = "") {
@@ -49,6 +50,9 @@ function parseBoolean(value, fallback = false) {
 async function handleSignup(req, res) {
   try {
     const body = await parseJsonBody(req)
+    const accountType =
+      normalizeAccountType(body.accountType) ||
+      inferAccountTypeFromLegacyPayload(body)
     const email = String(body.email || "")
       .trim()
       .toLowerCase()
@@ -57,6 +61,8 @@ async function handleSignup(req, res) {
     const middleName = String(body.middleName || "").trim() || null
     const lastName = String(body.lastName || "").trim() || null
     const isFaculty = parseBoolean(body.isFaculty, false)
+    const isAdmin = parseBoolean(body.isAdmin, false)
+    const phoneNumber = String(body.phoneNumber || "").trim() || null
 
     if (!email || !password) {
       sendJson(res, 400, {
@@ -75,6 +81,44 @@ async function handleSignup(req, res) {
     const existingStaff = await findStaffAccountByEmail(email)
     if (existingStaff) {
       sendJson(res, 409, { ok: false, message: "Email already exists." })
+      return
+    }
+
+    if (accountType === "staff") {
+      if (!phoneNumber) {
+        sendJson(res, 400, {
+          ok: false,
+          message: "Phone number is required for staff accounts.",
+        })
+        return
+      }
+
+      await createStaffAccount({
+        email,
+        password,
+        firstName,
+        middleName,
+        lastName,
+        phoneNumber,
+        isAdmin,
+      })
+
+      const createdStaff = await findStaffAccountByEmail(email)
+
+      sendJson(res, 201, {
+        ok: true,
+        message: "Staff account created.",
+        user: {
+          id: createdStaff.staff_id,
+          accountType: "staff",
+          role: createdStaff.is_admin ? "admin" : "staff",
+          email: createdStaff.email,
+          firstName: createdStaff.first_name,
+          middleName: createdStaff.middle_name,
+          lastName: createdStaff.last_name,
+          isAdmin: Boolean(createdStaff.is_admin),
+        },
+      })
       return
     }
 

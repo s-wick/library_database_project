@@ -8,9 +8,11 @@ import { Field, FieldLabel } from "@/components/ui/field"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { API_BASE_URL } from "@/lib/api-config"
 
+import { useCart } from "@/app/cart-provider"
+
 const roles = [
-  { id: "admin", label: "Admin / Staff" },
   { id: "student", label: "Student & Faculty" },
+  { id: "admin", label: "Admin / Staff" },
 ]
 
 const emptyForm = {
@@ -24,12 +26,14 @@ const emptyForm = {
 
 export default function AuthPage() {
   const navigate = useNavigate()
-  const [selectedRole, setSelectedRole] = useState("admin")
+  const [selectedRole, setSelectedRole] = useState("student")
   const [mode, setMode] = useState("signin")
   const [form, setForm] = useState(emptyForm)
   const [errors, setErrors] = useState({})
   const [success, setSuccess] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const { syncCartWithServer } = useCart()
 
   const isSignUp = mode === "signup"
   const apiBaseUrl = API_BASE_URL
@@ -119,7 +123,10 @@ export default function AuthPage() {
 
       if (!response.ok) {
         if (!isSignUp && response.status === 401) {
-          setErrors({ general: "Account does not exist. Create an account." })
+          // setErrors({ general: "Account does not exist. Create an account." })
+          setErrors({
+            general: `Account does not exist. ${selectedRole === "admin" ? "Contact your administrator." : "Create an account."}`,
+          })
           return
         }
         setErrors({
@@ -136,6 +143,10 @@ export default function AuthPage() {
         localStorage.setItem("isLoggedIn", "true")
         localStorage.setItem("authToken", data?.token || "")
         localStorage.setItem("authUser", JSON.stringify(data?.user || {}))
+        localStorage.setItem("user", JSON.stringify(data?.user || {}))
+
+        await syncCartWithServer()
+
         if (data?.user?.roleGroup === "adminStaff") {
           navigate("/management-dashboard")
         } else {

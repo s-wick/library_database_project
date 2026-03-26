@@ -1,17 +1,25 @@
 import { createBrowserRouter } from "react-router-dom"
 import LandingSearchPage from "./routes/landing-search"
+import SearchPage from "./routes/search-results"
 import AuthPage from "./routes/auth"
 import UserDashboardPage from "./routes/user-dashboard"
 import ManagementDashboardPage from "./routes/management-dashboard"
 import AddLibrarianPage from "./routes/add-librarian"
 import AddItemPage from "./routes/add-item"
 import ReportsPage from "./routes/reports"
+import CheckoutPage from "./routes/checkout"
+import ItemPage from "./routes/item"
 import { NotFoundRoute } from "./routes/not-found"
 
 export const router = createBrowserRouter([
   {
     path: "/",
     element: <LandingSearchPage />,
+    errorElement: <NotFoundRoute />,
+  },
+  {
+    path: "/search",
+    element: <SearchPage />,
     errorElement: <NotFoundRoute />,
   },
   {
@@ -42,6 +50,16 @@ export const router = createBrowserRouter([
   {
     path: "/management-dashboard/reports",
     element: <ReportsPage />,
+    errorElement: <NotFoundRoute />,
+  },
+  {
+    path: "/checkout",
+    element: <CheckoutPage />,
+    errorElement: <NotFoundRoute />,
+  },
+  {
+    path: "/item/:id",
+    element: <ItemPage />,
     errorElement: <NotFoundRoute />,
   },
 ])

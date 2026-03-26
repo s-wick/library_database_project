@@ -13,6 +13,22 @@ const { createGetGenresHandler } = require("./server/catalog/genres")
 const {
   createManagementReportsHandler,
 } = require("./server/management/reports")
+const {
+  handleGetItemsAll,
+  handleGetItemById,
+  handleSearchItems,
+} = require("./api/items")
+const { handleGetDashboard } = require("./api/dashboard")
+const {
+  handleBorrow,
+  handleHold,
+  handleCheckout,
+} = require("./api/transactions")
+const {
+  handleGetCart,
+  handleAddToCart,
+  handleRemoveFromCart,
+} = require("./api/cart")
 
 const port = Number(process.env.PORT || 4000)
 const envOrigins = process.env.ALLOWED_ORIGINS
@@ -295,7 +311,6 @@ function requireManagementUser(req, res) {
   }
   return user
 }
-
 async function handleHealth(_req, res) {
   try {
     const isConnected = await testConnection()
@@ -370,6 +385,62 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "POST" && pathname === "/api/management/reports") {
     if (!requireManagementUser(req, res)) return
     await handleManagementReports(req, res)
+    return
+  }
+
+  if (req.method === "GET" && pathname === "/api/dashboard") {
+    await handleGetDashboard(req, res)
+    return
+  }
+
+  if (req.method === "GET" && pathname === "/api/items/search") {
+    await handleSearchItems(req, res)
+    return
+  }
+
+  if (req.method === "GET" && pathname === "/api/items/all") {
+    await handleGetItemsAll(req, res)
+    return
+  }
+
+  if (req.method === "GET" && pathname.startsWith("/api/items/")) {
+    const parts = pathname.split("/")
+    // /api/items/:type/:id
+    if (parts.length === 5) {
+      const type = parts[3]
+      const id = parts[4]
+      await handleGetItemById(req, res, type, id)
+      return
+    }
+  }
+
+  if (req.method === "POST" && pathname === "/api/borrow") {
+    await handleBorrow(req, res)
+    return
+  }
+
+  if (req.method === "POST" && pathname === "/api/hold") {
+    await handleHold(req, res)
+    return
+  }
+
+  if (req.method === "POST" && pathname === "/api/checkout") {
+    await handleCheckout(req, res)
+    return
+  }
+
+  if (req.method === "GET" && pathname === "/api/cart") {
+    await handleGetCart(req, res, url)
+    return
+  }
+
+  if (req.method === "POST" && pathname === "/api/cart") {
+    await handleAddToCart(req, res)
+    return
+  }
+
+  if (req.method === "DELETE" && pathname === "/api/cart") {
+    await handleRemoveFromCart(req, res)
     return
   }
 

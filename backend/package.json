@@ -1,14 +1,11 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "main": "server.js",
+  "main": "src/server.js",
   "scripts": {
-    "generate:item-schema": "node scripts/generate-item-schema.js",
-    "predev": "npm run generate:item-schema",
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "lint": "eslint .",
-    "test:schema-sync": "node scripts/validate-item-schema.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

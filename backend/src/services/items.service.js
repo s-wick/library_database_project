@@ -79,7 +79,6 @@ function formatListItem(item) {
   return {
     ...item,
     thumbnail_image: formatThumbnail(item.thumbnail_image),
-    tag: "Library Item",
     availability: Number(item.in_stock) > 0 ? "Available" : "Not Available",
   }
 }

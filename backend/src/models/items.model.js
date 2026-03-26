@@ -26,6 +26,10 @@ function normalizeItemTypeCode(type) {
 function mapItemRow(row) {
   const standardType = STANDARD_TYPE_BY_CODE[row.item_type_code] || "Item"
   const creator = row.item_type_code === 1 ? row.author || "" : ""
+  const genres = String(row.genres_csv || "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean)
 
   return {
     item_id: row.item_id,
@@ -37,6 +41,7 @@ function mapItemRow(row) {
     thumbnail_image: row.thumbnail_image,
     in_stock: row.in_stock,
     author: row.author,
+    genres,
     edition: row.edition,
     publication: row.publication,
     publication_date: row.publication_date,
@@ -94,7 +99,8 @@ async function searchItems({ queryText = "", itemType = "All", limit = 50 }) {
        b.publication_date,
        a.audio_length_seconds,
        v.video_length_seconds,
-       MAX(g.genre_text) AS genre_text
+       MAX(g.genre_text) AS genre_text,
+       GROUP_CONCAT(DISTINCT g.genre_text ORDER BY g.genre_text SEPARATOR ',') AS genres_csv
      FROM item i
      LEFT JOIN book b ON b.item_id = i.item_id
      LEFT JOIN audio a ON a.item_id = i.item_id

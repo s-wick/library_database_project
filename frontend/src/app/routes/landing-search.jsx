@@ -80,6 +80,24 @@ export default function LandingSearchPage() {
     const params = new URLSearchParams()
     if (searchQuery) params.set("q", searchQuery)
     if (selectedType && selectedType !== "All") params.set("type", selectedType)
+
+    if (minStock) params.set("minStock", minStock)
+
+    if (selectedType === "Book") {
+      if (bookGenre) params.set("bookGenre", bookGenre)
+      if (bookAuthor) params.set("bookAuthor", bookAuthor)
+      if (bookPubDate) params.set("bookPubDate", bookPubDate)
+      if (bookEdition) params.set("bookEdition", bookEdition)
+    }
+
+    if (selectedType === "Audiobook" && audioLength) {
+      params.set("audioLength", audioLength)
+    }
+
+    if (selectedType === "Video" && videoLength) {
+      params.set("videoLength", videoLength)
+    }
+
     navigate(`/search?${params.toString()}`)
   }
 

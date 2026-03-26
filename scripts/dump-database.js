@@ -37,7 +37,13 @@ function requiredEnv(env, key) {
   return value
 }
 
-function runDump({ mysqldumpBin, connection, database, outputPath, extraArgs = [] }) {
+function runDump({
+  mysqldumpBin,
+  connection,
+  database,
+  outputPath,
+  extraArgs = [],
+}) {
   const args = [
     "--host",
     connection.host,

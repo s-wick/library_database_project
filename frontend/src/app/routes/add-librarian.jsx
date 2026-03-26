@@ -151,7 +151,7 @@ export default function AddLibrarianPage() {
           setError("Session expired. Please sign in again.")
           return
         }
-        setError(data.message || "Failed to add librarian.")
+        setError(data.error || data.message || "Failed to add librarian.")
         return
       }
       setSuccess("Librarian added successfully.")

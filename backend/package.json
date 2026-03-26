@@ -3,7 +3,10 @@
   "version": "1.0.0",
   "main": "server.js",
   "scripts": {
+    "generate:item-schema": "node scripts/generate-item-schema.js",
+    "prestart": "npm run generate:item-schema",
     "start": "node server.js",
+    "predev": "npm run generate:item-schema",
     "dev": "nodemon server.js",
     "lint": "eslint .",
     "test:schema-sync": "node scripts/validate-item-schema.js",

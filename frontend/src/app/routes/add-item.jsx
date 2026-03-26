@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Field, FieldLabel } from "@/components/ui/field"
+import { Field, FieldError, FieldLabel } from "@/components/ui/field"
 import { API_BASE_URL } from "@/lib/api-config"
 
 const itemFields = {
@@ -83,6 +83,14 @@ function defaultForm(type) {
   return next
 }
 
+function formatItemTypeLabel(value = "") {
+  return String(value)
+    .toLowerCase()
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ")
+}
+
 export default function AddItemPage() {
   const apiBaseUrl = API_BASE_URL
   const [itemTypes, setItemTypes] = useState([])
@@ -91,6 +99,7 @@ export default function AddItemPage() {
   const [form, setForm] = useState({})
   const [fileNames, setFileNames] = useState({})
   const [fileResetKey, setFileResetKey] = useState(0)
+  const [fieldErrors, setFieldErrors] = useState({})
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -137,6 +146,7 @@ export default function AddItemPage() {
       ...defaultForm(nextType),
       genreId: nextType === "RENTAL_EQUIPMENT" ? "NOT_APPLICABLE" : "",
     })
+    setFieldErrors({})
     setFileNames({})
     setFileResetKey((prev) => prev + 1)
     setError("")
@@ -145,6 +155,7 @@ export default function AddItemPage() {
 
   async function onChange(event) {
     const { name, value, files, type } = event.target
+    setFieldErrors((prev) => ({ ...prev, [name]: "" }))
     if (type === "file") {
       const file = files?.[0]
       if (!file) {
@@ -167,17 +178,21 @@ export default function AddItemPage() {
 
   async function onSubmit(event) {
     event.preventDefault()
+    setFieldErrors({})
     setError("")
     setSuccess("")
 
+    const nextErrors = {}
     for (const field of fields) {
-      if (field.required && !String(form[field.name] || "").trim()) {
-        setError(`${field.label} is required.`)
-        return
+      if (!String(form[field.name] || "").trim()) {
+        nextErrors[field.name] = `${field.label} is required.`
       }
     }
     if (!isRentalEquipment && !String(form.genreId || "").trim()) {
-      setError("Genre is required.")
+      nextErrors.genreId = "Genre is required."
+    }
+    if (Object.keys(nextErrors).length) {
+      setFieldErrors(nextErrors)
       return
     }
 
@@ -246,16 +261,22 @@ export default function AddItemPage() {
                 >
                   {itemTypes.map((type) => (
                     <option key={type.itemCode} value={type.itemType}>
-                      {type.itemType}
+                      {formatItemTypeLabel(type.itemType)}
                     </option>
                   ))}
                 </select>
               </Field>
               <Field>
                 <FieldLabel htmlFor="createdAt">Created at</FieldLabel>
-                <Input id="createdAt" type="date" value={todayDate} readOnly />
+                <Input
+                  id="createdAt"
+                  type="date"
+                  value={todayDate}
+                  readOnly
+                  className="cursor-not-allowed bg-muted/40 text-muted-foreground"
+                />
               </Field>
-              <Field>
+              <Field data-invalid={!!fieldErrors.genreId}>
                 <FieldLabel htmlFor="genreId">Genre</FieldLabel>
                 <select
                   id="genreId"
@@ -265,6 +286,7 @@ export default function AddItemPage() {
                   }
                   onChange={onChange}
                   disabled={isRentalEquipment}
+                  aria-invalid={!!fieldErrors.genreId}
                   className="h-9 w-full rounded-md border border-input bg-transparent px-2.5 py-1 text-sm"
                 >
                   {isRentalEquipment ? (
@@ -280,10 +302,11 @@ export default function AddItemPage() {
                     </>
                   )}
                 </select>
+                <FieldError>{fieldErrors.genreId}</FieldError>
               </Field>
 
               {fields.map((field) => (
-                <Field key={field.name}>
+                <Field key={field.name} data-invalid={!!fieldErrors[field.name]}>
                   <FieldLabel htmlFor={field.name}>{field.label}</FieldLabel>
                   {field.type === "file" ? (
                     <div className="rounded-md border border-input p-2">
@@ -307,8 +330,15 @@ export default function AddItemPage() {
                       step={field.step}
                       value={form[field.name] ?? ""}
                       onChange={onChange}
+                      aria-invalid={!!fieldErrors[field.name]}
+                      className={
+                        field.name === "publicationDate" && !form[field.name]
+                          ? "text-muted-foreground"
+                          : ""
+                      }
                     />
                   )}
+                  <FieldError>{fieldErrors[field.name]}</FieldError>
                 </Field>
               ))}
 

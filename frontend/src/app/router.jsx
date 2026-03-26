@@ -52,7 +52,11 @@ function RequireManagementAccess({ children }) {
   }, [])
 
   if (status === "loading") {
-    return <div className="p-6 text-sm text-muted-foreground">Checking access...</div>
+    return (
+      <div className="p-6 text-sm text-muted-foreground">
+        Checking access...
+      </div>
+    )
   }
 
   if (status === "authorized") {

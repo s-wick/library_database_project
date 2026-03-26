@@ -37,7 +37,11 @@ async function main() {
       "SELECT item_type AS itemType FROM item_type ORDER BY item_code ASC"
     )
     const types = itemTypeRows[0]
-      .map((row) => String(row.itemType || "").trim().toUpperCase())
+      .map((row) =>
+        String(row.itemType || "")
+          .trim()
+          .toUpperCase()
+      )
       .filter(Boolean)
       .filter((itemType) => ITEM_TYPES_TO_TABLES[itemType])
 
@@ -75,7 +79,9 @@ async function main() {
         throw new Error(`Missing table '${table}' while generating schema.`)
       }
 
-      const primaryColumn = metadata.find((column) => column.columnKey === "PRI")
+      const primaryColumn = metadata.find(
+        (column) => column.columnKey === "PRI"
+      )
       if (!primaryColumn) {
         throw new Error(`Missing primary key for table '${table}'.`)
       }

@@ -15,11 +15,6 @@ export default function ItemPage() {
   const { id } = useParams()
   const navigate = useNavigate()
 
-  // Extract item type from query param if available or default to search all
-  // to find matching item by its specific ID since they share different scopes.
-  const searchParams = new URLSearchParams(window.location.search)
-  const itemTypeParam = searchParams.get("type") || "book"
-
   const [book, setBook] = useState(null)
   const [loading, setLoading] = useState(true)
   const [availability, setAvailability] = useState("Available")
@@ -31,14 +26,10 @@ export default function ItemPage() {
     import.meta.env.VITE_API_BASE_URL || "http://localhost:4000"
 
   useEffect(() => {
-    // In a real app this would fetch from your backend (e.g., /api/items/:type/:id)
-    // and also fetch current borrow/hold status to compute availability.
     const fetchItem = async () => {
       try {
         setLoading(true)
-        const res = await fetch(
-          `${apiBaseUrl}/api/items/${itemTypeParam}/${id}`
-        )
+        const res = await fetch(`${apiBaseUrl}/api/items/${id}`)
         if (res.ok) {
           const data = await res.json()
           setBook(data.item)
@@ -54,7 +45,7 @@ export default function ItemPage() {
       }
     }
     fetchItem()
-  }, [id, itemTypeParam])
+  }, [id])
 
   // Formatting helpers based on missing standard field keys
   const getCreator = () =>
@@ -69,13 +60,20 @@ export default function ItemPage() {
     }
 
     try {
+      const userStr = localStorage.getItem("user")
+      const user = userStr ? JSON.parse(userStr) : null
+      if (!user?.id) {
+        navigate("/auth")
+        return
+      }
+
       if (availability === "Available") {
         await fetch(`${apiBaseUrl}/api/borrow`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             itemId: book.item_id,
-            itemType: itemTypeParam,
+            userId: user.id,
           }),
         })
         alert("Item successfully borrowed!")
@@ -85,7 +83,7 @@ export default function ItemPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             itemId: book.item_id,
-            itemType: itemTypeParam,
+            userId: user.id,
           }),
         })
         alert("Hold placed successfully!")
@@ -192,7 +190,7 @@ export default function ItemPage() {
                   <p>{new Date(book.publication_date).toLocaleDateString()}</p>
                 </div>
               ) : null}
-              {itemTypeParam === "audiobook" && book.narrator && (
+              {book.standard_type === "Audiobook" && book.narrator && (
                 <div>
                   <span className="font-semibold text-muted-foreground">
                     Narrator:
@@ -200,7 +198,8 @@ export default function ItemPage() {
                   <p>{book.narrator}</p>
                 </div>
               )}
-              {(itemTypeParam === "audiobook" || itemTypeParam === "video") &&
+              {(book.standard_type === "Audiobook" ||
+                book.standard_type === "Video") &&
                 book.duration && (
                   <div>
                     <span className="font-semibold text-muted-foreground">
@@ -209,7 +208,7 @@ export default function ItemPage() {
                     <p>{book.duration} minutes</p>
                   </div>
                 )}
-              {itemTypeParam === "equipment" && book.model && (
+              {book.standard_type === "Equipment" && book.model && (
                 <div>
                   <span className="font-semibold text-muted-foreground">
                     Model:
@@ -217,7 +216,7 @@ export default function ItemPage() {
                   <p>{book.model}</p>
                 </div>
               )}
-              {itemTypeParam === "equipment" && book.serial_number && (
+              {book.standard_type === "Equipment" && book.serial_number && (
                 <div>
                   <span className="font-semibold text-muted-foreground">
                     Serial Number:
@@ -225,7 +224,7 @@ export default function ItemPage() {
                   <p>{book.serial_number}</p>
                 </div>
               )}
-              {(!itemTypeParam || itemTypeParam === "book") && (
+              {book.standard_type === "Book" && (
                 <div>
                   <span className="font-semibold text-muted-foreground">
                     Edition:

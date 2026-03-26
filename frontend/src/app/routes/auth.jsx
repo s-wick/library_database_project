@@ -11,8 +11,8 @@ import { API_BASE_URL } from "@/lib/api-config"
 import { useCart } from "@/app/cart-provider"
 
 const roles = [
-  { id: "student", label: "Student & Faculty" },
-  { id: "admin", label: "Admin / Staff" },
+  { id: "user", label: "User Account" },
+  { id: "staff", label: "Staff Account" },
 ]
 
 const emptyForm = {
@@ -26,7 +26,7 @@ const emptyForm = {
 
 export default function AuthPage() {
   const navigate = useNavigate()
-  const [selectedRole, setSelectedRole] = useState("student")
+  const [selectedRole, setSelectedRole] = useState("user")
   const [mode, setMode] = useState("signin")
   const [form, setForm] = useState(emptyForm)
   const [errors, setErrors] = useState({})
@@ -51,7 +51,7 @@ export default function AuthPage() {
   function switchMode(nextMode) {
     setMode(nextMode)
     if (nextMode === "signup") {
-      setSelectedRole("student")
+      setSelectedRole("user")
     }
     setErrors({})
     setSuccess("")
@@ -89,24 +89,21 @@ export default function AuthPage() {
 
     const payload = isSignUp
       ? {
-          roleGroup: "studentFaculty",
-          role: "student",
           firstName: form.firstName.trim(),
           middleName: form.middleName.trim(),
           lastName: form.lastName.trim(),
           email: form.email.trim(),
           password: form.password,
+          isFaculty: false,
         }
-      : selectedRole === "admin"
+      : selectedRole === "staff"
         ? {
-            roleGroup: "adminStaff",
-            role: "admin",
+            accountType: "staff",
             email: form.email.trim(),
             password: form.password,
           }
         : {
-            roleGroup: "studentFaculty",
-            role: "student",
+            accountType: "user",
             email: form.email.trim(),
             password: form.password,
           }
@@ -125,7 +122,7 @@ export default function AuthPage() {
         if (!isSignUp && response.status === 401) {
           // setErrors({ general: "Account does not exist. Create an account." })
           setErrors({
-            general: `Account does not exist. ${selectedRole === "admin" ? "Contact your administrator." : "Create an account."}`,
+            general: `Account does not exist. ${selectedRole === "staff" ? "Contact your administrator." : "Create an account."}`,
           })
           return
         }
@@ -191,7 +188,7 @@ export default function AuthPage() {
                   <TabsTrigger
                     key={role.id}
                     value={role.id}
-                    disabled={isSignUp && role.id === "admin"}
+                    disabled={isSignUp && role.id === "staff"}
                   >
                     {role.label}
                   </TabsTrigger>
@@ -345,7 +342,7 @@ export default function AuthPage() {
               </Button>
             </form>
 
-            {(isSignUp || selectedRole !== "admin") && (
+            {(isSignUp || selectedRole !== "staff") && (
               <div className="text-center text-sm text-muted-foreground">
                 {isSignUp ? "Already have an account?" : "Need an account?"}{" "}
                 <button

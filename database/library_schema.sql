@@ -141,6 +141,98 @@ CREATE TABLE `fined_for` (
   CONSTRAINT `fined_for_ibfk_1` FOREIGN KEY (`item_id`, `user_id`, `checkout_date`) REFERENCES `borrow` (`item_id`, `user_id`, `checkout_date`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_fined_for_cap_item_value_before_insert` BEFORE INSERT ON `fined_for` FOR EACH ROW BEGIN
+  DECLARE max_item_value DECIMAL(10,2) DEFAULT NULL;
+
+  SELECT i.monetary_value
+    INTO max_item_value
+  FROM borrow b
+  INNER JOIN item i ON i.item_id = b.item_id
+  WHERE b.item_id = NEW.item_id
+    AND b.user_id = NEW.user_id
+    AND b.checkout_date = NEW.checkout_date
+  LIMIT 1;
+
+  IF NEW.amount IS NOT NULL AND NEW.amount < 0 THEN
+    SET NEW.amount = 0;
+  END IF;
+
+  IF max_item_value IS NOT NULL
+     AND NEW.amount IS NOT NULL
+     AND NEW.amount > max_item_value THEN
+    SET NEW.amount = max_item_value;
+  END IF;
+
+  IF NEW.amount_paid IS NOT NULL AND NEW.amount_paid < 0 THEN
+    SET NEW.amount_paid = 0;
+  END IF;
+
+  IF NEW.amount IS NOT NULL
+     AND NEW.amount_paid IS NOT NULL
+     AND NEW.amount_paid > NEW.amount THEN
+    SET NEW.amount_paid = NEW.amount;
+  END IF;
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_fined_for_cap_item_value_before_update` BEFORE UPDATE ON `fined_for` FOR EACH ROW BEGIN
+  DECLARE max_item_value DECIMAL(10,2) DEFAULT NULL;
+
+  SELECT i.monetary_value
+    INTO max_item_value
+  FROM borrow b
+  INNER JOIN item i ON i.item_id = b.item_id
+  WHERE b.item_id = NEW.item_id
+    AND b.user_id = NEW.user_id
+    AND b.checkout_date = NEW.checkout_date
+  LIMIT 1;
+
+  IF NEW.amount IS NOT NULL AND NEW.amount < 0 THEN
+    SET NEW.amount = 0;
+  END IF;
+
+  IF max_item_value IS NOT NULL
+     AND NEW.amount IS NOT NULL
+     AND NEW.amount > max_item_value THEN
+    SET NEW.amount = max_item_value;
+  END IF;
+
+  IF NEW.amount_paid IS NOT NULL AND NEW.amount_paid < 0 THEN
+    SET NEW.amount_paid = 0;
+  END IF;
+
+  IF NEW.amount IS NOT NULL
+     AND NEW.amount_paid IS NOT NULL
+     AND NEW.amount_paid > NEW.amount THEN
+    SET NEW.amount_paid = NEW.amount;
+  END IF;
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 
 --
 -- Table structure for table `genre`
@@ -312,4 +404,4 @@ CREATE TABLE `video` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-03-26  5:47:13
+-- Dump completed on 2026-03-26  6:09:30

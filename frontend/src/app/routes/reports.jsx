@@ -6,7 +6,11 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { Badge } from "@/components/ui/badge"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import { API_BASE_URL } from "@/lib/api-config"
 
 export default function ReportsPage() {
@@ -25,9 +29,6 @@ export default function ReportsPage() {
     itemType: "",
     genre: [],
     overdue: "all",
-    availability: "all",
-    name: "",
-    author: "",
   })
   const [rows, setRows] = useState([])
   const [summary, setSummary] = useState(null)
@@ -56,7 +57,10 @@ export default function ReportsPage() {
         if (value === "RENTAL_EQUIPMENT") {
           return { ...prev, itemType: value, genre: ["NOT_APPLICABLE"] }
         }
-        if (Array.isArray(prev.genre) && prev.genre.includes("NOT_APPLICABLE")) {
+        if (
+          Array.isArray(prev.genre) &&
+          prev.genre.includes("NOT_APPLICABLE")
+        ) {
           return { ...prev, itemType: value, genre: [] }
         }
       }
@@ -87,9 +91,6 @@ export default function ReportsPage() {
         itemType: filters.itemType,
         genre: Array.isArray(filters.genre) ? filters.genre.join(",") : "",
         overdue: filters.overdue,
-        availability: filters.availability,
-        name: filters.name,
-        author: filters.author,
       })
 
       const response = await fetch(`${API_BASE_URL}/api/reports?${params}`)
@@ -131,7 +132,6 @@ export default function ReportsPage() {
     filters.itemType === "BOOK" ||
     filters.itemType === "AUDIO" ||
     filters.itemType === "VIDEO"
-  const isUserSearchReport = filters.reportType === "userItemSearch"
   const filteredGenres = genres.filter((genre) =>
     genre.toLowerCase().includes(genreQuery.trim().toLowerCase())
   )
@@ -166,71 +166,64 @@ export default function ReportsPage() {
                 >
                   <option value="itemsCheckedOut">Items checked out</option>
                   <option value="finesOwed">Fines owed</option>
-                  <option value="userItemSearch">User item search</option>
                 </select>
               </Field>
-              {!isUserSearchReport && (
-                <Field>
-                  <FieldLabel htmlFor="startDate">From date</FieldLabel>
-                  <div className="relative">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className={`h-9 w-full justify-start text-left font-normal ${!filters.startDate ? "text-muted-foreground" : ""}`}
-                    >
-                      <Calendar className="mr-2 h-4 w-4" />
-                      {formatPickerDate(filters.startDate)}
-                    </Button>
-                    <input
-                      id="startDate"
-                      name="startDate"
-                      type="date"
-                      value={filters.startDate}
-                      onChange={onChange}
-                      className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                    />
-                  </div>
-                </Field>
-              )}
-              {!isUserSearchReport && (
-                <Field>
-                  <FieldLabel htmlFor="endDate">To date</FieldLabel>
-                  <div className="relative">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className={`h-9 w-full justify-start text-left font-normal ${!filters.endDate ? "text-muted-foreground" : ""}`}
-                    >
-                      <Calendar className="mr-2 h-4 w-4" />
-                      {formatPickerDate(filters.endDate)}
-                    </Button>
-                    <input
-                      id="endDate"
-                      name="endDate"
-                      type="date"
-                      value={filters.endDate}
-                      onChange={onChange}
-                      className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                    />
-                  </div>
-                </Field>
-              )}
-              {!isUserSearchReport && (
-                <Field>
-                  <FieldLabel htmlFor="userType">User type</FieldLabel>
-                  <select
-                    id="userType"
-                    name="userType"
-                    value={filters.userType}
-                    onChange={onChange}
-                    className="h-9 w-full rounded-md border border-input bg-transparent px-2.5 py-1 text-sm"
+              <Field>
+                <FieldLabel htmlFor="startDate">From date</FieldLabel>
+                <div className="relative">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={`h-9 w-full justify-start text-left font-normal ${!filters.startDate ? "text-muted-foreground" : ""}`}
                   >
-                    <option value="">All</option>
-                    <option value="STUDENT">Student</option>
-                    <option value="FACULTY">Faculty</option>
-                  </select>
-                </Field>
-              )}
+                    <Calendar className="mr-2 h-4 w-4" />
+                    {formatPickerDate(filters.startDate)}
+                  </Button>
+                  <input
+                    id="startDate"
+                    name="startDate"
+                    type="date"
+                    value={filters.startDate}
+                    onChange={onChange}
+                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                  />
+                </div>
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="endDate">To date</FieldLabel>
+                <div className="relative">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={`h-9 w-full justify-start text-left font-normal ${!filters.endDate ? "text-muted-foreground" : ""}`}
+                  >
+                    <Calendar className="mr-2 h-4 w-4" />
+                    {formatPickerDate(filters.endDate)}
+                  </Button>
+                  <input
+                    id="endDate"
+                    name="endDate"
+                    type="date"
+                    value={filters.endDate}
+                    onChange={onChange}
+                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                  />
+                </div>
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="userType">User type</FieldLabel>
+                <select
+                  id="userType"
+                  name="userType"
+                  value={filters.userType}
+                  onChange={onChange}
+                  className="h-9 w-full rounded-md border border-input bg-transparent px-2.5 py-1 text-sm"
+                >
+                  <option value="">All</option>
+                  <option value="STUDENT">Student</option>
+                  <option value="FACULTY">Faculty</option>
+                </select>
+              </Field>
               <Field>
                 <FieldLabel htmlFor="itemType">Item type</FieldLabel>
                 <select
@@ -320,62 +313,20 @@ export default function ReportsPage() {
                   </Popover>
                 )}
               </Field>
-              {!isUserSearchReport && (
-                <Field>
-                  <FieldLabel htmlFor="overdue">Overdue</FieldLabel>
-                  <select
-                    id="overdue"
-                    name="overdue"
-                    value={filters.overdue}
-                    onChange={onChange}
-                    className="h-9 w-full rounded-md border border-input bg-transparent px-2.5 py-1 text-sm"
-                  >
-                    <option value="all">All</option>
-                    <option value="overdue">Overdue only</option>
-                    <option value="notOverdue">Not overdue</option>
-                  </select>
-                </Field>
-              )}
-              {isUserSearchReport && (
-                <Field>
-                  <FieldLabel htmlFor="availability">Availability</FieldLabel>
-                  <select
-                    id="availability"
-                    name="availability"
-                    value={filters.availability}
-                    onChange={onChange}
-                    className="h-9 w-full rounded-md border border-input bg-transparent px-2.5 py-1 text-sm"
-                  >
-                    <option value="all">All</option>
-                    <option value="available">Available</option>
-                    <option value="notAvailable">Not Available</option>
-                  </select>
-                </Field>
-              )}
-              {isUserSearchReport && (
-                <Field>
-                  <FieldLabel htmlFor="name">Name</FieldLabel>
-                  <Input
-                    id="name"
-                    name="name"
-                    value={filters.name}
-                    onChange={onChange}
-                    placeholder="Item name"
-                  />
-                </Field>
-              )}
-              {isUserSearchReport && (
-                <Field>
-                  <FieldLabel htmlFor="author">Author</FieldLabel>
-                  <Input
-                    id="author"
-                    name="author"
-                    value={filters.author}
-                    onChange={onChange}
-                    placeholder="Author"
-                  />
-                </Field>
-              )}
+              <Field>
+                <FieldLabel htmlFor="overdue">Overdue</FieldLabel>
+                <select
+                  id="overdue"
+                  name="overdue"
+                  value={filters.overdue}
+                  onChange={onChange}
+                  className="h-9 w-full rounded-md border border-input bg-transparent px-2.5 py-1 text-sm"
+                >
+                  <option value="all">All</option>
+                  <option value="overdue">Overdue only</option>
+                  <option value="notOverdue">Not overdue</option>
+                </select>
+              </Field>
               <div className="flex items-end">
                 <Button type="submit" disabled={isLoading} className="w-full">
                   {isLoading ? "Generating..." : "Generate report"}
@@ -412,15 +363,6 @@ export default function ReportsPage() {
                       {summary.overdueCount ?? 0}
                     </p>
                   </div>
-                ) : filters.reportType === "userItemSearch" ? (
-                  <div className="rounded-md border p-3">
-                    <p className="text-xs text-muted-foreground">
-                      Available count
-                    </p>
-                    <p className="text-lg font-semibold">
-                      {summary.availableCount ?? 0}
-                    </p>
-                  </div>
                 ) : (
                   <div className="rounded-md border p-3">
                     <p className="text-xs text-muted-foreground">
@@ -447,15 +389,6 @@ export default function ReportsPage() {
                       <th className="px-3 py-2">Due</th>
                       <th className="px-3 py-2">Overdue</th>
                     </tr>
-                  ) : filters.reportType === "userItemSearch" ? (
-                    <tr>
-                      <th className="px-3 py-2">Item</th>
-                      <th className="px-3 py-2">Item type</th>
-                      <th className="px-3 py-2">Author</th>
-                      <th className="px-3 py-2">Genre</th>
-                      <th className="px-3 py-2">Availability</th>
-                      <th className="px-3 py-2">In stock</th>
-                    </tr>
                   ) : (
                     <tr>
                       <th className="px-3 py-2">Fine ID</th>
@@ -477,9 +410,7 @@ export default function ReportsPage() {
                         colSpan={
                           filters.reportType === "itemsCheckedOut"
                             ? 7
-                            : filters.reportType === "userItemSearch"
-                              ? 6
-                              : 8
+                            : 8
                         }
                       >
                         No report data.
@@ -501,17 +432,6 @@ export default function ReportsPage() {
                         <td className="px-3 py-2">
                           {Number(row.isOverdue) === 1 ? "Yes" : "No"}
                         </td>
-                      </tr>
-                    ))
-                  ) : filters.reportType === "userItemSearch" ? (
-                    rows.map((row) => (
-                      <tr key={row.itemId} className="border-t">
-                        <td className="px-3 py-2">{row.itemName || "-"}</td>
-                        <td className="px-3 py-2">{row.itemType || "-"}</td>
-                        <td className="px-3 py-2">{row.author || "-"}</td>
-                        <td className="px-3 py-2">{row.genres || "-"}</td>
-                        <td className="px-3 py-2">{row.availability || "-"}</td>
-                        <td className="px-3 py-2">{row.inStock ?? 0}</td>
                       </tr>
                     ))
                   ) : (

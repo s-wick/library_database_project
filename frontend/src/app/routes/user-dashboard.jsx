@@ -184,7 +184,7 @@ function BorrowedBooks({ borrowedBooks = [] }) {
   )
 }
 
-function HoldQueue({ holdQueue = [] }) {
+function HoldQueue({ holdQueue = [], onCancelHold, cancelingHoldId = null }) {
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -212,9 +212,11 @@ function HoldQueue({ holdQueue = [] }) {
               <Button
                 variant="ghost"
                 size="sm"
+                onClick={() => onCancelHold?.(item)}
+                disabled={cancelingHoldId === item.id}
                 className="mt-1 h-6 px-2 text-xs text-red-500 hover:text-red-600"
               >
-                Cancel
+                {cancelingHoldId === item.id ? "Canceling..." : "Cancel"}
               </Button>
             </div>
           </div>
@@ -260,6 +262,11 @@ function FinesPanel({ fines = [] }) {
                 <p className="text-xs text-muted-foreground">
                   {fine.daysOverdue} days overdue
                 </p>
+                {fine.isAtMaxValue && (
+                  <p className="text-xs font-medium text-amber-600 dark:text-amber-400">
+                    Capped at item value (${fine.itemValue.toFixed(2)})
+                  </p>
+                )}
               </div>
             </div>
             <div className="flex items-center gap-4">
@@ -389,10 +396,43 @@ export default function UserDashboard() {
   const [holdQueue, setHoldQueue] = useState([])
   const [fines, setFines] = useState([])
   const [borrowHistory, setBorrowHistory] = useState([])
+  const [cancelingHoldId, setCancelingHoldId] = useState(null)
   const [loading, setLoading] = useState(true)
 
   const apiBaseUrl =
     import.meta.env.VITE_API_BASE_URL || "http://localhost:4000"
+
+  const fetchDashboardData = async (userId) => {
+    try {
+      setLoading(true)
+
+      if (!userId) {
+        setBorrowedBooks([])
+        setHoldQueue([])
+        setFines([])
+        setBorrowHistory([])
+        return
+      }
+
+      const res = await fetch(`${apiBaseUrl}/api/dashboard?userId=${userId}`)
+      if (res.ok) {
+        const data = await res.json()
+        setBorrowedBooks(data.borrowedBooks || [])
+        setHoldQueue(data.holdQueue || [])
+        setFines(data.fines || [])
+        setBorrowHistory(data.borrowHistory || [])
+      } else {
+        setBorrowedBooks([])
+        setHoldQueue([])
+        setFines([])
+        setBorrowHistory([])
+      }
+    } catch (err) {
+      console.error("Failed to fetch dashboard data", err)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
     // Attempt to load user from local storage
@@ -410,49 +450,47 @@ export default function UserDashboard() {
           initials = name[0].toUpperCase()
         }
         setUserData({ name, email: parsed.email, avatarInitials: initials })
+        fetchDashboardData(parsed.id)
+        return
       }
     } catch (err) {
       // Ignore
     }
 
-    // Fetch dashboard data
-    const fetchDashboardData = async () => {
-      try {
-        setLoading(true)
-        const userStr = localStorage.getItem("user")
-        const user = userStr ? JSON.parse(userStr) : null
-
-        if (!user?.id) {
-          setBorrowedBooks([])
-          setHoldQueue([])
-          setFines([])
-          setBorrowHistory([])
-          return
-        }
-
-        // Simulate API call to fetch full dashboard data
-        const res = await fetch(`${apiBaseUrl}/api/dashboard?userId=${user.id}`)
-        if (res.ok) {
-          const data = await res.json()
-          setBorrowedBooks(data.borrowedBooks || [])
-          setHoldQueue(data.holdQueue || [])
-          setFines(data.fines || [])
-          setBorrowHistory(data.borrowHistory || [])
-        } else {
-          // Fallback empty states
-          setBorrowedBooks([])
-          setHoldQueue([])
-          setFines([])
-          setBorrowHistory([])
-        }
-      } catch (err) {
-        console.error("Failed to fetch dashboard data", err)
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchDashboardData()
+    fetchDashboardData(null)
   }, [])
+
+  const handleCancelHold = async (hold) => {
+    try {
+      const userStr = localStorage.getItem("user")
+      const user = userStr ? JSON.parse(userStr) : null
+      if (!user?.id || !hold?.itemId) return
+
+      setCancelingHoldId(hold.id)
+
+      const res = await fetch(`${apiBaseUrl}/api/hold`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          itemId: hold.itemId,
+        }),
+      })
+
+      if (!res.ok) {
+        const errorBody = await res.json().catch(() => null)
+        throw new Error(errorBody?.message || "Failed to cancel hold")
+      }
+
+      await fetchDashboardData(user.id)
+    } catch (err) {
+      console.error("Failed to cancel hold", err)
+    } finally {
+      setCancelingHoldId(null)
+    }
+  }
 
   const handleSignOut = () => {
     localStorage.setItem("isLoggedIn", "false")
@@ -581,7 +619,11 @@ export default function UserDashboard() {
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                   <BorrowedBooks borrowedBooks={borrowedBooks} />
                   <div className="space-y-6">
-                    <HoldQueue holdQueue={holdQueue} />
+                    <HoldQueue
+                      holdQueue={holdQueue}
+                      onCancelHold={handleCancelHold}
+                      cancelingHoldId={cancelingHoldId}
+                    />
                     <FinesPanel fines={fines} />
                   </div>
                 </div>
@@ -596,7 +638,11 @@ export default function UserDashboard() {
 
             <TabsContent value="holds">
               <div className="space-y-4">
-                <HoldQueue holdQueue={holdQueue} />
+                <HoldQueue
+                  holdQueue={holdQueue}
+                  onCancelHold={handleCancelHold}
+                  cancelingHoldId={cancelingHoldId}
+                />
               </div>
             </TabsContent>
 
@@ -604,7 +650,8 @@ export default function UserDashboard() {
               <div className="space-y-4">
                 <FinesPanel fines={fines} />
                 <p className="text-center text-xs text-muted-foreground">
-                  Fines accrue at $0.25/day per overdue item.
+                  Fines accrue at $5/day per overdue item and stop at the
+                  item value.
                 </p>
               </div>
             </TabsContent>

@@ -1,4 +1,29 @@
 const { query } = require("../database")
+const { DAILY_FINE_RATE } = require("../utils/fine-calculation")
+
+async function syncOverdueFines(userId) {
+  await query(
+    `
+    INSERT INTO fined_for (item_id, user_id, checkout_date, amount, amount_paid)
+    SELECT b.item_id,
+           b.user_id,
+           b.checkout_date,
+           LEAST(
+             ROUND(GREATEST(TIMESTAMPDIFF(DAY, b.due_date, COALESCE(b.return_date, NOW())), 0) * ?, 2),
+             i.monetary_value
+           ) AS amount,
+           0
+    FROM borrow b
+    INNER JOIN item i ON i.item_id = b.item_id
+    WHERE b.user_id = ?
+      AND TIMESTAMPDIFF(DAY, b.due_date, COALESCE(b.return_date, NOW())) > 0
+    ON DUPLICATE KEY UPDATE
+      amount = VALUES(amount),
+      amount_paid = LEAST(COALESCE(amount_paid, 0), VALUES(amount))
+  `,
+    [DAILY_FINE_RATE, userId]
+  )
+}
 
 async function getBorrowedBooks(userId) {
   return query(
@@ -44,17 +69,37 @@ async function getActiveHolds(userId) {
   )
 }
 
+async function cancelHold(userId, itemId, requestDate = null) {
+  let sql = `
+    DELETE FROM hold_item
+    WHERE user_id = ?
+      AND item_id = ?
+  `
+  const params = [userId, itemId]
+
+  // Optional legacy support for requestDate. Most clients should omit this.
+  if (requestDate) {
+    sql += ` AND request_date = ?`
+    params.push(requestDate)
+  }
+
+  const result = await query(sql, params)
+  return Number(result.affectedRows || 0) > 0
+}
+
 async function getUnpaidFines(userId) {
   return query(
     `
     SELECT f.item_id,
            f.checkout_date,
            i.title,
+          i.monetary_value AS item_value,
            bk.author,
            f.amount,
            f.amount_paid,
            b.due_date,
-           b.return_date
+              b.return_date,
+              GREATEST(TIMESTAMPDIFF(DAY, b.due_date, COALESCE(b.return_date, NOW())), 0) AS days_overdue
     FROM fined_for f
     INNER JOIN borrow b
       ON b.item_id = f.item_id
@@ -92,8 +137,10 @@ async function getBorrowHistory(userId) {
 }
 
 module.exports = {
+  syncOverdueFines,
   getBorrowedBooks,
   getActiveHolds,
+  cancelHold,
   getUnpaidFines,
   getBorrowHistory,
 }

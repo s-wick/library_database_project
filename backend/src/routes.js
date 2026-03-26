@@ -16,6 +16,7 @@ const {
   handleBorrow,
   handleHold,
   handleCheckout,
+  handleCancelHold,
 } = require("./services/transactions.service")
 const {
   handleGetCart,
@@ -113,6 +114,11 @@ async function handleApiRoute(req, res, url) {
 
   if (req.method === "POST" && pathname === "/api/hold") {
     await handleHold(req, res)
+    return
+  }
+
+  if (req.method === "DELETE" && pathname === "/api/hold") {
+    await handleCancelHold(req, res)
     return
   }
 

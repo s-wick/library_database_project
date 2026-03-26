@@ -11,6 +11,19 @@ function normalizeUserType(value) {
   return ""
 }
 
+function parseGenresFilter(value) {
+  const raw = String(value || "").trim()
+  if (!raw || raw === "NOT_APPLICABLE") return []
+
+  const items = raw
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .filter((part) => part !== "NOT_APPLICABLE")
+
+  return Array.from(new Set(items))
+}
+
 function buildWhereFilters(url) {
   const params = []
   const clauses = []
@@ -39,15 +52,16 @@ function buildWhereFilters(url) {
     params.push(itemType)
   }
 
-  const genre = String(url.searchParams.get("genre") || "").trim()
-  if (genre && genre !== "NOT_APPLICABLE") {
+  const genres = parseGenresFilter(url.searchParams.get("genre"))
+  if (genres.length) {
+    const placeholders = genres.map(() => "?").join(",")
     clauses.push(`EXISTS (
       SELECT 1
       FROM assigned_genres agf
       INNER JOIN genre gf ON gf.genre_id = agf.genre_id
-      WHERE agf.item_id = i.item_id AND gf.genre_text = ?
+      WHERE agf.item_id = i.item_id AND gf.genre_text IN (${placeholders})
     )`)
-    params.push(genre)
+    params.push(...genres)
   }
 
   const overdue = String(url.searchParams.get("overdue") || "all").trim()
@@ -64,6 +78,56 @@ function buildWhereFilters(url) {
 
   if (overdue === "notOverdue") {
     clauses.push(`${overdueExpr} = 0`)
+  }
+
+  return {
+    whereClause: clauses.length ? `WHERE ${clauses.join(" AND ")}` : "",
+    params,
+  }
+}
+
+function buildUserSearchFilters(url) {
+  const params = []
+  const clauses = []
+
+  const itemType = String(url.searchParams.get("itemType") || "").trim()
+  if (itemType) {
+    clauses.push("it.item_type = ?")
+    params.push(itemType)
+  }
+
+  const genres = parseGenresFilter(url.searchParams.get("genre"))
+  if (genres.length) {
+    const placeholders = genres.map(() => "?").join(",")
+    clauses.push(`EXISTS (
+      SELECT 1
+      FROM assigned_genres agf
+      INNER JOIN genre gf ON gf.genre_id = agf.genre_id
+      WHERE agf.item_id = i.item_id AND gf.genre_text IN (${placeholders})
+    )`)
+    params.push(...genres)
+  }
+
+  const availability = String(url.searchParams.get("availability") || "")
+    .trim()
+    .toLowerCase()
+  if (availability === "available") {
+    clauses.push("i.items_in_stock > 0")
+  }
+  if (availability === "notavailable") {
+    clauses.push("i.items_in_stock <= 0")
+  }
+
+  const name = String(url.searchParams.get("name") || "").trim()
+  if (name) {
+    clauses.push("i.title LIKE ?")
+    params.push(`%${name}%`)
+  }
+
+  const author = String(url.searchParams.get("author") || "").trim()
+  if (author) {
+    clauses.push("COALESCE(bk.author, '') LIKE ?")
+    params.push(`%${author}%`)
   }
 
   return {
@@ -164,6 +228,38 @@ async function getFineRows(url) {
   return rows
 }
 
+async function getUserSearchRows(url) {
+  const { whereClause, params } = buildUserSearchFilters(url)
+
+  const rows = await query(
+    `SELECT
+       i.item_id AS itemId,
+       i.title AS itemName,
+       it.item_type AS itemType,
+       bk.author AS author,
+       i.items_in_stock AS inStock,
+       CASE WHEN i.items_in_stock > 0 THEN 'Available' ELSE 'Not Available' END AS availability,
+       COALESCE(ig.genres, '') AS genres
+     FROM item i
+     LEFT JOIN item_type it ON it.item_code = i.item_type_code
+     LEFT JOIN book bk ON bk.item_id = i.item_id
+     LEFT JOIN (
+       SELECT
+         ag.item_id,
+         GROUP_CONCAT(DISTINCT g.genre_text ORDER BY g.genre_text SEPARATOR ', ') AS genres
+       FROM assigned_genres ag
+       INNER JOIN genre g ON g.genre_id = ag.genre_id
+       GROUP BY ag.item_id
+     ) ig ON ig.item_id = i.item_id
+     ${whereClause}
+     ORDER BY i.title ASC
+     LIMIT 500`,
+    params
+  )
+
+  return rows
+}
+
 async function handleGetReports(_req, res, url) {
   try {
     const reportType = String(
@@ -202,6 +298,21 @@ async function handleGetReports(_req, res, url) {
         summary: {
           totalRecords: rows.length,
           totalAmount,
+        },
+      })
+      return
+    }
+
+    if (reportType === "userItemSearch") {
+      const rows = await getUserSearchRows(url)
+
+      sendJson(res, 200, {
+        ok: true,
+        reportType,
+        rows,
+        summary: {
+          totalRecords: rows.length,
+          availableCount: rows.filter((row) => Number(row.inStock) > 0).length,
         },
       })
       return

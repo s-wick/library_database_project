@@ -516,6 +516,27 @@ INSERT INTO `video` VALUES (101,'Scream',NULL,6660,NULL,19.99,3,7,'2026-03-22','
 /*!40000 ALTER TABLE `video` ENABLE KEYS */;
 UNLOCK TABLES;
 
+
+CREATE TRIGGER `trg_fined_for_cap_item_value_before_insert`
+BEFORE INSERT ON `fined_for`
+FOR EACH ROW
+BEGIN
+  DECLARE max_item_value DECIMAL(10,2) DEFAULT NULL;
+
+  SELECT COALESCE(book.monetary_value, video.monetary_value, audio.monetary_value, rental.monetary_value)
+    INTO max_item_value
+  FROM borrow b
+  LEFT JOIN book ON b.item_type_code = 1 AND b.item_id = book.book_id
+  LEFT JOIN video ON b.item_type_code = 2 AND b.item_id = video.video_id
+  LEFT JOIN audio ON b.item_type_code = 3 AND b.item_id = audio.audio_id
+  LEFT JOIN rental_equipment rental ON b.item_type_code = 4 AND b.item_id = rental.equipment_id
+  WHERE b.borrow_transaction_id = NEW.borrow_transaction_id
+  LIMIT 1;
+
+  IF max_item_value IS NOT NULL AND NEW.amount IS NOT NULL AND NEW.amount > max_item_value THEN
+    SET NEW.amount = max_item_value;
+  END IF;
+END$$
 --
 -- Dumping events for database 'librarydatabase'
 --

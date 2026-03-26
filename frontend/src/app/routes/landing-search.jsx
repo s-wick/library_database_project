@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import React, { useEffect, useState } from "react"
 import { Search } from "lucide-react"
 import { Link } from "react-router-dom"
 import {
@@ -22,13 +22,18 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useTheme } from "@/components/theme-provider"
 import { Moon, Sun, LayoutDashboard } from "lucide-react"
 
 // Background image import
 import bgImage from "@/assets/library-hero.png"
-import { books, borrows, holds, studentUsers } from "@/data/dummy-data"
+import { books, borrows, holds } from "@/data/dummy-data"
+
+const API_BASE_URL =
+  (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL) ||
+  (typeof process !== "undefined" && process.env?.REACT_APP_API_URL) ||
+  "http://localhost:4000/api"
 
 export default function LandingSearchPage() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -36,19 +41,77 @@ export default function LandingSearchPage() {
 
   // Track login state in local storage to simulate authentication
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
-    // For demo purposes, if unset let's show logged in initially, else use the setting.
     const stored = localStorage.getItem("isLoggedIn")
-    return stored === null ? true : stored === "true"
+    return stored === "true"
   })
-  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [userDisplayName, setUserDisplayName] = useState("Guest")
+  const [avatarInitials, setAvatarInitials] = useState("G")
 
-  const activeUser = studentUsers[0]
-  const avatarInitials = `${activeUser.first_name[0]}${activeUser.last_name[0]}`
+  useEffect(() => {
+    async function hydrateSignedInUser() {
+      if (!isLoggedIn) {
+        setUserDisplayName("Guest")
+        setAvatarInitials("G")
+        return
+      }
+
+      const currentUserId = localStorage.getItem("userId")
+      const currentUserRole = String(localStorage.getItem("userRole") || "")
+        .trim()
+        .toLowerCase()
+      const storedUserTypeCode = Number.parseInt(
+        localStorage.getItem("userTypeCode") || "",
+        10
+      )
+
+      if (
+        currentUserId &&
+        (storedUserTypeCode === 1 || storedUserTypeCode === 2)
+      ) {
+        try {
+          const response = await fetch(
+            `${API_BASE_URL}/users/profile?user_id=${currentUserId}&user_type=${storedUserTypeCode}`
+          )
+          if (response.ok) {
+            const user = await response.json()
+            const first = String(user.first_name || "").trim()
+            const last = String(user.last_name || "").trim()
+            const fullName = `${first} ${last}`.trim() || "Library Member"
+            setUserDisplayName(fullName)
+            setAvatarInitials(`${first[0] || "L"}${last[0] || "M"}`)
+            return
+          }
+        } catch {
+          // Fall through to role-based fallback if profile request fails.
+        }
+      }
+
+      const fallbackName =
+        currentUserRole === "admin"
+          ? "Admin"
+          : currentUserRole === "staff"
+            ? "Staff"
+            : currentUserRole === "faculty"
+              ? "Faculty"
+              : currentUserRole === "student"
+                ? "Student"
+                : "Library Member"
+
+      setUserDisplayName(fallbackName)
+      setAvatarInitials(fallbackName.slice(0, 2).toUpperCase())
+    }
+
+    hydrateSignedInUser()
+  }, [isLoggedIn])
 
   const handleSignOut = () => {
     localStorage.setItem("isLoggedIn", "false")
+    localStorage.removeItem("userId")
+    localStorage.removeItem("userRole")
+    localStorage.removeItem("userRoleGroup")
+    localStorage.removeItem("userTypeCode")
+    localStorage.removeItem("userName")
     setIsLoggedIn(false)
-    setDropdownOpen(false)
   }
 
   // Compute availability dynamically from borrowing entities
@@ -124,15 +187,21 @@ export default function LandingSearchPage() {
           {isLoggedIn ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-violet-600 shadow-md transition-opacity outline-none hover:opacity-90">
-                  <Avatar className="h-9 w-9 bg-transparent">
+                <button className="flex items-center gap-2 rounded-full pr-1 transition-opacity outline-none hover:opacity-90">
+                  <span className="hidden text-sm font-medium text-foreground sm:inline">
+                    {userDisplayName}
+                  </span>
+                  <Avatar className="h-9 w-9 bg-gradient-to-br from-blue-500 to-violet-600">
                     <AvatarFallback className="bg-transparent text-sm font-bold text-white">
                       {avatarInitials}
                     </AvatarFallback>
                   </Avatar>
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem className="pointer-events-none text-xs text-muted-foreground">
+                  Signed in as {userDisplayName}
+                </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link to="/user-dashboard" className="w-full cursor-pointer">
                     Dashboard

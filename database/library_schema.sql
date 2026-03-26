@@ -16,6 +16,24 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
+-- Table structure for table `assigned_genres`
+--
+
+DROP TABLE IF EXISTS `assigned_genres`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `assigned_genres` (
+  `item_id` int unsigned NOT NULL,
+  `genre_id` int unsigned NOT NULL,
+  `assigned_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`item_id`,`genre_id`),
+  KEY `genre_id` (`genre_id`),
+  CONSTRAINT `assigned_genres_ibfk_1` FOREIGN KEY (`item_id`) REFERENCES `item` (`item_id`),
+  CONSTRAINT `assigned_genres_ibfk_2` FOREIGN KEY (`genre_id`) REFERENCES `genre` (`genre_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `audio`
 --
 
@@ -23,19 +41,11 @@ DROP TABLE IF EXISTS `audio`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `audio` (
-  `audio_id` int unsigned NOT NULL,
-  `audio_name` varchar(512) NOT NULL,
-  `thumbnail_image` blob,
+  `item_id` int unsigned NOT NULL,
   `audio_length_seconds` int unsigned DEFAULT NULL,
-  `audio_file` blob,
-  `monetary_value` decimal(5,2) DEFAULT NULL,
-  `audios_in_stock` tinyint unsigned DEFAULT NULL,
-  `created_at` date DEFAULT NULL,
-  `created_by` varchar(64) DEFAULT NULL,
-  `item_type_code` tinyint unsigned DEFAULT NULL,
-  PRIMARY KEY (`audio_id`),
-  KEY `item_type_code` (`item_type_code`),
-  CONSTRAINT `audio_ibfk_1` FOREIGN KEY (`item_type_code`) REFERENCES `item_type` (`item_code`)
+  `audio_file` blob NOT NULL,
+  PRIMARY KEY (`item_id`),
+  CONSTRAINT `fk_audio_item` FOREIGN KEY (`item_id`) REFERENCES `item` (`item_id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -47,22 +57,32 @@ DROP TABLE IF EXISTS `book`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `book` (
-  `book_id` int unsigned NOT NULL,
-  `title` varchar(512) NOT NULL,
-  `author` varchar(64) NOT NULL,
-  `edition` varchar(32) DEFAULT NULL,
-  `publication` varchar(64) DEFAULT NULL,
-  `publication_date` date DEFAULT NULL,
-  `thumbnail_image` blob,
-  `monetary_value` decimal(5,2) DEFAULT NULL,
-  `books_in_stock` tinyint unsigned DEFAULT NULL,
-  `online_pdf_url` varchar(2048) DEFAULT NULL,
-  `created_at` date DEFAULT NULL,
-  `created_by` varchar(64) DEFAULT NULL,
-  `item_type_code` tinyint unsigned DEFAULT NULL,
-  PRIMARY KEY (`book_id`),
-  KEY `item_type_code` (`item_type_code`),
-  CONSTRAINT `book_ibfk_1` FOREIGN KEY (`item_type_code`) REFERENCES `item_type` (`item_code`)
+  `item_id` int unsigned NOT NULL,
+  `author` varchar(50) NOT NULL,
+  `edition` varchar(25) DEFAULT NULL,
+  `publication` varchar(50) NOT NULL,
+  `publication_date` date NOT NULL,
+  PRIMARY KEY (`item_id`),
+  CONSTRAINT `fk_book_item` FOREIGN KEY (`item_id`) REFERENCES `item` (`item_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `book_room`
+--
+
+DROP TABLE IF EXISTS `book_room`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `book_room` (
+  `room_number` varchar(10) NOT NULL,
+  `user_id` int unsigned NOT NULL,
+  `start_time` datetime NOT NULL,
+  `end_time` datetime NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`room_number`,`user_id`,`start_time`,`end_time`),
+  KEY `user_id` (`user_id`),
+  CONSTRAINT `book_room_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `user_account` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -74,20 +94,16 @@ DROP TABLE IF EXISTS `borrow`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `borrow` (
-  `borrow_transaction_id` int unsigned NOT NULL AUTO_INCREMENT,
-  `item_type_code` tinyint unsigned DEFAULT NULL,
-  `item_id` int unsigned DEFAULT NULL,
-  `borrower_type` tinyint unsigned DEFAULT NULL,
-  `borrower_id` int unsigned DEFAULT NULL,
-  `checkout_date` datetime DEFAULT NULL,
-  `due_date` datetime DEFAULT NULL,
+  `item_id` int unsigned NOT NULL,
+  `user_id` int unsigned NOT NULL,
+  `checkout_date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `due_date` datetime NOT NULL,
   `return_date` datetime DEFAULT NULL,
-  PRIMARY KEY (`borrow_transaction_id`),
-  KEY `item_type_code` (`item_type_code`),
-  KEY `borrower_type` (`borrower_type`),
-  CONSTRAINT `borrow_ibfk_1` FOREIGN KEY (`item_type_code`) REFERENCES `item_type` (`item_code`),
-  CONSTRAINT `borrow_ibfk_2` FOREIGN KEY (`borrower_type`) REFERENCES `user_type` (`user_code`)
-) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  PRIMARY KEY (`item_id`,`user_id`,`checkout_date`),
+  KEY `user_id` (`user_id`),
+  CONSTRAINT `borrow_ibfk_1` FOREIGN KEY (`item_id`) REFERENCES `item` (`item_id`),
+  CONSTRAINT `borrow_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `user_account` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -100,34 +116,11 @@ DROP TABLE IF EXISTS `cart_items`;
 CREATE TABLE `cart_items` (
   `cart_id` int unsigned NOT NULL AUTO_INCREMENT,
   `user_id` int unsigned NOT NULL,
-  `item_type` tinyint unsigned NOT NULL,
   `item_id` int unsigned NOT NULL,
-  `added_to_cart` datetime NOT NULL,
-  PRIMARY KEY (`cart_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `faculty_user`
---
-
-DROP TABLE IF EXISTS `faculty_user`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `faculty_user` (
-  `faculty_id` int unsigned NOT NULL,
-  `email` varchar(64) NOT NULL,
-  `password` varchar(128) NOT NULL,
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  `first_name` varchar(50) DEFAULT NULL,
-  `middle_name` varchar(50) DEFAULT NULL,
-  `last_name` varchar(50) DEFAULT NULL,
-  `borrowed_items` int unsigned DEFAULT '0',
-  `fines` int unsigned DEFAULT '0',
-  `user_type_code` tinyint unsigned DEFAULT '2',
-  PRIMARY KEY (`faculty_id`),
-  KEY `user_type_code` (`user_type_code`),
-  CONSTRAINT `faculty_user_ibfk_1` FOREIGN KEY (`user_type_code`) REFERENCES `user_type` (`user_code`)
+  `added_to_cart` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`cart_id`),
+  KEY `item_id` (`item_id`),
+  CONSTRAINT `cart_items_ibfk_1` FOREIGN KEY (`item_id`) REFERENCES `item` (`item_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -139,16 +132,32 @@ DROP TABLE IF EXISTS `fined_for`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `fined_for` (
-  `fine_id` int unsigned NOT NULL AUTO_INCREMENT,
-  `borrow_transaction_id` int unsigned DEFAULT NULL,
-  `amount` int unsigned DEFAULT NULL,
-  `fine_reason` varchar(256) DEFAULT NULL,
-  `date_assigned` datetime DEFAULT NULL,
-  `is_paid` tinyint(1) DEFAULT NULL,
-  PRIMARY KEY (`fine_id`),
-  KEY `borrow_transaction_id` (`borrow_transaction_id`),
-  CONSTRAINT `fined_for_ibfk_1` FOREIGN KEY (`borrow_transaction_id`) REFERENCES `borrow` (`borrow_transaction_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `item_id` int unsigned NOT NULL,
+  `user_id` int unsigned NOT NULL,
+  `checkout_date` datetime NOT NULL,
+  `amount` decimal(8,2) DEFAULT NULL,
+  `amount_paid` decimal(8,2) DEFAULT NULL,
+  PRIMARY KEY (`item_id`,`user_id`,`checkout_date`),
+  CONSTRAINT `fined_for_ibfk_1` FOREIGN KEY (`item_id`, `user_id`, `checkout_date`) REFERENCES `borrow` (`item_id`, `user_id`, `checkout_date`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `genre`
+--
+
+DROP TABLE IF EXISTS `genre`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `genre` (
+  `genre_id` int unsigned NOT NULL AUTO_INCREMENT,
+  `genre_text` varchar(15) NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `created_by` int unsigned NOT NULL,
+  PRIMARY KEY (`genre_id`),
+  KEY `created_by` (`created_by`),
+  CONSTRAINT `genre_ibfk_1` FOREIGN KEY (`created_by`) REFERENCES `staff_account` (`staff_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -159,39 +168,37 @@ DROP TABLE IF EXISTS `hold_item`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `hold_item` (
-  `hold_id` int unsigned NOT NULL AUTO_INCREMENT,
-  `item_id` int unsigned DEFAULT NULL,
-  `user_type` tinyint unsigned DEFAULT NULL,
-  `user_id` int unsigned DEFAULT NULL,
-  `request_date` datetime DEFAULT CURRENT_TIMESTAMP,
-  `hold_status` enum('active','fulfilled','cancelled') DEFAULT NULL,
-  `queue_position` tinyint unsigned DEFAULT NULL,
-  PRIMARY KEY (`hold_id`),
-  KEY `user_type` (`user_type`),
-  CONSTRAINT `hold_item_ibfk_1` FOREIGN KEY (`user_type`) REFERENCES `user_type` (`user_code`)
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `item_id` int unsigned NOT NULL,
+  `user_id` int unsigned NOT NULL,
+  `request_date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`item_id`,`user_id`,`request_date`),
+  KEY `user_id` (`user_id`),
+  CONSTRAINT `hold_item_ibfk_1` FOREIGN KEY (`item_id`) REFERENCES `item` (`item_id`),
+  CONSTRAINT `hold_item_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `user_account` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `image`
+-- Table structure for table `item`
 --
 
-DROP TABLE IF EXISTS `image`;
+DROP TABLE IF EXISTS `item`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `image` (
-  `image_id` int unsigned NOT NULL,
-  `image_name` varchar(512) NOT NULL,
+CREATE TABLE `item` (
+  `item_id` int unsigned NOT NULL AUTO_INCREMENT,
+  `item_type_code` tinyint unsigned NOT NULL,
+  `title` varchar(100) NOT NULL,
   `thumbnail_image` blob,
-  `image_file` blob,
-  `monetary_value` decimal(5,2) DEFAULT NULL,
-  `images_in_stock` tinyint unsigned DEFAULT NULL,
-  `created_at` date DEFAULT NULL,
-  `created_by` varchar(64) DEFAULT NULL,
-  `item_type_code` tinyint unsigned DEFAULT NULL,
-  PRIMARY KEY (`image_id`),
-  KEY `item_type_code` (`item_type_code`),
-  CONSTRAINT `image_ibfk_1` FOREIGN KEY (`item_type_code`) REFERENCES `item_type` (`Item_code`)
+  `monetary_value` decimal(8,2) NOT NULL,
+  `items_in_stock` tinyint unsigned NOT NULL DEFAULT '0',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `created_by` int unsigned NOT NULL,
+  PRIMARY KEY (`item_id`),
+  KEY `fk_item_type` (`item_type_code`),
+  KEY `fk_item_created_by` (`created_by`),
+  CONSTRAINT `fk_item_created_by` FOREIGN KEY (`created_by`) REFERENCES `staff_account` (`staff_id`),
+  CONSTRAINT `fk_item_type` FOREIGN KEY (`item_type_code`) REFERENCES `item_type` (`item_code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -203,30 +210,10 @@ DROP TABLE IF EXISTS `item_type`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `item_type` (
-  `item_code` tinyint unsigned NOT NULL,
-  `item_type` varchar(32) NOT NULL,
+  `item_code` tinyint unsigned NOT NULL AUTO_INCREMENT,
+  `item_type` varchar(20) NOT NULL,
   PRIMARY KEY (`item_code`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `librarian`
---
-
-DROP TABLE IF EXISTS `librarian`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `librarian` (
-  `librarian_id` int unsigned NOT NULL,
-  `email` varchar(64) NOT NULL,
-  `password` varchar(128) NOT NULL,
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  `first_name` varchar(50) DEFAULT NULL,
-  `middle_name` varchar(50) DEFAULT NULL,
-  `last_name` varchar(50) DEFAULT NULL,
-  `phone_number` char(15) DEFAULT NULL,
-  PRIMARY KEY (`librarian_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -237,10 +224,10 @@ DROP TABLE IF EXISTS `meeting_room`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `meeting_room` (
-  `room_number` varchar(50) NOT NULL,
-  `capacity` int unsigned DEFAULT NULL,
-  `has_projector` tinyint(1) DEFAULT NULL,
-  `has_whiteboard` tinyint(1) DEFAULT NULL,
+  `room_number` varchar(10) NOT NULL,
+  `capacity` smallint unsigned DEFAULT NULL,
+  `has_projector` tinyint(1) DEFAULT '0',
+  `has_whiteboard` tinyint(1) DEFAULT '0',
   PRIMARY KEY (`room_number`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -253,99 +240,50 @@ DROP TABLE IF EXISTS `rental_equipment`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `rental_equipment` (
-  `equipment_id` int unsigned NOT NULL,
-  `rental_name` varchar(512) NOT NULL,
-  `thumbnail_image` blob,
-  `monetary_value` decimal(5,2) DEFAULT NULL,
-  `equipment_in_stock` tinyint unsigned DEFAULT NULL,
-  `created_at` date DEFAULT NULL,
-  `created_by` varchar(64) DEFAULT NULL,
-  `item_type_code` tinyint unsigned DEFAULT NULL,
-  PRIMARY KEY (`equipment_id`),
-  KEY `item_type_code` (`item_type_code`),
-  CONSTRAINT `rental_equipment_ibfk_1` FOREIGN KEY (`item_type_code`) REFERENCES `item_type` (`item_code`)
+  `item_id` int unsigned NOT NULL,
+  PRIMARY KEY (`item_id`),
+  CONSTRAINT `fk_equipment_item` FOREIGN KEY (`item_id`) REFERENCES `item` (`item_id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `reserve_room`
+-- Table structure for table `staff_account`
 --
 
-DROP TABLE IF EXISTS `reserve_room`;
+DROP TABLE IF EXISTS `staff_account`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `reserve_room` (
-  `booking_id` int unsigned NOT NULL AUTO_INCREMENT,
-  `room_number` varchar(50) DEFAULT NULL,
-  `reserve_user_type` tinyint unsigned DEFAULT NULL,
-  `reserved_by` int unsigned DEFAULT NULL,
-  `start_datetime` datetime DEFAULT NULL,
-  `end_datetime` datetime DEFAULT NULL,
-  `booking_status` enum('active','cancelled','completed') DEFAULT NULL,
-  `created_at` datetime DEFAULT NULL,
-  PRIMARY KEY (`booking_id`),
-  KEY `room_number` (`room_number`),
-  KEY `reserve_user_type` (`reserve_user_type`),
-  CONSTRAINT `reserve_room_ibfk_1` FOREIGN KEY (`room_number`) REFERENCES `meeting_room` (`room_number`),
-  CONSTRAINT `reserve_room_ibfk_2` FOREIGN KEY (`reserve_user_type`) REFERENCES `user_type` (`user_code`)
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `student_user`
---
-
-DROP TABLE IF EXISTS `student_user`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `student_user` (
-  `student_id` int unsigned NOT NULL,
-  `email` varchar(64) NOT NULL,
-  `password` varchar(128) NOT NULL,
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  `first_name` varchar(50) DEFAULT NULL,
+CREATE TABLE `staff_account` (
+  `staff_id` int unsigned NOT NULL AUTO_INCREMENT,
+  `email` varchar(50) NOT NULL,
+  `password` varchar(100) NOT NULL,
+  `first_name` varchar(50) NOT NULL,
   `middle_name` varchar(50) DEFAULT NULL,
-  `last_name` varchar(50) DEFAULT NULL,
-  `borrowed_items` int unsigned DEFAULT '0',
-  `fines` int unsigned DEFAULT '0',
-  `user_type_code` tinyint unsigned DEFAULT '1',
-  PRIMARY KEY (`student_id`),
-  KEY `user_type_code` (`user_type_code`),
-  CONSTRAINT `student_user_ibfk_1` FOREIGN KEY (`user_type_code`) REFERENCES `user_type` (`user_code`)
+  `last_name` varchar(50) NOT NULL,
+  `phone_number` char(15) NOT NULL,
+  `is_admin` tinyint(1) NOT NULL DEFAULT '0',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`staff_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `system_administrator`
+-- Table structure for table `user_account`
 --
 
-DROP TABLE IF EXISTS `system_administrator`;
+DROP TABLE IF EXISTS `user_account`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `system_administrator` (
-  `administrator_id` int unsigned NOT NULL,
-  `email` varchar(64) NOT NULL,
-  `password` varchar(128) NOT NULL,
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  `first_name` varchar(50) DEFAULT NULL,
+CREATE TABLE `user_account` (
+  `user_id` int unsigned NOT NULL AUTO_INCREMENT,
+  `email` varchar(50) NOT NULL,
+  `password` varchar(100) NOT NULL,
+  `first_name` varchar(50) NOT NULL,
   `middle_name` varchar(50) DEFAULT NULL,
-  `last_name` varchar(50) DEFAULT NULL,
-  `phone_number` char(15) DEFAULT NULL,
-  PRIMARY KEY (`administrator_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `user_type`
---
-
-DROP TABLE IF EXISTS `user_type`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `user_type` (
-  `user_code` tinyint unsigned NOT NULL,
-  `user_type` varchar(16) NOT NULL,
-  PRIMARY KEY (`user_code`)
+  `last_name` varchar(50) NOT NULL,
+  `is_faculty` tinyint(1) NOT NULL DEFAULT '0',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -357,19 +295,11 @@ DROP TABLE IF EXISTS `video`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `video` (
-  `video_id` int unsigned NOT NULL,
-  `video_name` varchar(512) NOT NULL,
-  `thumbnail_image` blob,
+  `item_id` int unsigned NOT NULL,
   `video_length_seconds` int unsigned DEFAULT NULL,
-  `video_file` blob,
-  `monetary_value` decimal(5,2) DEFAULT NULL,
-  `videos_in_stock` tinyint unsigned DEFAULT NULL,
-  `created_at` date DEFAULT NULL,
-  `created_by` varchar(64) DEFAULT NULL,
-  `item_type_code` tinyint unsigned DEFAULT NULL,
-  PRIMARY KEY (`video_id`),
-  KEY `item_type_code` (`item_type_code`),
-  CONSTRAINT `video_ibfk_1` FOREIGN KEY (`item_type_code`) REFERENCES `item_type` (`item_code`)
+  `video_file` blob NOT NULL,
+  PRIMARY KEY (`item_id`),
+  CONSTRAINT `fk_video_item` FOREIGN KEY (`item_id`) REFERENCES `item` (`item_id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -382,4 +312,4 @@ CREATE TABLE `video` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-03-25 12:47:11
+-- Dump completed on 2026-03-26  2:40:48

@@ -229,7 +229,7 @@ function HoldQueue({ holdQueue = [] }) {
   )
 }
 
-function FinesPanel({ fines = [] }) {
+function FinesPanel({ fines = [], onPayClick }) {
   const unpaid = fines.filter((f) => f.status === "unpaid")
   const total = unpaid.reduce((s, f) => s + f.amount, 0)
 
@@ -302,7 +302,10 @@ function FinesPanel({ fines = [] }) {
       </CardContent>
       {total > 0 && (
         <CardFooter className="pt-0">
-          <Button className="w-full bg-red-600 text-white hover:bg-red-700">
+          <Button
+            className="w-full bg-red-600 text-white hover:bg-red-700"
+            onClick={() => onPayClick?.(total)}
+          >
             <CreditCard className="mr-2 h-4 w-4" /> Pay ${total.toFixed(2)}
           </Button>
         </CardFooter>
@@ -460,6 +463,15 @@ export default function UserDashboard() {
     navigate("/")
   }
 
+  const handlePayFines = (amount) => {
+    navigate("/payment", {
+      state: {
+        amount,
+        type: "fine",
+      },
+    })
+  }
+
   const tabs = [
     { id: "overview", label: "Overview", icon: Home },
     { id: "borrowed", label: "Borrowed", icon: BookOpen },
@@ -582,7 +594,7 @@ export default function UserDashboard() {
                   <BorrowedBooks borrowedBooks={borrowedBooks} />
                   <div className="space-y-6">
                     <HoldQueue holdQueue={holdQueue} />
-                    <FinesPanel fines={fines} />
+                    <FinesPanel fines={fines} onPayClick={handlePayFines} />
                   </div>
                 </div>
               </div>
@@ -602,7 +614,7 @@ export default function UserDashboard() {
 
             <TabsContent value="fines">
               <div className="space-y-4">
-                <FinesPanel fines={fines} />
+                <FinesPanel fines={fines} onPayClick={handlePayFines} />
                 <p className="text-center text-xs text-muted-foreground">
                   Fines accrue at $0.25/day per overdue item.
                 </p>

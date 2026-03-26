@@ -29,13 +29,25 @@ export default function SearchPage() {
   const [comboboxOpen, setComboboxOpen] = useState(false)
 
   const [showFilters, setShowFilters] = useState(false)
-  const [bookGenre, setBookGenre] = useState("")
-  const [bookAuthor, setBookAuthor] = useState("")
-  const [bookPubDate, setBookPubDate] = useState("")
-  const [bookEdition, setBookEdition] = useState("")
-  const [audioLength, setAudioLength] = useState("")
-  const [videoLength, setVideoLength] = useState("")
-  const [minStock, setMinStock] = useState("")
+  const [bookGenre, setBookGenre] = useState(
+    searchParams.get("bookGenre") || ""
+  )
+  const [bookAuthor, setBookAuthor] = useState(
+    searchParams.get("bookAuthor") || ""
+  )
+  const [bookPubDate, setBookPubDate] = useState(
+    searchParams.get("bookPubDate") || ""
+  )
+  const [bookEdition, setBookEdition] = useState(
+    searchParams.get("bookEdition") || ""
+  )
+  const [audioLength, setAudioLength] = useState(
+    searchParams.get("audioLength") || ""
+  )
+  const [videoLength, setVideoLength] = useState(
+    searchParams.get("videoLength") || ""
+  )
+  const [minStock, setMinStock] = useState(searchParams.get("minStock") || "")
 
   const itemTypes = [
     { value: "All", label: "All Types" },
@@ -76,11 +88,41 @@ export default function SearchPage() {
     fetchItems()
   }, [searchParams])
 
+  useEffect(() => {
+    setSearchQuery(searchParams.get("q") || "")
+    setSelectedType(searchParams.get("type") || "All")
+    setBookGenre(searchParams.get("bookGenre") || "")
+    setBookAuthor(searchParams.get("bookAuthor") || "")
+    setBookPubDate(searchParams.get("bookPubDate") || "")
+    setBookEdition(searchParams.get("bookEdition") || "")
+    setAudioLength(searchParams.get("audioLength") || "")
+    setVideoLength(searchParams.get("videoLength") || "")
+    setMinStock(searchParams.get("minStock") || "")
+  }, [searchParams])
+
   // Update URL params when filters change
   const handleSearch = () => {
     const params = new URLSearchParams()
     if (searchQuery) params.set("q", searchQuery)
     if (selectedType && selectedType !== "All") params.set("type", selectedType)
+
+    if (minStock) params.set("minStock", minStock)
+
+    if (selectedType === "Book") {
+      if (bookGenre) params.set("bookGenre", bookGenre)
+      if (bookAuthor) params.set("bookAuthor", bookAuthor)
+      if (bookPubDate) params.set("bookPubDate", bookPubDate)
+      if (bookEdition) params.set("bookEdition", bookEdition)
+    }
+
+    if (selectedType === "Audiobook" && audioLength) {
+      params.set("audioLength", audioLength)
+    }
+
+    if (selectedType === "Video" && videoLength) {
+      params.set("videoLength", videoLength)
+    }
+
     setSearchParams(params, { replace: true })
   }
 
@@ -90,7 +132,88 @@ export default function SearchPage() {
     }
   }
 
-  const filteredItems = allLibraryItems || []
+  const parseDurationToSeconds = (value) => {
+    const raw = String(value || "")
+      .trim()
+      .toLowerCase()
+    if (!raw) return null
+
+    const match = raw.match(
+      /^(\d+(?:\.\d+)?)(h|hr|hrs|hour|hours|m|min|mins|minute|minutes|s|sec|secs|second|seconds)?$/
+    )
+    if (!match) {
+      const fallback = Number(raw)
+      return Number.isFinite(fallback) ? fallback : null
+    }
+
+    const amount = Number(match[1])
+    const unit = match[2] || "s"
+
+    if (["h", "hr", "hrs", "hour", "hours"].includes(unit)) {
+      return Math.round(amount * 3600)
+    }
+    if (["m", "min", "mins", "minute", "minutes"].includes(unit)) {
+      return Math.round(amount * 60)
+    }
+    return Math.round(amount)
+  }
+
+  const parseMinutesToSeconds = (value) => {
+    const minutes = Number(String(value || "").trim())
+    if (!Number.isFinite(minutes) || minutes < 0) return null
+    return Math.round(minutes * 60)
+  }
+
+  const containsCI = (value, needle) =>
+    String(value || "")
+      .toLowerCase()
+      .includes(
+        String(needle || "")
+          .trim()
+          .toLowerCase()
+      )
+
+  const arrayContainsCI = (values, needle) => {
+    const normalizedNeedle = String(needle || "")
+      .trim()
+      .toLowerCase()
+    if (!normalizedNeedle) return true
+    if (!Array.isArray(values)) return false
+    return values.some((entry) =>
+      String(entry || "")
+        .toLowerCase()
+        .includes(normalizedNeedle)
+    )
+  }
+
+  const filteredItems = (allLibraryItems || []).filter((item) => {
+    if (minStock) {
+      const min = Number(minStock)
+      if (Number.isFinite(min) && Number(item.in_stock || 0) < min) return false
+    }
+
+    if (selectedType === "Book") {
+      if (bookAuthor && !containsCI(item.author, bookAuthor)) return false
+      if (bookEdition && !containsCI(item.edition, bookEdition)) return false
+      if (bookPubDate && !containsCI(item.publication_date, bookPubDate))
+        return false
+      if (bookGenre && !arrayContainsCI(item.genres, bookGenre)) return false
+    }
+
+    if (selectedType === "Audiobook" && audioLength) {
+      const wanted = parseDurationToSeconds(audioLength)
+      const actual = Number(item.audio_length_seconds || item.duration || 0)
+      if (Number.isFinite(wanted) && wanted > 0 && actual < wanted) return false
+    }
+
+    if (selectedType === "Video" && videoLength) {
+      const wanted = parseMinutesToSeconds(videoLength)
+      const actual = Number(item.video_length_seconds || item.duration || 0)
+      if (Number.isFinite(wanted) && wanted > 0 && actual < wanted) return false
+    }
+
+    return true
+  })
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -134,11 +257,32 @@ export default function SearchPage() {
                   className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                   value={selectedType}
                   onChange={(e) => {
-                    setSelectedType(e.target.value)
+                    const nextType = e.target.value
+                    setSelectedType(nextType)
                     const params = new URLSearchParams()
                     if (searchQuery) params.set("q", searchQuery)
-                    if (e.target.value && e.target.value !== "All")
-                      params.set("type", e.target.value)
+
+                    if (nextType && nextType !== "All") {
+                      params.set("type", nextType)
+                    }
+
+                    if (minStock) params.set("minStock", minStock)
+
+                    if (nextType === "Book") {
+                      if (bookGenre) params.set("bookGenre", bookGenre)
+                      if (bookAuthor) params.set("bookAuthor", bookAuthor)
+                      if (bookPubDate) params.set("bookPubDate", bookPubDate)
+                      if (bookEdition) params.set("bookEdition", bookEdition)
+                    }
+
+                    if (nextType === "Audiobook" && audioLength) {
+                      params.set("audioLength", audioLength)
+                    }
+
+                    if (nextType === "Video" && videoLength) {
+                      params.set("videoLength", videoLength)
+                    }
+
                     setSearchParams(params, { replace: true })
                   }}
                 >
@@ -159,7 +303,14 @@ export default function SearchPage() {
                   placeholder="e.g. 1"
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                   value={minStock}
-                  onChange={(e) => setMinStock(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value
+                    setMinStock(value)
+                    const params = new URLSearchParams(searchParams)
+                    if (value) params.set("minStock", value)
+                    else params.delete("minStock")
+                    setSearchParams(params, { replace: true })
+                  }}
                 />
               </div>
 
@@ -175,7 +326,14 @@ export default function SearchPage() {
                       placeholder="e.g. Fiction"
                       className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
                       value={bookGenre}
-                      onChange={(e) => setBookGenre(e.target.value)}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        setBookGenre(value)
+                        const params = new URLSearchParams(searchParams)
+                        if (value) params.set("bookGenre", value)
+                        else params.delete("bookGenre")
+                        setSearchParams(params, { replace: true })
+                      }}
                     />
                   </div>
                   <div className="flex flex-col gap-1 text-left">
@@ -187,7 +345,14 @@ export default function SearchPage() {
                       placeholder="e.g. Orwell"
                       className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
                       value={bookAuthor}
-                      onChange={(e) => setBookAuthor(e.target.value)}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        setBookAuthor(value)
+                        const params = new URLSearchParams(searchParams)
+                        if (value) params.set("bookAuthor", value)
+                        else params.delete("bookAuthor")
+                        setSearchParams(params, { replace: true })
+                      }}
                     />
                   </div>
                   <div className="flex flex-col gap-1 text-left">
@@ -199,7 +364,14 @@ export default function SearchPage() {
                       placeholder="e.g. 1949"
                       className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
                       value={bookPubDate}
-                      onChange={(e) => setBookPubDate(e.target.value)}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        setBookPubDate(value)
+                        const params = new URLSearchParams(searchParams)
+                        if (value) params.set("bookPubDate", value)
+                        else params.delete("bookPubDate")
+                        setSearchParams(params, { replace: true })
+                      }}
                     />
                   </div>
                   <div className="flex flex-col gap-1 text-left">
@@ -211,7 +383,14 @@ export default function SearchPage() {
                       placeholder="e.g. First"
                       className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
                       value={bookEdition}
-                      onChange={(e) => setBookEdition(e.target.value)}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        setBookEdition(value)
+                        const params = new URLSearchParams(searchParams)
+                        if (value) params.set("bookEdition", value)
+                        else params.delete("bookEdition")
+                        setSearchParams(params, { replace: true })
+                      }}
                     />
                   </div>
                 </>
@@ -228,7 +407,14 @@ export default function SearchPage() {
                     placeholder="e.g. 10h"
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
                     value={audioLength}
-                    onChange={(e) => setAudioLength(e.target.value)}
+                    onChange={(e) => {
+                      const value = e.target.value
+                      setAudioLength(value)
+                      const params = new URLSearchParams(searchParams)
+                      if (value) params.set("audioLength", value)
+                      else params.delete("audioLength")
+                      setSearchParams(params, { replace: true })
+                    }}
                   />
                 </div>
               )}
@@ -237,14 +423,22 @@ export default function SearchPage() {
               {selectedType === "Video" && (
                 <div className="flex flex-col gap-1 text-left">
                   <label className="text-xs font-semibold text-muted-foreground uppercase">
-                    Length
+                    Length (minutes)
                   </label>
                   <input
-                    type="text"
-                    placeholder="e.g. 120m"
+                    type="number"
+                    min="0"
+                    placeholder="e.g. 120"
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
                     value={videoLength}
-                    onChange={(e) => setVideoLength(e.target.value)}
+                    onChange={(e) => {
+                      const value = e.target.value
+                      setVideoLength(value)
+                      const params = new URLSearchParams(searchParams)
+                      if (value) params.set("videoLength", value)
+                      else params.delete("videoLength")
+                      setSearchParams(params, { replace: true })
+                    }}
                   />
                 </div>
               )}

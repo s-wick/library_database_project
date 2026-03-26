@@ -31,6 +31,21 @@ export function ItemCard({ item }) {
   const inCart = cartItems.some(
     (i) => i.item_id === item.item_id && i.standard_type === item.standard_type
   )
+  const genres = Array.isArray(item.genres) ? item.genres : []
+
+  const metadata = [
+    genres.length ? `Genre: ${genres.slice(0, 2).join(", ")}` : null,
+    item.author ? `Author: ${item.author}` : null,
+    item.edition ? `Edition: ${item.edition}` : null,
+    item.publication_date
+      ? `Published: ${String(item.publication_date).slice(0, 10)}`
+      : null,
+    Number.isFinite(Number(item.in_stock))
+      ? `In stock: ${item.in_stock}`
+      : null,
+  ]
+    .filter(Boolean)
+    .slice(0, 3)
 
   const handleAddToCart = () => {
     const isLoggedIn = localStorage.getItem("isLoggedIn") === "true"
@@ -72,9 +87,6 @@ export function ItemCard({ item }) {
               <Badge variant={isAvailable ? "default" : "secondary"}>
                 {item.availability}
               </Badge>
-              <span className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                {item.tag}
-              </span>
             </div>
             <CardTitle className="line-clamp-2 text-lg leading-tight">
               {item.title}
@@ -84,9 +96,13 @@ export function ItemCard({ item }) {
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-1 flex-col p-4 pt-2">
-            <p className="line-clamp-3 text-sm text-slate-600 dark:text-slate-300">
-              {item.description || "No description available."}
-            </p>
+            <div className="space-y-1 text-sm text-slate-600 dark:text-slate-300">
+              {metadata.map((line) => (
+                <p key={line} className="line-clamp-1">
+                  {line}
+                </p>
+              ))}
+            </div>
           </CardContent>
           <CardFooter className="mt-auto px-4 pt-0 pb-3">
             <DialogTrigger asChild>
@@ -126,6 +142,12 @@ export function ItemCard({ item }) {
                     {item.standard_type === "Book" ? "Author:" : "Creator:"}{" "}
                     {item.creator}
                   </p>
+                )}
+                {genres.length > 0 && <p>Genres: {genres.join(", ")}</p>}
+                {item.edition && <p>Edition: {item.edition}</p>}
+                {item.publication && <p>Publisher: {item.publication}</p>}
+                {item.publication_date && (
+                  <p>Published: {String(item.publication_date).slice(0, 10)}</p>
                 )}
                 <p>In Stock: {item.in_stock}</p>
               </div>

@@ -80,6 +80,24 @@ export default function LandingSearchPage() {
     const params = new URLSearchParams()
     if (searchQuery) params.set("q", searchQuery)
     if (selectedType && selectedType !== "All") params.set("type", selectedType)
+
+    if (minStock) params.set("minStock", minStock)
+
+    if (selectedType === "Book") {
+      if (bookGenre) params.set("bookGenre", bookGenre)
+      if (bookAuthor) params.set("bookAuthor", bookAuthor)
+      if (bookPubDate) params.set("bookPubDate", bookPubDate)
+      if (bookEdition) params.set("bookEdition", bookEdition)
+    }
+
+    if (selectedType === "Audiobook" && audioLength) {
+      params.set("audioLength", audioLength)
+    }
+
+    if (selectedType === "Video" && videoLength) {
+      params.set("videoLength", videoLength)
+    }
+
     navigate(`/search?${params.toString()}`)
   }
 
@@ -245,11 +263,12 @@ export default function LandingSearchPage() {
                 {selectedType === "Video" && (
                   <div className="flex flex-col gap-1 text-left">
                     <label className="text-xs font-semibold text-muted-foreground uppercase">
-                      Length
+                      Length (minutes)
                     </label>
                     <input
-                      type="text"
-                      placeholder="e.g. 120m"
+                      type="number"
+                      min="0"
+                      placeholder="e.g. 120"
                       className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
                       value={videoLength}
                       onChange={(e) => setVideoLength(e.target.value)}

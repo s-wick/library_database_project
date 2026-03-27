@@ -38,6 +38,7 @@ import {
   CardContent,
   CardFooter,
 } from "@/components/ui/card"
+import { API_BASE_URL } from "@/lib/api-config"
 
 // Application Data Helpers
 
@@ -399,8 +400,7 @@ export default function UserDashboard() {
   const [cancelingHoldId, setCancelingHoldId] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  const apiBaseUrl =
-    import.meta.env.VITE_API_BASE_URL || "http://localhost:4000"
+  const apiBaseUrl = API_BASE_URL
 
   const fetchDashboardData = async (userId) => {
     try {

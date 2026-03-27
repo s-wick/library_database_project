@@ -10,6 +10,7 @@ import {
   CardContent,
 } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { API_BASE_URL } from "@/lib/api-config"
 
 export default function ItemPage() {
   const { id } = useParams()
@@ -22,8 +23,7 @@ export default function ItemPage() {
 
   const isFaculty = false // Change according to user type logic if needed
   const borrowDuration = isFaculty ? 14 : 7 // days
-  const apiBaseUrl =
-    import.meta.env.VITE_API_BASE_URL || "http://localhost:4000"
+  const apiBaseUrl = API_BASE_URL
 
   useEffect(() => {
     const fetchItem = async () => {

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react"
+import { API_BASE_URL } from "@/lib/api-config"
 
 const CartContext = createContext()
 
@@ -16,8 +17,7 @@ export function CartProvider({ children }) {
     localStorage.setItem("cart", JSON.stringify(cartItems))
   }, [cartItems])
 
-  const apiBaseUrl =
-    import.meta.env.VITE_API_BASE_URL || "http://localhost:4000"
+  const apiBaseUrl = API_BASE_URL
 
   const getUser = () => {
     try {

@@ -17,6 +17,7 @@ const {
   handleHold,
   handleCheckout,
   handleCancelHold,
+  handleBorrowStatus,
 } = require("./services/transactions.service")
 const {
   handleGetCart,
@@ -28,6 +29,7 @@ const {
   handleGetMyRoomBooking,
   handleBookRoom,
 } = require("./services/rooms.service")
+const { handleGetFines, handlePayFines } = require("./services/fines.service")
 
 async function handleApiRoute(req, res, url) {
   const { pathname } = url
@@ -132,6 +134,11 @@ async function handleApiRoute(req, res, url) {
     return
   }
 
+  if (req.method === "GET" && pathname === "/api/borrow-status") {
+    await handleBorrowStatus(req, res, url)
+    return
+  }
+
   if (req.method === "GET" && pathname === "/api/cart") {
     await handleGetCart(req, res, url)
     return
@@ -159,6 +166,16 @@ async function handleApiRoute(req, res, url) {
 
   if (req.method === "POST" && pathname === "/api/rooms/book") {
     await handleBookRoom(req, res)
+    return
+  }
+
+  if (req.method === "GET" && pathname === "/api/fines") {
+    await handleGetFines(req, res, url)
+    return
+  }
+
+  if (req.method === "POST" && pathname === "/api/fines/pay") {
+    await handlePayFines(req, res)
     return
   }
 

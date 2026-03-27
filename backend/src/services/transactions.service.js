@@ -4,8 +4,10 @@ const {
   createHold,
   cancelHold,
   getUserAccountById,
+  getActiveBorrowCount,
   OutOfStockError,
 } = require("../models/transactions.model")
+const { getCartRowsByUserId } = require("../models/cart.model")
 const { deleteCartItem } = require("../models/cart.model")
 
 async function handleBorrow(req, res) {
@@ -104,14 +106,6 @@ async function handleCheckout(req, res) {
       return
     }
 
-    if (items.length > 5) {
-      sendJson(res, 400, {
-        ok: false,
-        message: "Exceeded maximum checkout limit of 5 items",
-      })
-      return
-    }
-
     const user = await getUserAccountById(userId)
     if (!user) {
       sendJson(res, 404, { ok: false, message: "User account not found" })
@@ -119,6 +113,19 @@ async function handleCheckout(req, res) {
     }
 
     const borrowDays = user.is_faculty ? 14 : 7
+    const borrowLimit = user.is_faculty ? 6 : 3
+    const activeCount = await getActiveBorrowCount(user.user_id)
+    const totalAfterCheckout = activeCount + items.length
+
+    if (totalAfterCheckout > borrowLimit) {
+      sendJson(res, 400, {
+        ok: false,
+        message: `Borrow limit exceeded. You currently have ${activeCount} active borrow(s) and your limit is ${borrowLimit}. You can only check out ${borrowLimit - activeCount} more item(s).`,
+        activeCount,
+        borrowLimit,
+      })
+      return
+    }
 
     for (const item of items) {
       await createBorrowTransaction(user.user_id, item.itemId, borrowDays)
@@ -131,6 +138,15 @@ async function handleCheckout(req, res) {
       sendJson(res, 409, {
         ok: false,
         message: "One or more selected items are currently unavailable.",
+      })
+      return
+    }
+
+    // MySQL trigger signals borrow limit
+    if (error.sqlState === "45000") {
+      sendJson(res, 400, {
+        ok: false,
+        message: error.message || "Borrow limit reached.",
       })
       return
     }
@@ -183,4 +199,43 @@ module.exports = {
   handleBorrow,
   handleHold,
   handleCancelHold,
+  handleBorrowStatus,
+}
+
+async function handleBorrowStatus(req, res, url) {
+  try {
+    const userId = url.searchParams.get("userId")
+    if (!userId) {
+      sendJson(res, 400, { ok: false, message: "userId is required" })
+      return
+    }
+
+    const user = await getUserAccountById(userId)
+    if (!user) {
+      sendJson(res, 404, { ok: false, message: "User not found" })
+      return
+    }
+
+    const borrowLimit = user.is_faculty ? 6 : 3
+    const borrowDays = user.is_faculty ? 14 : 7
+    const activeCount = await getActiveBorrowCount(user.user_id)
+    const cartRows = await getCartRowsByUserId(userId)
+    const cartCount = cartRows.length
+
+    sendJson(res, 200, {
+      ok: true,
+      isFaculty: Boolean(user.is_faculty),
+      borrowLimit,
+      borrowDays,
+      activeCount,
+      cartCount,
+      remaining: Math.max(borrowLimit - activeCount, 0),
+    })
+  } catch (error) {
+    sendJson(res, 500, {
+      ok: false,
+      message: "Failed to get borrow status",
+      error: error.message,
+    })
+  }
 }

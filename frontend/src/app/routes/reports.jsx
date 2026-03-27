@@ -408,9 +408,7 @@ export default function ReportsPage() {
                       <td
                         className="px-3 py-4 text-muted-foreground"
                         colSpan={
-                          filters.reportType === "itemsCheckedOut"
-                            ? 7
-                            : 8
+                          filters.reportType === "itemsCheckedOut" ? 7 : 8
                         }
                       >
                         No report data.

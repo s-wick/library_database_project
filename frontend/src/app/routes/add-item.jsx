@@ -38,7 +38,6 @@ const itemFields = {
       label: "Video length seconds",
       type: "number",
     },
-    { name: "videoFile", label: "Video file", type: "file" },
     {
       name: "monetaryValue",
       label: "Monetary value",
@@ -55,7 +54,6 @@ const itemFields = {
       label: "Audio length seconds",
       type: "number",
     },
-    { name: "audioFile", label: "Audio file", type: "file" },
     {
       name: "monetaryValue",
       label: "Monetary value",
@@ -110,7 +108,8 @@ export default function AddItemPage() {
   const todayDate = useMemo(() => new Date().toISOString().slice(0, 10), [])
 
   const fields = useMemo(() => itemFields[itemType] || [], [itemType])
-  const isBook = itemType === "BOOK"
+  const supportsGenres =
+    itemType === "BOOK" || itemType === "AUDIO" || itemType === "VIDEO"
 
   useEffect(() => {
     const types = [
@@ -145,7 +144,10 @@ export default function AddItemPage() {
     setItemType(nextType)
     setForm({
       ...defaultForm(nextType),
-      genres: nextType !== "BOOK" ? ["NOT_APPLICABLE"] : [],
+      genres:
+        nextType === "BOOK" || nextType === "AUDIO" || nextType === "VIDEO"
+          ? []
+          : ["NOT_APPLICABLE"],
     })
     setFieldErrors({})
     setFileNames({})
@@ -205,7 +207,7 @@ export default function AddItemPage() {
           itemType,
           createdAt: todayDate,
           ...form,
-          genres: !isBook ? ["NOT_APPLICABLE"] : form.genres,
+          genres: supportsGenres ? form.genres : ["NOT_APPLICABLE"],
         }),
       })
       const data = await response.json().catch(() => ({}))
@@ -220,7 +222,7 @@ export default function AddItemPage() {
       setSuccess("Item added successfully.")
       setForm({
         ...defaultForm(itemType),
-        genres: !isBook ? ["NOT_APPLICABLE"] : [],
+        genres: supportsGenres ? [] : ["NOT_APPLICABLE"],
       })
       setFileNames({})
       setFileResetKey((prev) => prev + 1)
@@ -288,7 +290,7 @@ export default function AddItemPage() {
               </Field>
               <Field data-invalid={!!fieldErrors.genres}>
                 <FieldLabel>Genres</FieldLabel>
-                {!isBook ? (
+                {!supportsGenres ? (
                   <Input value="Not applicable" disabled className="h-9" />
                 ) : (
                   <div className="space-y-2">

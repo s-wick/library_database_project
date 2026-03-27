@@ -1,10 +1,16 @@
 import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, Calendar, Check, ChevronsUpDown, X } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Field, FieldLabel } from "@/components/ui/field"
+import { Badge } from "@/components/ui/badge"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import { API_BASE_URL } from "@/lib/api-config"
 
 export default function ReportsPage() {
@@ -21,13 +27,15 @@ export default function ReportsPage() {
     endDate: "",
     userType: "",
     itemType: "",
-    genre: "",
+    genre: [],
     overdue: "all",
   })
   const [rows, setRows] = useState([])
   const [summary, setSummary] = useState(null)
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [isGenreOpen, setIsGenreOpen] = useState(false)
+  const [genreQuery, setGenreQuery] = useState("")
 
   useEffect(() => {
     fetch(`${API_BASE_URL}/api/genres/search?q=`)
@@ -46,14 +54,27 @@ export default function ReportsPage() {
     const { name, value } = event.target
     setFilters((prev) => {
       if (name === "itemType") {
-        if (value !== "" && value !== "BOOK") {
-          return { ...prev, itemType: value, genre: "NOT_APPLICABLE" }
+        if (value === "RENTAL_EQUIPMENT") {
+          return { ...prev, itemType: value, genre: ["NOT_APPLICABLE"] }
         }
-        if (prev.genre === "NOT_APPLICABLE") {
-          return { ...prev, itemType: value, genre: "" }
+        if (
+          Array.isArray(prev.genre) &&
+          prev.genre.includes("NOT_APPLICABLE")
+        ) {
+          return { ...prev, itemType: value, genre: [] }
         }
       }
       return { ...prev, [name]: value }
+    })
+  }
+
+  function toggleGenre(genre) {
+    setFilters((prev) => {
+      const selected = Array.isArray(prev.genre) ? prev.genre : []
+      if (selected.includes(genre)) {
+        return { ...prev, genre: selected.filter((item) => item !== genre) }
+      }
+      return { ...prev, genre: [...selected, genre] }
     })
   }
 
@@ -68,7 +89,7 @@ export default function ReportsPage() {
         endDate: filters.endDate,
         userType: filters.userType,
         itemType: filters.itemType,
-        genre: filters.genre,
+        genre: Array.isArray(filters.genre) ? filters.genre.join(",") : "",
         overdue: filters.overdue,
       })
 
@@ -99,7 +120,21 @@ export default function ReportsPage() {
     return date.toLocaleDateString()
   }
 
-  const isBookOrAll = filters.itemType === "" || filters.itemType === "BOOK"
+  function formatPickerDate(value) {
+    if (!value) return "Select a date"
+    const date = new Date(`${value}T00:00:00`)
+    if (Number.isNaN(date.getTime())) return value
+    return date.toLocaleDateString()
+  }
+
+  const supportsGenreForItemType =
+    filters.itemType === "" ||
+    filters.itemType === "BOOK" ||
+    filters.itemType === "AUDIO" ||
+    filters.itemType === "VIDEO"
+  const filteredGenres = genres.filter((genre) =>
+    genre.toLowerCase().includes(genreQuery.trim().toLowerCase())
+  )
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -135,23 +170,45 @@ export default function ReportsPage() {
               </Field>
               <Field>
                 <FieldLabel htmlFor="startDate">From date</FieldLabel>
-                <Input
-                  id="startDate"
-                  name="startDate"
-                  type="date"
-                  value={filters.startDate}
-                  onChange={onChange}
-                />
+                <div className="relative">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={`h-9 w-full justify-start text-left font-normal ${!filters.startDate ? "text-muted-foreground" : ""}`}
+                  >
+                    <Calendar className="mr-2 h-4 w-4" />
+                    {formatPickerDate(filters.startDate)}
+                  </Button>
+                  <input
+                    id="startDate"
+                    name="startDate"
+                    type="date"
+                    value={filters.startDate}
+                    onChange={onChange}
+                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                  />
+                </div>
               </Field>
               <Field>
                 <FieldLabel htmlFor="endDate">To date</FieldLabel>
-                <Input
-                  id="endDate"
-                  name="endDate"
-                  type="date"
-                  value={filters.endDate}
-                  onChange={onChange}
-                />
+                <div className="relative">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={`h-9 w-full justify-start text-left font-normal ${!filters.endDate ? "text-muted-foreground" : ""}`}
+                  >
+                    <Calendar className="mr-2 h-4 w-4" />
+                    {formatPickerDate(filters.endDate)}
+                  </Button>
+                  <input
+                    id="endDate"
+                    name="endDate"
+                    type="date"
+                    value={filters.endDate}
+                    onChange={onChange}
+                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                  />
+                </div>
               </Field>
               <Field>
                 <FieldLabel htmlFor="userType">User type</FieldLabel>
@@ -186,27 +243,75 @@ export default function ReportsPage() {
               </Field>
               <Field>
                 <FieldLabel htmlFor="genre">Genre</FieldLabel>
-                <select
-                  id="genre"
-                  name="genre"
-                  value={filters.genre}
-                  onChange={onChange}
-                  disabled={!isBookOrAll}
-                  className="h-9 w-full rounded-md border border-input bg-transparent px-2.5 py-1 text-sm"
-                >
-                  {!isBookOrAll ? (
-                    <option value="NOT_APPLICABLE">Not applicable</option>
-                  ) : (
-                    <>
-                      <option value="">All</option>
-                      {genres.map((genre) => (
-                        <option key={genre} value={genre}>
-                          {genre}
-                        </option>
-                      ))}
-                    </>
-                  )}
-                </select>
+                {!supportsGenreForItemType ? (
+                  <Input value="Not applicable" disabled className="h-9" />
+                ) : (
+                  <Popover open={isGenreOpen} onOpenChange={setIsGenreOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="min-h-9 w-full justify-between px-2 py-1.5"
+                      >
+                        <div className="flex flex-wrap items-center gap-1">
+                          {filters.genre.length === 0 ? (
+                            <span className="text-muted-foreground">
+                              Select genres
+                            </span>
+                          ) : (
+                            filters.genre.map((genre) => (
+                              <Badge key={genre} variant="secondary">
+                                {genre}
+                                <button
+                                  type="button"
+                                  className="ml-1"
+                                  onClick={(event) => {
+                                    event.preventDefault()
+                                    event.stopPropagation()
+                                    toggleGenre(genre)
+                                  }}
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </Badge>
+                            ))
+                          )}
+                        </div>
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[320px] p-2" align="start">
+                      <Input
+                        value={genreQuery}
+                        onChange={(event) => setGenreQuery(event.target.value)}
+                        placeholder="Search genres..."
+                        className="mb-2 h-9"
+                      />
+                      <div className="max-h-48 overflow-y-auto rounded-md border">
+                        {filteredGenres.length === 0 ? (
+                          <p className="px-2 py-2 text-sm text-muted-foreground">
+                            No genres found.
+                          </p>
+                        ) : (
+                          filteredGenres.map((genre) => {
+                            const selected = filters.genre.includes(genre)
+                            return (
+                              <button
+                                key={genre}
+                                type="button"
+                                className="flex w-full items-center justify-between px-2 py-2 text-left text-sm hover:bg-muted"
+                                onClick={() => toggleGenre(genre)}
+                              >
+                                <span>{genre}</span>
+                                {selected && <Check className="h-4 w-4" />}
+                              </button>
+                            )
+                          })
+                        )}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                )}
               </Field>
               <Field>
                 <FieldLabel htmlFor="overdue">Overdue</FieldLabel>

@@ -292,6 +292,72 @@ async function handleCreateItem(req, res) {
       await query(`INSERT INTO rental_equipment (item_id) VALUES (?)`, [itemId])
     }
 
+    const nextGenres = parseGenres(body.genres)
+    if (nextGenres !== undefined) {
+      const invalidGenre = nextGenres.find((genreText) => genreText.length > 15)
+      if (invalidGenre) {
+        sendJson(res, 400, {
+          ok: false,
+          message: `Genre "${invalidGenre}" is too long (max 15 characters).`,
+        })
+        return
+      }
+
+      if (nextGenres.length) {
+        const loweredGenres = nextGenres.map((genreText) =>
+          genreText.toLowerCase()
+        )
+        const placeholders = loweredGenres.map(() => "?").join(",")
+        const existingGenres = await query(
+          `SELECT genre_id, genre_text
+           FROM genre
+           WHERE LOWER(genre_text) IN (${placeholders})`,
+          loweredGenres
+        )
+
+        const genreIdByText = new Map(
+          existingGenres.map((row) => [
+            String(row.genre_text).toLowerCase(),
+            row.genre_id,
+          ])
+        )
+
+        const missingGenres = nextGenres.filter(
+          (genreText) => !genreIdByText.has(genreText.toLowerCase())
+        )
+
+        if (missingGenres.length) {
+          const staffId = await getDefaultStaffId()
+          if (!staffId) {
+            sendJson(res, 400, {
+              ok: false,
+              message: "No staff account found to create new genres.",
+            })
+            return
+          }
+
+          for (const genreText of missingGenres) {
+            const result = await query(
+              `INSERT INTO genre (genre_text, created_by)
+               VALUES (?, ?)`,
+              [genreText, staffId]
+            )
+            genreIdByText.set(genreText.toLowerCase(), result.insertId)
+          }
+        }
+
+        for (const genreText of nextGenres) {
+          const genreId = genreIdByText.get(genreText.toLowerCase())
+          if (!genreId) continue
+          await query(
+            `INSERT INTO assigned_genres (item_id, genre_id)
+             VALUES (?, ?)`,
+            [itemId, genreId]
+          )
+        }
+      }
+    }
+
     sendJson(res, 201, {
       ok: true,
       message: "Item created successfully.",
@@ -565,6 +631,7 @@ async function handleDeleteItem(_req, res, id) {
     }
 
     try {
+      await query(`DELETE FROM assigned_genres WHERE item_id = ?`, [itemId])
       const result = await query(`DELETE FROM item WHERE item_id = ?`, [itemId])
       if (!result.affectedRows) {
         sendJson(res, 404, { ok: false, message: "Item not found." })

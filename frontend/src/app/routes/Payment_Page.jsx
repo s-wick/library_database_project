@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 import { useTheme } from "@/components/theme-provider"
+import { API_BASE_URL } from "@/lib/api-config"
 
 export default function PaymentPage() {
   const { setTheme, theme } = useTheme()
@@ -38,8 +39,7 @@ export default function PaymentPage() {
     cardholderName: "Cardholder Name is required.",
   }
 
-  const apiBaseUrl =
-    import.meta.env.VITE_API_BASE_URL || "http://localhost:4000"
+  const apiBaseUrl = API_BASE_URL
 
   // Force light mode for the payment page
   useEffect(() => {

@@ -2,4 +2,4 @@
 buildCommand = "npm install"
 
 [deploy]
-startCommand = "node server.js"
+startCommand = "npm start"

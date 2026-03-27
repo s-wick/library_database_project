@@ -78,7 +78,13 @@ async function searchItems({ queryText = "", itemType = "All", limit = 50 }) {
       i.title LIKE ?
       OR COALESCE(b.author, '') LIKE ?
       OR COALESCE(b.publication, '') LIKE ?
-      OR COALESCE(g.genre_text, '') LIKE ?
+      OR EXISTS (
+        SELECT 1
+        FROM assigned_genres ag
+        INNER JOIN genre g ON g.genre_id = ag.genre_id
+        WHERE ag.item_id = i.item_id
+          AND g.genre_text LIKE ?
+      )
     )`)
     params.push(likeQuery, likeQuery, likeQuery, likeQuery)
   }
@@ -99,30 +105,30 @@ async function searchItems({ queryText = "", itemType = "All", limit = 50 }) {
        b.publication_date,
        a.audio_length_seconds,
        v.video_length_seconds,
-       MAX(g.genre_text) AS genre_text,
-       GROUP_CONCAT(DISTINCT g.genre_text ORDER BY g.genre_text SEPARATOR ',') AS genres_csv
-     FROM item i
+       ga.genres_csv
+     FROM (
+       SELECT
+         i.item_id,
+         i.created_at
+       FROM item i
+       LEFT JOIN book b ON b.item_id = i.item_id
+       ${whereClause}
+       ORDER BY i.created_at DESC
+       LIMIT ${safeLimit}
+     ) recent
+     INNER JOIN item i ON i.item_id = recent.item_id
      LEFT JOIN book b ON b.item_id = i.item_id
      LEFT JOIN audio a ON a.item_id = i.item_id
      LEFT JOIN video v ON v.item_id = i.item_id
-     LEFT JOIN assigned_genres ag ON ag.item_id = i.item_id
-     LEFT JOIN genre g ON g.genre_id = ag.genre_id
-     ${whereClause}
-     GROUP BY
-       i.item_id,
-       i.item_type_code,
-       i.title,
-      i.monetary_value,
-       i.thumbnail_image,
-       i.items_in_stock,
-       b.author,
-       b.edition,
-       b.publication,
-       b.publication_date,
-       a.audio_length_seconds,
-       v.video_length_seconds
-     ORDER BY i.created_at DESC
-     LIMIT ${safeLimit}`,
+     LEFT JOIN (
+       SELECT
+         ag.item_id,
+         GROUP_CONCAT(DISTINCT g.genre_text SEPARATOR ',') AS genres_csv
+       FROM assigned_genres ag
+       INNER JOIN genre g ON g.genre_id = ag.genre_id
+       GROUP BY ag.item_id
+     ) ga ON ga.item_id = i.item_id
+     ORDER BY recent.created_at DESC`,
     params
   )
 

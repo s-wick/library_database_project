@@ -86,10 +86,21 @@ async function getUserAccountById(userId) {
   return rows[0] || null
 }
 
+async function getActiveBorrowCount(userId) {
+  const rows = await query(
+    `SELECT COUNT(*) AS cnt
+     FROM borrow
+     WHERE user_id = ? AND return_date IS NULL`,
+    [userId]
+  )
+  return Number(rows[0]?.cnt || 0)
+}
+
 module.exports = {
   createBorrowTransaction,
   createHold,
   cancelHold,
   getUserAccountById,
+  getActiveBorrowCount,
   OutOfStockError,
 }

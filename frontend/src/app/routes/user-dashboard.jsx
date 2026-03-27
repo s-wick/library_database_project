@@ -19,6 +19,7 @@ import {
   RotateCcw,
   DollarSign,
   ArrowUpRight,
+  ShieldCheck,
 } from "lucide-react"
 import { useTheme } from "@/components/theme-provider"
 import { Button } from "@/components/ui/button"
@@ -39,6 +40,84 @@ import {
   CardFooter,
 } from "@/components/ui/card"
 import { API_BASE_URL } from "@/lib/api-config"
+
+// ── Borrow Limit Card ─────────────────────────────────────────────────────────
+function BorrowLimitCard({ borrowStatus }) {
+  if (!borrowStatus) return null
+  const { isFaculty, borrowLimit, borrowDays, activeCount } = borrowStatus
+  const remaining = Math.max(borrowLimit - activeCount, 0)
+  const pctUsed = Math.min((activeCount / borrowLimit) * 100, 100)
+
+  const barColor =
+    pctUsed >= 100
+      ? "bg-red-500"
+      : pctUsed >= 66
+        ? "bg-amber-500"
+        : "bg-emerald-500"
+
+  return (
+    <Card className="overflow-hidden">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg">Borrowing Privileges</CardTitle>
+          <span
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
+              isFaculty
+                ? "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300"
+                : "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
+            }`}
+          >
+            <ShieldCheck className="h-3.5 w-3.5" />
+            {isFaculty ? "Faculty" : "Student"}
+          </span>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Stats row */}
+        <div className="grid grid-cols-3 divide-x divide-border rounded-xl border bg-muted/30">
+          <div className="flex flex-col items-center px-2 py-3 text-center">
+            <span className="text-xl font-bold">{borrowLimit}</span>
+            <span className="mt-0.5 text-[11px] text-muted-foreground">
+              Max items
+            </span>
+          </div>
+          <div className="flex flex-col items-center px-2 py-3 text-center">
+            <span className="text-xl font-bold">{borrowDays}</span>
+            <span className="mt-0.5 text-[11px] text-muted-foreground">
+              Days per loan
+            </span>
+          </div>
+          <div className="flex flex-col items-center px-2 py-3 text-center">
+            <span
+              className={`text-xl font-bold ${remaining === 0 ? "text-red-600" : "text-emerald-600"}`}
+            >
+              {remaining}
+            </span>
+            <span className="mt-0.5 text-[11px] text-muted-foreground">
+              Slots left
+            </span>
+          </div>
+        </div>
+
+        {/* Progress bar */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>Currently borrowed</span>
+            <span>
+              {activeCount} / {borrowLimit}
+            </span>
+          </div>
+          <div className="h-3 w-full overflow-hidden rounded-full bg-muted">
+            <div
+              className={`h-full rounded-full transition-all ${barColor}`}
+              style={{ width: `${pctUsed}%` }}
+            />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
 
 // Application Data Helpers
 
@@ -233,6 +312,7 @@ function HoldQueue({ holdQueue = [], onCancelHold, cancelingHoldId = null }) {
 }
 
 function FinesPanel({ fines = [] }) {
+  const navigate = useNavigate()
   const unpaid = fines.filter((f) => f.status === "unpaid")
   const total = unpaid.reduce((s, f) => s + f.amount, 0)
 
@@ -310,7 +390,10 @@ function FinesPanel({ fines = [] }) {
       </CardContent>
       {total > 0 && (
         <CardFooter className="pt-0">
-          <Button className="w-full bg-red-600 text-white hover:bg-red-700">
+          <Button
+            className="w-full bg-red-600 text-white hover:bg-red-700"
+            onClick={() => navigate("/payment")}
+          >
             <CreditCard className="mr-2 h-4 w-4" /> Pay ${total.toFixed(2)}
           </Button>
         </CardFooter>
@@ -399,6 +482,7 @@ export default function UserDashboard() {
   const [borrowHistory, setBorrowHistory] = useState([])
   const [cancelingHoldId, setCancelingHoldId] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [borrowStatus, setBorrowStatus] = useState(null)
 
   const apiBaseUrl = API_BASE_URL
 
@@ -426,6 +510,15 @@ export default function UserDashboard() {
         setHoldQueue([])
         setFines([])
         setBorrowHistory([])
+      }
+
+      // Fetch borrow status separately
+      const statusRes = await fetch(
+        `${apiBaseUrl}/api/borrow-status?userId=${userId}`
+      )
+      if (statusRes.ok) {
+        const statusData = await statusRes.json()
+        if (statusData.ok) setBorrowStatus(statusData)
       }
     } catch (err) {
       console.error("Failed to fetch dashboard data", err)
@@ -616,6 +709,7 @@ export default function UserDashboard() {
                   fines={fines}
                   borrowHistory={borrowHistory}
                 />
+                <BorrowLimitCard borrowStatus={borrowStatus} />
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                   <BorrowedBooks borrowedBooks={borrowedBooks} />
                   <div className="space-y-6">

@@ -6,8 +6,13 @@ on:
 
 jobs:
   changes:
-    if: github.event.action != 'closed'
+    if: >-
+      github.event.action != 'closed' &&
+      github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
     outputs:
       backend: ${{ steps.filter.outputs.backend }}
     steps:
@@ -25,7 +30,8 @@ jobs:
   preview-frontend:
     if: >-
       github.event.action != 'closed' &&
-      contains(github.event.pull_request.labels.*.name, 'preview')
+      contains(github.event.pull_request.labels.*.name, 'preview') &&
+      github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     outputs:
       frontend_url: ${{ steps.vercel.outputs.frontend_url }}
@@ -53,7 +59,8 @@ jobs:
   preview-db:
     if: >-
       github.event.action != 'closed' &&
-      contains(github.event.pull_request.labels.*.name, 'preview')
+      contains(github.event.pull_request.labels.*.name, 'preview') &&
+      github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -90,7 +97,8 @@ jobs:
   preview-db-teardown:
     if: >-
       github.event.action == 'closed' &&
-      contains(github.event.pull_request.labels.*.name, 'preview')
+      contains(github.event.pull_request.labels.*.name, 'preview') &&
+      github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -115,7 +123,8 @@ jobs:
     if: >-
       github.event.action != 'closed' &&
       contains(github.event.pull_request.labels.*.name, 'preview') &&
-      needs.changes.outputs.backend == 'true'
+      needs.changes.outputs.backend == 'true' &&
+      github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     needs: [changes, preview-db, preview-frontend]
     outputs:
@@ -172,7 +181,8 @@ jobs:
   preview-backend-teardown:
     if: >-
       github.event.action == 'closed' &&
-      contains(github.event.pull_request.labels.*.name, 'preview')
+      contains(github.event.pull_request.labels.*.name, 'preview') &&
+      github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -199,7 +209,8 @@ jobs:
   preview-summary:
     if: >-
       github.event.action != 'closed' &&
-      contains(github.event.pull_request.labels.*.name, 'preview')
+      contains(github.event.pull_request.labels.*.name, 'preview') &&
+      github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     needs: [preview-db, preview-frontend, preview-backend]
     permissions:

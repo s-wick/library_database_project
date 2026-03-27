@@ -158,42 +158,6 @@ INSERT INTO `borrow` VALUES (1,1,'2026-02-01 10:15:00','2026-02-15 23:59:59','20
 UNLOCK TABLES;
 
 --
--- Triggers for table `borrow`
---
-
-DROP TRIGGER IF EXISTS `trg_borrow_limit_before_insert`;
-
-DELIMITER ;;
-/*!50003 CREATE TRIGGER `trg_borrow_limit_before_insert`
-BEFORE INSERT ON `borrow`
-FOR EACH ROW
-BEGIN
-  DECLARE v_is_faculty   TINYINT(1) DEFAULT 0;
-  DECLARE v_active_count INT        DEFAULT 0;
-  DECLARE v_limit        INT        DEFAULT 3;
-
-  SELECT COALESCE(is_faculty, 0)
-    INTO v_is_faculty
-    FROM user_account
-   WHERE user_id = NEW.user_id
-   LIMIT 1;
-
-  SET v_limit = IF(v_is_faculty = 1, 6, 3);
-
-  SELECT COUNT(*)
-    INTO v_active_count
-    FROM borrow
-   WHERE user_id = NEW.user_id
-     AND return_date IS NULL;
-
-  IF v_active_count >= v_limit THEN
-    SIGNAL SQLSTATE '45000'
-      SET MESSAGE_TEXT = 'Borrow limit reached: you have too many active borrows.';
-  END IF;
-END */;;
-DELIMITER ;
-
---
 -- Table structure for table `cart_items`
 --
 
@@ -248,58 +212,6 @@ LOCK TABLES `fined_for` WRITE;
 INSERT INTO `fined_for` VALUES (3,2,'2026-02-03 09:10:00',6.50,6.50),(12,2,'2026-02-15 13:40:00',4.25,0.00),(36,2,'2026-03-08 10:00:00',9.00,3.00);
 /*!40000 ALTER TABLE `fined_for` ENABLE KEYS */;
 UNLOCK TABLES;
-/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
-/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
-/*!50003 SET @saved_col_connection = @@collation_connection */ ;
-/*!50003 SET character_set_client  = utf8mb4 */ ;
-/*!50003 SET character_set_results = utf8mb4 */ ;
-/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
-/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
-/*!50003 SET sql_mode              = 'NO_AUTO_VALUE_ON_ZERO' */ ;
-DELIMITER ;;
-/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_fined_for_cap_before_insert` BEFORE INSERT ON `fined_for` FOR EACH ROW BEGIN
-  DECLARE item_value DECIMAL(8,2) DEFAULT 0;
-
-  SELECT COALESCE(i.monetary_value, 0)
-    INTO item_value
-    FROM item i
-   WHERE i.item_id = NEW.item_id
-   LIMIT 1;
-
-  SET NEW.amount = LEAST(GREATEST(COALESCE(NEW.amount, 0), 0), item_value);
-  SET NEW.amount_paid = LEAST(GREATEST(COALESCE(NEW.amount_paid, 0), 0), NEW.amount);
-END */;;
-DELIMITER ;
-/*!50003 SET sql_mode              = @saved_sql_mode */ ;
-/*!50003 SET character_set_client  = @saved_cs_client */ ;
-/*!50003 SET character_set_results = @saved_cs_results */ ;
-/*!50003 SET collation_connection  = @saved_col_connection */ ;
-/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
-/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
-/*!50003 SET @saved_col_connection = @@collation_connection */ ;
-/*!50003 SET character_set_client  = utf8mb4 */ ;
-/*!50003 SET character_set_results = utf8mb4 */ ;
-/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
-/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
-/*!50003 SET sql_mode              = 'NO_AUTO_VALUE_ON_ZERO' */ ;
-DELIMITER ;;
-/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_fined_for_cap_before_update` BEFORE UPDATE ON `fined_for` FOR EACH ROW BEGIN
-  DECLARE item_value DECIMAL(8,2) DEFAULT 0;
-
-  SELECT COALESCE(i.monetary_value, 0)
-    INTO item_value
-    FROM item i
-   WHERE i.item_id = NEW.item_id
-   LIMIT 1;
-
-  SET NEW.amount = LEAST(GREATEST(COALESCE(NEW.amount, 0), 0), item_value);
-  SET NEW.amount_paid = LEAST(GREATEST(COALESCE(NEW.amount_paid, 0), 0), NEW.amount);
-END */;;
-DELIMITER ;
-/*!50003 SET sql_mode              = @saved_sql_mode */ ;
-/*!50003 SET character_set_client  = @saved_cs_client */ ;
-/*!50003 SET character_set_results = @saved_cs_results */ ;
-/*!50003 SET collation_connection  = @saved_col_connection */ ;
 
 --
 -- Table structure for table `genre`
@@ -550,14 +462,6 @@ LOCK TABLES `video` WRITE;
 INSERT INTO `video` VALUES (21,3600,_binary '\0'),(22,4200,_binary '\0'),(23,4800,_binary '\0'),(24,5400,_binary '\0'),(25,6000,_binary '\0'),(26,6600,_binary '\0'),(27,7200,_binary '\0'),(28,7800,_binary '\0'),(29,8400,_binary '\0'),(30,9000,_binary '\0');
 /*!40000 ALTER TABLE `video` ENABLE KEYS */;
 UNLOCK TABLES;
-
---
--- Dumping events for database 'librarydatabase'
---
-
---
--- Dumping routines for database 'librarydatabase'
---
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -568,4 +472,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-03-26 20:04:58
+-- Dump completed on 2026-03-26 20:30:49

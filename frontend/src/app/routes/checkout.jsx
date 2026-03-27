@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card"
 import { Navbar } from "@/components/navbar"
 import { useCart } from "@/app/cart-provider"
+import { API_BASE_URL } from "@/lib/api-config"
 
 export default function CheckoutPage() {
   const navigate = useNavigate()
@@ -45,8 +46,7 @@ export default function CheckoutPage() {
 
     try {
       setIsCheckingOut(true)
-      const apiBaseUrl =
-        import.meta.env.VITE_API_BASE_URL || "http://localhost:4000"
+      const apiBaseUrl = API_BASE_URL
 
       const userStr = localStorage.getItem("user")
       if (!userStr) {

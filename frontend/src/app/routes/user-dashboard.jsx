@@ -74,19 +74,27 @@ function BorrowLimitCard({ borrowStatus }) {
       <CardContent className="space-y-4">
         {/* Stats row */}
         <div className="grid grid-cols-3 divide-x divide-border rounded-xl border bg-muted/30">
-          <div className="flex flex-col items-center py-3 px-2 text-center">
+          <div className="flex flex-col items-center px-2 py-3 text-center">
             <span className="text-xl font-bold">{borrowLimit}</span>
-            <span className="text-[11px] text-muted-foreground mt-0.5">Max items</span>
+            <span className="mt-0.5 text-[11px] text-muted-foreground">
+              Max items
+            </span>
           </div>
-          <div className="flex flex-col items-center py-3 px-2 text-center">
+          <div className="flex flex-col items-center px-2 py-3 text-center">
             <span className="text-xl font-bold">{borrowDays}</span>
-            <span className="text-[11px] text-muted-foreground mt-0.5">Days per loan</span>
+            <span className="mt-0.5 text-[11px] text-muted-foreground">
+              Days per loan
+            </span>
           </div>
-          <div className="flex flex-col items-center py-3 px-2 text-center">
-            <span className={`text-xl font-bold ${remaining === 0 ? "text-red-600" : "text-emerald-600"}`}>
+          <div className="flex flex-col items-center px-2 py-3 text-center">
+            <span
+              className={`text-xl font-bold ${remaining === 0 ? "text-red-600" : "text-emerald-600"}`}
+            >
               {remaining}
             </span>
-            <span className="text-[11px] text-muted-foreground mt-0.5">Slots left</span>
+            <span className="mt-0.5 text-[11px] text-muted-foreground">
+              Slots left
+            </span>
           </div>
         </div>
 
@@ -94,7 +102,9 @@ function BorrowLimitCard({ borrowStatus }) {
         <div className="space-y-1.5">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span>Currently borrowed</span>
-            <span>{activeCount} / {borrowLimit}</span>
+            <span>
+              {activeCount} / {borrowLimit}
+            </span>
           </div>
           <div className="h-3 w-full overflow-hidden rounded-full bg-muted">
             <div
@@ -503,7 +513,9 @@ export default function UserDashboard() {
       }
 
       // Fetch borrow status separately
-      const statusRes = await fetch(`${apiBaseUrl}/api/borrow-status?userId=${userId}`)
+      const statusRes = await fetch(
+        `${apiBaseUrl}/api/borrow-status?userId=${userId}`
+      )
       if (statusRes.ok) {
         const statusData = await statusRes.json()
         if (statusData.ok) setBorrowStatus(statusData)

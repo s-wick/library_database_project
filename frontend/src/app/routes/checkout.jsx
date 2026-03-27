@@ -22,7 +22,8 @@ function BorrowLimitBadge({ isFaculty, borrowLimit, borrowDays }) {
           : "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
       }`}
     >
-      {isFaculty ? "Faculty" : "Student"} · Up to {borrowLimit} items · {borrowDays}-day loans
+      {isFaculty ? "Faculty" : "Student"} · Up to {borrowLimit} items ·{" "}
+      {borrowDays}-day loans
     </div>
   )
 }
@@ -69,9 +70,7 @@ function BorrowLimitBar({ activeCount, cartCount, borrowLimit }) {
           />
         )}
         {/* Free slots */}
-        {pctFree > 0 && (
-          <div className="h-full flex-1" />
-        )}
+        {pctFree > 0 && <div className="h-full flex-1" />}
       </div>
       <div className="flex gap-4 text-[11px] text-muted-foreground">
         <span className="flex items-center gap-1">
@@ -94,7 +93,13 @@ function BorrowLimitBar({ activeCount, cartCount, borrowLimit }) {
 }
 
 // ── Limit Exceeded Modal ──────────────────────────────────────────────────────
-function LimitExceededModal({ open, onClose, activeCount, borrowLimit, isFaculty }) {
+function LimitExceededModal({
+  open,
+  onClose,
+  activeCount,
+  borrowLimit,
+  isFaculty,
+}) {
   if (!open) return null
   const remaining = Math.max(borrowLimit - activeCount, 0)
   return (
@@ -102,7 +107,7 @@ function LimitExceededModal({ open, onClose, activeCount, borrowLimit, isFaculty
       <div className="relative mx-4 w-full max-w-md rounded-2xl bg-background p-6 shadow-xl">
         <button
           onClick={onClose}
-          className="absolute right-4 top-4 rounded-full p-1 text-muted-foreground hover:bg-muted"
+          className="absolute top-4 right-4 rounded-full p-1 text-muted-foreground hover:bg-muted"
         >
           <X className="h-4 w-4" />
         </button>
@@ -113,8 +118,8 @@ function LimitExceededModal({ open, onClose, activeCount, borrowLimit, isFaculty
         <p className="mb-4 text-sm text-muted-foreground">
           As a <strong>{isFaculty ? "faculty" : "student"}</strong> member, you
           can have at most <strong>{borrowLimit} items</strong> borrowed at a
-          time. You currently have <strong>{activeCount}</strong> active
-          borrow{activeCount !== 1 ? "s" : ""}, so you can add{" "}
+          time. You currently have <strong>{activeCount}</strong> active borrow
+          {activeCount !== 1 ? "s" : ""}, so you can add{" "}
           <strong>{remaining}</strong> more item{remaining !== 1 ? "s" : ""} to
           your checkout.
         </p>
@@ -176,7 +181,8 @@ export default function CheckoutPage() {
   }, [cartItems])
 
   // Derived limits
-  const borrowLimit = borrowStatus?.borrowLimit ?? (borrowStatus?.isFaculty ? 6 : 3)
+  const borrowLimit =
+    borrowStatus?.borrowLimit ?? (borrowStatus?.isFaculty ? 6 : 3)
   const borrowDays = borrowStatus?.borrowDays ?? 7
   const isFaculty = borrowStatus?.isFaculty ?? false
   const activeCount = borrowStatus?.activeCount ?? 0
@@ -219,7 +225,10 @@ export default function CheckoutPage() {
         navigate("/user-dashboard")
       } else {
         const error = await res.json()
-        if (error.activeCount !== undefined || error.borrowLimit !== undefined) {
+        if (
+          error.activeCount !== undefined ||
+          error.borrowLimit !== undefined
+        ) {
           setShowLimitModal(true)
         } else {
           alert(error.message || "Checkout failed")
@@ -269,9 +278,11 @@ export default function CheckoutPage() {
 
         {/* Borrow Limit Info */}
         {borrowStatus && (
-          <div className="mb-6 rounded-xl border bg-card p-4 shadow-sm space-y-3">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <span className="text-sm font-medium">Your borrowing privileges</span>
+          <div className="mb-6 space-y-3 rounded-xl border bg-card p-4 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-sm font-medium">
+                Your borrowing privileges
+              </span>
               <BorrowLimitBadge
                 isFaculty={isFaculty}
                 borrowLimit={borrowLimit}
@@ -348,7 +359,9 @@ export default function CheckoutPage() {
                     <span>{activeCount}</span>
                   </div>
                   <div className="flex justify-between font-medium">
-                    <span className="text-muted-foreground">Total after checkout</span>
+                    <span className="text-muted-foreground">
+                      Total after checkout
+                    </span>
                     <span className={wouldExceedLimit ? "text-red-600" : ""}>
                       {activeCount + cartItems.length} / {borrowLimit}
                     </span>
@@ -358,7 +371,7 @@ export default function CheckoutPage() {
                     <span>{borrowDays} days</span>
                   </div>
                   {wouldExceedLimit && (
-                    <div className="mt-4 flex items-start gap-2 rounded-md bg-destructive/15 p-3 text-destructive text-xs">
+                    <div className="mt-4 flex items-start gap-2 rounded-md bg-destructive/15 p-3 text-xs text-destructive">
                       <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
                       <span>
                         Exceeds your {isFaculty ? "faculty" : "student"} limit
@@ -377,10 +390,7 @@ export default function CheckoutPage() {
                     className="w-full gap-2"
                     size="lg"
                     onClick={handleCheckout}
-                    disabled={
-                      isCheckingOut ||
-                      cartItems.length === 0
-                    }
+                    disabled={isCheckingOut || cartItems.length === 0}
                   >
                     <CheckCircle className="h-4 w-4" />
                     {isCheckingOut ? "Checking out..." : "Confirm Checkout"}
@@ -407,4 +417,3 @@ export default function CheckoutPage() {
     </div>
   )
 }
-

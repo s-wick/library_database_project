@@ -34,6 +34,9 @@ export default function ReportsPage() {
   const [summary, setSummary] = useState(null)
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [hasGenerated, setHasGenerated] = useState(false)
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(100)
   const [isGenreOpen, setIsGenreOpen] = useState(false)
   const [genreQuery, setGenreQuery] = useState("")
 
@@ -52,6 +55,13 @@ export default function ReportsPage() {
 
   function onChange(event) {
     const { name, value } = event.target
+    if (name === "reportType") {
+      setHasGenerated(false)
+      setRows([])
+      setSummary(null)
+      setError("")
+      setPage(1)
+    }
     setFilters((prev) => {
       if (name === "itemType") {
         if (value === "RENTAL_EQUIPMENT") {
@@ -78,10 +88,10 @@ export default function ReportsPage() {
     })
   }
 
-  async function onSubmit(event) {
-    event.preventDefault()
+  async function fetchReport(nextPage) {
     setError("")
     setIsLoading(true)
+    setHasGenerated(true)
     try {
       const params = new URLSearchParams({
         reportType: filters.reportType,
@@ -91,6 +101,8 @@ export default function ReportsPage() {
         itemType: filters.itemType,
         genre: Array.isArray(filters.genre) ? filters.genre.join(",") : "",
         overdue: filters.overdue,
+        page: String(nextPage),
+        pageSize: String(pageSize),
       })
 
       const response = await fetch(`${API_BASE_URL}/api/reports?${params}`)
@@ -111,6 +123,18 @@ export default function ReportsPage() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  async function onSubmit(event) {
+    event.preventDefault()
+    setPage(1)
+    await fetchReport(1)
+  }
+
+  async function goToPage(nextPage) {
+    if (nextPage < 1 || isLoading) return
+    setPage(nextPage)
+    await fetchReport(nextPage)
   }
 
   function formatDate(value) {
@@ -341,124 +365,160 @@ export default function ReportsPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Report results</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {summary && (
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="rounded-md border p-3">
-                  <p className="text-xs text-muted-foreground">Total records</p>
-                  <p className="text-lg font-semibold">
-                    {summary.totalRecords ?? 0}
-                  </p>
-                </div>
-                {filters.reportType === "itemsCheckedOut" ? (
+        {hasGenerated && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Report results</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {summary && (
+                <div className="grid gap-4 md:grid-cols-3">
                   <div className="rounded-md border p-3">
                     <p className="text-xs text-muted-foreground">
-                      Overdue count
+                      Records shown
                     </p>
                     <p className="text-lg font-semibold">
-                      {summary.overdueCount ?? 0}
+                      {summary.totalRecords ?? 0}
                     </p>
                   </div>
-                ) : (
-                  <div className="rounded-md border p-3">
-                    <p className="text-xs text-muted-foreground">
-                      Total amount
-                    </p>
-                    <p className="text-lg font-semibold">
-                      ${Number(summary.totalAmount || 0)}
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-
-            <div className="overflow-x-auto rounded-md border">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/40 text-left">
                   {filters.reportType === "itemsCheckedOut" ? (
-                    <tr>
-                      <th className="px-3 py-2">Item</th>
-                      <th className="px-3 py-2">Item type</th>
-                      <th className="px-3 py-2">User type</th>
-                      <th className="px-3 py-2">Borrower</th>
-                      <th className="px-3 py-2">Checkout</th>
-                      <th className="px-3 py-2">Due</th>
-                      <th className="px-3 py-2">Overdue</th>
-                    </tr>
+                    <div className="rounded-md border p-3">
+                      <p className="text-xs text-muted-foreground">
+                        Overdue count
+                      </p>
+                      <p className="text-lg font-semibold">
+                        {summary.overdueCount ?? 0}
+                      </p>
+                    </div>
                   ) : (
-                    <tr>
-                      <th className="px-3 py-2">Fine ID</th>
-                      <th className="px-3 py-2">Item</th>
-                      <th className="px-3 py-2">User type</th>
-                      <th className="px-3 py-2">Borrower</th>
-                      <th className="px-3 py-2">Amount</th>
-                      <th className="px-3 py-2">Reason</th>
-                      <th className="px-3 py-2">Assigned</th>
-                      <th className="px-3 py-2">Overdue</th>
-                    </tr>
+                    <div className="rounded-md border p-3">
+                      <p className="text-xs text-muted-foreground">
+                        Total amount
+                      </p>
+                      <p className="text-lg font-semibold">
+                        ${Number(summary.totalAmount || 0)}
+                      </p>
+                    </div>
                   )}
-                </thead>
-                <tbody>
-                  {rows.length === 0 ? (
-                    <tr>
-                      <td
-                        className="px-3 py-4 text-muted-foreground"
-                        colSpan={
-                          filters.reportType === "itemsCheckedOut" ? 7 : 8
-                        }
-                      >
-                        No report data.
-                      </td>
-                    </tr>
-                  ) : filters.reportType === "itemsCheckedOut" ? (
-                    rows.map((row) => (
-                      <tr key={row.borrowTransactionId} className="border-t">
-                        <td className="px-3 py-2">{row.itemName || "-"}</td>
-                        <td className="px-3 py-2">{row.itemType || "-"}</td>
-                        <td className="px-3 py-2">{row.userType || "-"}</td>
-                        <td className="px-3 py-2">
-                          {row.borrowerName || row.borrowerId || "-"}
-                        </td>
-                        <td className="px-3 py-2">
-                          {formatDate(row.checkoutDate)}
-                        </td>
-                        <td className="px-3 py-2">{formatDate(row.dueDate)}</td>
-                        <td className="px-3 py-2">
-                          {Number(row.isOverdue) === 1 ? "Yes" : "No"}
+                </div>
+              )}
+
+              <div className="overflow-x-auto rounded-md border">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/40 text-left">
+                    {filters.reportType === "itemsCheckedOut" ? (
+                      <tr>
+                        <th className="px-3 py-2">Item</th>
+                        <th className="px-3 py-2">Item type</th>
+                        <th className="px-3 py-2">User type</th>
+                        <th className="px-3 py-2">Borrower</th>
+                        <th className="px-3 py-2">Checkout</th>
+                        <th className="px-3 py-2">Due</th>
+                        <th className="px-3 py-2">Overdue</th>
+                      </tr>
+                    ) : (
+                      <tr>
+                        <th className="px-3 py-2">Fine ID</th>
+                        <th className="px-3 py-2">Item</th>
+                        <th className="px-3 py-2">User type</th>
+                        <th className="px-3 py-2">Borrower</th>
+                        <th className="px-3 py-2">Amount</th>
+                        <th className="px-3 py-2">Paid off</th>
+                        <th className="px-3 py-2">Reason</th>
+                        <th className="px-3 py-2">Assigned</th>
+                        <th className="px-3 py-2">Overdue</th>
+                      </tr>
+                    )}
+                  </thead>
+                  <tbody>
+                    {rows.length === 0 ? (
+                      <tr>
+                        <td
+                          className="px-3 py-4 text-muted-foreground"
+                          colSpan={
+                            filters.reportType === "itemsCheckedOut" ? 7 : 9
+                          }
+                        >
+                          No report data.
                         </td>
                       </tr>
-                    ))
-                  ) : (
-                    rows.map((row) => (
-                      <tr key={row.fineId} className="border-t">
-                        <td className="px-3 py-2">{row.fineId}</td>
-                        <td className="px-3 py-2">{row.itemName || "-"}</td>
-                        <td className="px-3 py-2">{row.userType || "-"}</td>
-                        <td className="px-3 py-2">
-                          {row.borrowerName || row.borrowerId || "-"}
-                        </td>
-                        <td className="px-3 py-2">
-                          ${Number(row.amount || 0)}
-                        </td>
-                        <td className="px-3 py-2">{row.fineReason || "-"}</td>
-                        <td className="px-3 py-2">
-                          {formatDate(row.dateAssigned)}
-                        </td>
-                        <td className="px-3 py-2">
-                          {Number(row.isOverdue) === 1 ? "Yes" : "No"}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+                    ) : filters.reportType === "itemsCheckedOut" ? (
+                      rows.map((row) => (
+                        <tr key={row.borrowTransactionId} className="border-t">
+                          <td className="px-3 py-2">{row.itemName || "-"}</td>
+                          <td className="px-3 py-2">{row.itemType || "-"}</td>
+                          <td className="px-3 py-2">{row.userType || "-"}</td>
+                          <td className="px-3 py-2">
+                            {row.borrowerName || row.borrowerId || "-"}
+                          </td>
+                          <td className="px-3 py-2">
+                            {formatDate(row.checkoutDate)}
+                          </td>
+                          <td className="px-3 py-2">
+                            {formatDate(row.dueDate)}
+                          </td>
+                          <td className="px-3 py-2">
+                            {Number(row.isOverdue) === 1 ? "Yes" : "No"}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      rows.map((row) => (
+                        <tr key={row.fineId} className="border-t">
+                          <td className="px-3 py-2">{row.fineId}</td>
+                          <td className="px-3 py-2">{row.itemName || "-"}</td>
+                          <td className="px-3 py-2">{row.userType || "-"}</td>
+                          <td className="px-3 py-2">
+                            {row.borrowerName || row.borrowerId || "-"}
+                          </td>
+                          <td className="px-3 py-2">
+                            ${Number(row.amount || 0)}
+                          </td>
+                          <td className="px-3 py-2">
+                            {Number(row.isPaidOff) === 1 ? "Yes" : "No"}
+                          </td>
+                          <td className="px-3 py-2">{row.fineReason || "-"}</td>
+                          <td className="px-3 py-2">
+                            {formatDate(row.dateAssigned)}
+                          </td>
+                          <td className="px-3 py-2">
+                            {Number(row.isOverdue) === 1 ? "Yes" : "No"}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
+                <span>
+                  Page {summary?.page ?? page}
+                  {summary?.pageSize ? ` · ${summary.pageSize} per page` : ""}
+                </span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => goToPage((summary?.page ?? page) - 1)}
+                    disabled={(summary?.page ?? page) <= 1 || isLoading}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => goToPage((summary?.page ?? page) + 1)}
+                    disabled={!summary?.hasMore || isLoading}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   )

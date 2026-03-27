@@ -86,8 +86,28 @@ function buildWhereFilters(url) {
   }
 }
 
+function getPagination(url) {
+  const pageValue = Number(url.searchParams.get("page") || 1)
+  const pageSizeValue = Number(url.searchParams.get("pageSize") || 100)
+
+  const page = Number.isFinite(pageValue) && pageValue > 0 ? pageValue : 1
+  const pageSize = Number.isFinite(pageSizeValue)
+    ? Math.min(Math.max(pageSizeValue, 1), 200)
+    : 100
+
+  return {
+    page,
+    pageSize,
+    offset: (page - 1) * pageSize,
+  }
+}
+
 async function getCheckedOutRows(url) {
   const { whereClause, params } = buildWhereFilters(url)
+  const { page, pageSize, offset } = getPagination(url)
+  const limit = pageSize + 1
+  const safeOffset = Math.max(0, Math.trunc(offset))
+  const safeLimit = Math.max(1, Math.trunc(limit))
 
   const rows = await query(
     `SELECT
@@ -120,16 +140,27 @@ async function getCheckedOutRows(url) {
        GROUP BY ag.item_id
      ) ig ON ig.item_id = i.item_id
      ${whereClause}
-     ORDER BY b.checkout_date DESC
-     LIMIT 500`,
+    ORDER BY b.checkout_date DESC
+    LIMIT ${safeOffset}, ${safeLimit}`,
     params
   )
 
-  return rows
+  const hasMore = rows.length > pageSize
+
+  return {
+    rows: hasMore ? rows.slice(0, pageSize) : rows,
+    page,
+    pageSize,
+    hasMore,
+  }
 }
 
 async function getFineRows(url) {
   const { whereClause, params } = buildWhereFilters(url)
+  const { page, pageSize, offset } = getPagination(url)
+  const limit = pageSize + 1
+  const safeOffset = Math.max(0, Math.trunc(offset))
+  const safeLimit = Math.max(1, Math.trunc(limit))
 
   const rows = await query(
     `SELECT
@@ -143,6 +174,7 @@ async function getFineRows(url) {
        ua.email AS borrowerEmail,
        ff.amount AS amount,
        ff.amount_paid AS amountPaid,
+      CASE WHEN COALESCE(ff.amount_paid, 0) >= COALESCE(ff.amount, 0) THEN 1 ELSE 0 END AS isPaidOff,
        'Overdue item' AS fineReason,
        ff.checkout_date AS dateAssigned,
        b.checkout_date AS checkoutDate,
@@ -170,12 +202,19 @@ async function getFineRows(url) {
        GROUP BY ag.item_id
      ) ig ON ig.item_id = i.item_id
      ${whereClause}
-     ORDER BY ff.checkout_date DESC
-     LIMIT 500`,
+    ORDER BY ff.checkout_date DESC
+    LIMIT ${safeOffset}, ${safeLimit}`,
     params
   )
 
-  return rows
+  const hasMore = rows.length > pageSize
+
+  return {
+    rows: hasMore ? rows.slice(0, pageSize) : rows,
+    page,
+    pageSize,
+    hasMore,
+  }
 }
 
 async function handleGetReports(_req, res, url) {
@@ -185,7 +224,7 @@ async function handleGetReports(_req, res, url) {
     )
 
     if (reportType === "itemsCheckedOut") {
-      const rows = await getCheckedOutRows(url)
+      const { rows, page, pageSize, hasMore } = await getCheckedOutRows(url)
       const overdueCount = rows.filter(
         (row) => Number(row.isOverdue) === 1
       ).length
@@ -197,13 +236,16 @@ async function handleGetReports(_req, res, url) {
         summary: {
           totalRecords: rows.length,
           overdueCount,
+          page,
+          pageSize,
+          hasMore,
         },
       })
       return
     }
 
     if (reportType === "finesOwed") {
-      const rows = await getFineRows(url)
+      const { rows, page, pageSize, hasMore } = await getFineRows(url)
       const totalAmount = rows.reduce(
         (sum, row) => sum + Number(row.amount || 0),
         0
@@ -216,6 +258,9 @@ async function handleGetReports(_req, res, url) {
         summary: {
           totalRecords: rows.length,
           totalAmount,
+          page,
+          pageSize,
+          hasMore,
         },
       })
       return

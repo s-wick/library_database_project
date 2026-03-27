@@ -20,7 +20,7 @@ export function Navbar({ showBack = false }) {
 
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
     const stored = localStorage.getItem("isLoggedIn")
-    return stored === null ? true : stored === "true"
+    return stored === "true"
   })
 
   let avatarInitials = "U"

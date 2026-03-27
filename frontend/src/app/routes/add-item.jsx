@@ -219,6 +219,24 @@ export default function AddItemPage() {
         setError(data.message || "Failed to add item.")
         return
       }
+
+      if (supportsGenres) {
+        const nextGenreList = [...(genres || [])]
+        const existing = new Set(
+          nextGenreList.map((genre) => String(genre).toLowerCase())
+        )
+        ;(form.genres || []).forEach((genre) => {
+          const normalized = String(genre || "").trim()
+          if (!normalized) return
+          const key = normalized.toLowerCase()
+          if (!existing.has(key)) {
+            existing.add(key)
+            nextGenreList.push(normalized)
+          }
+        })
+        setGenres(nextGenreList)
+      }
+
       setSuccess("Item added successfully.")
       setForm({
         ...defaultForm(itemType),

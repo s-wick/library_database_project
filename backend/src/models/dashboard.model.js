@@ -136,6 +136,30 @@ async function getBorrowHistory(userId) {
   )
 }
 
+async function getFinesForPayment(userId) {
+  return query(
+    `SELECT CONCAT(f.item_id, '-', DATE_FORMAT(f.checkout_date, '%Y%m%d%H%i%s')) AS fine_id,
+            i.title AS item_title,
+            f.amount,
+            CASE WHEN COALESCE(f.amount_paid, 0) >= f.amount THEN 1 ELSE 0 END AS is_paid
+     FROM fined_for f
+     INNER JOIN item i ON i.item_id = f.item_id
+     WHERE f.user_id = ?
+     ORDER BY f.checkout_date DESC`,
+    [userId]
+  )
+}
+
+async function payAllFines(userId) {
+  const result = await query(
+    `UPDATE fined_for
+     SET amount_paid = amount
+     WHERE user_id = ? AND (amount_paid IS NULL OR amount_paid < amount)`,
+    [userId]
+  )
+  return Number(result.affectedRows || 0)
+}
+
 module.exports = {
   syncOverdueFines,
   getBorrowedBooks,
@@ -143,4 +167,6 @@ module.exports = {
   cancelHold,
   getUnpaidFines,
   getBorrowHistory,
+  getFinesForPayment,
+  payAllFines,
 }

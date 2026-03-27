@@ -9,7 +9,7 @@ USE `librarydatabase`;
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
 /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
-/*!50503 SET NAMES utf8 */;
+/*!50503 SET NAMES utf8mb4 */;
 /*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
 /*!40103 SET TIME_ZONE='+00:00' */;
 /*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
@@ -41,7 +41,7 @@ CREATE TABLE `assigned_genres` (
 
 LOCK TABLES `assigned_genres` WRITE;
 /*!40000 ALTER TABLE `assigned_genres` DISABLE KEYS */;
-INSERT INTO `assigned_genres` VALUES (41,1,'2026-03-26 05:18:30'),(41,2,'2026-03-26 05:18:30');
+INSERT INTO `assigned_genres` VALUES (2,1,'2026-03-26 17:03:46'),(2,3,'2026-03-26 17:03:46'),(11,4,'2026-03-26 17:06:59'),(12,5,'2026-03-26 17:07:48'),(13,3,'2026-03-26 17:08:23'),(41,1,'2026-03-26 05:18:30'),(41,2,'2026-03-26 05:18:30');
 /*!40000 ALTER TABLE `assigned_genres` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -228,7 +228,7 @@ CREATE TABLE `genre` (
   PRIMARY KEY (`genre_id`),
   KEY `created_by` (`created_by`),
   CONSTRAINT `genre_ibfk_1` FOREIGN KEY (`created_by`) REFERENCES `staff_account` (`staff_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -237,7 +237,7 @@ CREATE TABLE `genre` (
 
 LOCK TABLES `genre` WRITE;
 /*!40000 ALTER TABLE `genre` DISABLE KEYS */;
-INSERT INTO `genre` VALUES (1,'Sci-Fi','2026-03-26 05:16:37',1),(2,'Dystopian','2026-03-26 05:16:37',1);
+INSERT INTO `genre` VALUES (1,'Sci-Fi','2026-03-26 05:16:37',1),(2,'Dystopian','2026-03-26 05:16:37',1),(3,'Action','2026-03-26 17:03:46',1),(4,'Comedy','2026-03-26 17:06:59',1),(5,'Scary','2026-03-26 17:07:48',1);
 /*!40000 ALTER TABLE `genre` ENABLE KEYS */;
 UNLOCK TABLES;
 

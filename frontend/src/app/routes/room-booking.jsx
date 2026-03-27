@@ -4,6 +4,7 @@ import { CheckCircle2, XCircle, DoorOpen } from "lucide-react"
 import { Navbar } from "@/components/navbar"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
+import { API_BASE_URL } from "@/lib/api-config"
 
 function formatDateTimeLocal(date) {
   const pad = (n) => String(n).padStart(2, "0")
@@ -24,8 +25,7 @@ function FeatureRow({ label, enabled }) {
 }
 
 export default function RoomBookingPage() {
-  const apiBaseUrl =
-    import.meta.env.VITE_API_BASE_URL || "http://localhost:4000"
+  const apiBaseUrl = API_BASE_URL
 
   const [rooms, setRooms] = useState([])
   const [activeBooking, setActiveBooking] = useState(null)

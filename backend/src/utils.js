@@ -9,7 +9,7 @@ function parseJsonBody(req) {
     let body = ""
     req.on("data", (chunk) => {
       body += chunk.toString()
-      if (body.length > 1_000_000) {
+      if (body.length > 15_000_000) {
         reject(new Error("Payload too large"))
         req.destroy()
       }

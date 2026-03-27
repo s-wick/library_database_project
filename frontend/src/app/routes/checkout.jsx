@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card"
 import { Navbar } from "@/components/navbar"
 import { useCart } from "@/app/cart-provider"
+import { API_BASE_URL } from "@/lib/api-config"
 
 // ── Borrow Limit Progress Visual ──────────────────────────────────────────────
 function BorrowLimitBadge({ isFaculty, borrowLimit, borrowDays }) {
@@ -163,16 +164,13 @@ export default function CheckoutPage() {
   // Borrow status from API
   const [borrowStatus, setBorrowStatus] = useState(null)
 
-  const apiBaseUrl =
-    import.meta.env.VITE_API_BASE_URL || "http://localhost:4000"
-
   useEffect(() => {
     const userStr = localStorage.getItem("user")
     if (!userStr) return
     const user = JSON.parse(userStr)
     if (!user?.id) return
 
-    fetch(`${apiBaseUrl}/api/borrow-status?userId=${user.id}`)
+    fetch(`${API_BASE_URL}/api/borrow-status?userId=${user.id}`)
       .then((r) => r.json())
       .then((data) => {
         if (data.ok) setBorrowStatus(data)
@@ -208,7 +206,7 @@ export default function CheckoutPage() {
       }
       const user = JSON.parse(userStr)
 
-      const res = await fetch(`${apiBaseUrl}/api/checkout`, {
+      const res = await fetch(`${API_BASE_URL}/api/checkout`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -11,6 +11,19 @@ function normalizeUserType(value) {
   return ""
 }
 
+function parseGenresFilter(value) {
+  const raw = String(value || "").trim()
+  if (!raw || raw === "NOT_APPLICABLE") return []
+
+  const items = raw
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .filter((part) => part !== "NOT_APPLICABLE")
+
+  return Array.from(new Set(items))
+}
+
 function buildWhereFilters(url) {
   const params = []
   const clauses = []
@@ -39,15 +52,16 @@ function buildWhereFilters(url) {
     params.push(itemType)
   }
 
-  const genre = String(url.searchParams.get("genre") || "").trim()
-  if (genre && genre !== "NOT_APPLICABLE") {
+  const genres = parseGenresFilter(url.searchParams.get("genre"))
+  if (genres.length) {
+    const placeholders = genres.map(() => "?").join(",")
     clauses.push(`EXISTS (
       SELECT 1
       FROM assigned_genres agf
       INNER JOIN genre gf ON gf.genre_id = agf.genre_id
-      WHERE agf.item_id = i.item_id AND gf.genre_text = ?
+      WHERE agf.item_id = i.item_id AND gf.genre_text IN (${placeholders})
     )`)
-    params.push(genre)
+    params.push(...genres)
   }
 
   const overdue = String(url.searchParams.get("overdue") || "all").trim()

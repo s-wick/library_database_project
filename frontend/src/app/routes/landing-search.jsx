@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge"
 import { Navbar } from "@/components/navbar"
 import { ItemCard } from "@/components/item-card"
 import { LayoutDashboard, Image as ImageIcon, Filter } from "lucide-react"
+import { API_BASE_URL } from "@/lib/api-config"
 
 // Background image import
 import bgImage from "@/assets/library-hero.png"
@@ -41,8 +42,7 @@ export default function LandingSearchPage() {
 
   const navigate = useNavigate()
 
-  const apiBaseUrl =
-    import.meta.env.VITE_API_BASE_URL || "http://localhost:4000"
+  const apiBaseUrl = API_BASE_URL
 
   // Fetch all items by type to populate the landing page categories
   useEffect(() => {

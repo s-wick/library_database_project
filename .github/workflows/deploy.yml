@@ -70,8 +70,8 @@ jobs:
     env:
       DB_HOST: ${{ secrets.DB_HOST }}
       DB_PORT: ${{ secrets.DB_PORT }}
-      DB_USER: ${{ secrets.DB_USER }}
-      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      DB_USER: ${{ secrets.PR_DB_USER }}
+      DB_PASSWORD: ${{ secrets.PR_DB_PASSWORD }}
       DB_NAME: library_pr_${{ github.event.pull_request.number }}
     steps:
       - name: Check out repository
@@ -82,7 +82,7 @@ jobs:
 
       - name: Create and seed PR database
         env:
-          MYSQL_PWD: ${{ secrets.DB_PASSWORD }}
+          MYSQL_PWD: ${{ secrets.PR_DB_PASSWORD }}
         run: |
           mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" \
             -e "CREATE DATABASE IF NOT EXISTS \`$DB_NAME\`;"
@@ -105,8 +105,8 @@ jobs:
     env:
       DB_HOST: ${{ secrets.DB_HOST }}
       DB_PORT: ${{ secrets.DB_PORT }}
-      DB_USER: ${{ secrets.DB_USER }}
-      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      DB_USER: ${{ secrets.PR_DB_USER }}
+      DB_PASSWORD: ${{ secrets.PR_DB_PASSWORD }}
       DB_NAME: library_pr_${{ github.event.pull_request.number }}
     steps:
       - name: Install MySQL client
@@ -114,7 +114,7 @@ jobs:
 
       - name: Drop PR database
         env:
-          MYSQL_PWD: ${{ secrets.DB_PASSWORD }}
+          MYSQL_PWD: ${{ secrets.PR_DB_PASSWORD }}
         run: |
           mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" \
             -e "DROP DATABASE IF EXISTS \`$DB_NAME\`;"
@@ -138,8 +138,8 @@ jobs:
       RAILWAY_SERVICE_ID: ${{ secrets.RAILWAY_SERVICE_ID }}
       DB_HOST: ${{ secrets.DB_HOST }}
       DB_PORT: ${{ secrets.DB_PORT }}
-      DB_USER: ${{ secrets.DB_USER }}
-      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      DB_USER: ${{ secrets.PR_DB_USER }}
+      DB_PASSWORD: ${{ secrets.PR_DB_PASSWORD }}
       DB_NAME: library_pr_${{ github.event.pull_request.number }}
       PREVIEW_ENV: pr-${{ github.event.pull_request.number }}
       ALLOWED_ORIGINS: ${{ needs.preview-frontend.outputs.frontend_origin }}

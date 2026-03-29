@@ -156,10 +156,10 @@ jobs:
       - name: Install Railway CLI
         run: npm install -g @railway/cli
 
-      - name: Railway auth check
-        run: |
-          railway whoami
-          railway projects
+      # - name: Railway auth check
+      #   run: |
+      #     railway whoami
+      #     railway projects
 
       - name: Link Railway project
         run: railway link --project "$RAILWAY_PROJECT_ID" --service "$RAILWAY_SERVICE_ID"

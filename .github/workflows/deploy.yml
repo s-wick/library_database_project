@@ -20,7 +20,7 @@ jobs:
 
       - name: Set Railway token
         run: RAILWAY_TOKEN=${{ secrets.RAILWAY_TOKEN }} railway up --service=${{ secrets.RAILWAY_SERVICE_ID }}
-      
+
       - name: Check Railway authentication
         run: railway whoami
 

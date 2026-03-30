@@ -5,6 +5,24 @@ on:
     types: [opened, synchronize, reopened, labeled, closed]
 
 jobs:
+  prerequisites:
+    if: >-
+      github.event.action != 'closed' &&
+      contains(github.event.pull_request.labels.*.name, 'preview') &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    env:
+      # RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+    steps:
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Test Railway CLI auth
+        run: |
+          RAILWAY_TOKEN=${{ secrets.RAILWAY_TOKEN }} railway up --service=${{ secrets.RAILWAY_SERVICE_ID }}
+          railway whoami
+
   changes:
     if: >-
       github.event.action != 'closed' &&
@@ -28,6 +46,7 @@ jobs:
               - 'backend/**'
 
   preview-frontend:
+    needs: prerequisites
     if: >-
       github.event.action != 'closed' &&
       contains(github.event.pull_request.labels.*.name, 'preview') &&
@@ -57,6 +76,7 @@ jobs:
           echo "frontend_origin=$frontend_origin" >> "$GITHUB_OUTPUT"
 
   preview-db:
+    needs: prerequisites
     if: >-
       github.event.action != 'closed' &&
       contains(github.event.pull_request.labels.*.name, 'preview') &&
@@ -133,7 +153,7 @@ jobs:
       contents: read
       pull-requests: write
     env:
-      RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+      # RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
       RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
       RAILWAY_SERVICE_ID: ${{ secrets.RAILWAY_SERVICE_ID }}
@@ -156,18 +176,10 @@ jobs:
       - name: Install Railway CLI
         run: npm install -g @railway/cli
 
-      # - name: Railway auth check
-      #   run: |
-      #     railway whoami
-      #     railway projects
-
-      - name: Link Railway project
-        run: railway link --project "$RAILWAY_PROJECT_ID" --service "$RAILWAY_SERVICE_ID"
-
       - name: Configure Railway preview environment variables
         working-directory: backend
         run: |
-          railway variables set -e "$PREVIEW_ENV" \
+          railway variables set -e "$PREVIEW_ENV" --service "$RAILWAY_SERVICE_ID" \
             DB_HOST="$DB_HOST" \
             DB_PORT="$DB_PORT" \
             DB_USER="$DB_USER" \
@@ -177,12 +189,12 @@ jobs:
 
       - name: Deploy backend to Railway preview environment
         working-directory: backend
-        run: railway up -e "$PREVIEW_ENV"
+        run: railway up -e "$PREVIEW_ENV" --service "$RAILWAY_SERVICE_ID"
 
       - name: Extract Railway preview URL
         id: railway_url
         run: |
-          railway status --json -e "$PREVIEW_ENV" | node -e "const fs=require('fs'); const text=fs.readFileSync(0,'utf8'); const urls=(text.match(/https?:\/\/[^\s\"']+/g)||[]); const railway=urls.find((u)=>u.includes('railway.app'))||urls[0]||''; console.log('url='+railway);" >> "$GITHUB_OUTPUT"
+          railway status --json -e "$PREVIEW_ENV" --service "$RAILWAY_SERVICE_ID" | node -e "const fs=require('fs'); const text=fs.readFileSync(0,'utf8'); const urls=(text.match(/https?:\/\/[^\s\"']+/g)||[]); const railway=urls.find((u)=>u.includes('railway.app'))||urls[0]||''; console.log('url='+railway);" >> "$GITHUB_OUTPUT"
 
   preview-backend-teardown:
     if: >-
@@ -193,7 +205,7 @@ jobs:
     permissions:
       contents: read
     env:
-      RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+      # RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
       RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
       RAILWAY_SERVICE_ID: ${{ secrets.RAILWAY_SERVICE_ID }}
@@ -207,11 +219,8 @@ jobs:
       - name: Install Railway CLI
         run: npm install -g @railway/cli
 
-      - name: Link Railway project
-        run: railway link --project "$RAILWAY_PROJECT_ID" --service "$RAILWAY_SERVICE_ID"
-
       - name: Delete Railway preview environment
-        run: railway environment delete "$PREVIEW_ENV"
+        run: railway environment delete "$PREVIEW_ENV" --project "$RAILWAY_PROJECT_ID"
 
   preview-summary:
     if: >-

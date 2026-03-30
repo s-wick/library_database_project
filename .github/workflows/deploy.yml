@@ -18,10 +18,11 @@ jobs:
       - name: Install Railway CLI
         run: npm install -g @railway/cli
 
-      - name: Test Railway CLI auth
-        run: |
-          RAILWAY_TOKEN=${{ secrets.RAILWAY_TOKEN }} railway up --service=${{ secrets.RAILWAY_SERVICE_ID }}
-          railway whoami
+      - name: Set Railway token
+        run: RAILWAY_TOKEN=${{ secrets.RAILWAY_TOKEN }} railway up --service=${{ secrets.RAILWAY_SERVICE_ID }}
+      
+      - name: Check Railway authentication
+        run: railway whoami
 
   changes:
     if: >-

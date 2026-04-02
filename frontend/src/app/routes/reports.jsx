@@ -56,8 +56,7 @@ function PieChartCard({ title, data }) {
                 <span
                   className="h-3 w-3 rounded-sm"
                   style={{
-                    backgroundColor:
-                      CHART_COLORS[index % CHART_COLORS.length],
+                    backgroundColor: CHART_COLORS[index % CHART_COLORS.length],
                   }}
                 />
                 <span className="min-w-36">{item.label}</span>

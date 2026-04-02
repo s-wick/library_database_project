@@ -13,6 +13,66 @@ import {
 } from "@/components/ui/popover"
 import { API_BASE_URL } from "@/lib/api-config"
 
+const CHART_COLORS = ["#2563eb", "#16a34a", "#f59e0b", "#dc2626", "#7c3aed"]
+
+function buildPieBackground(data) {
+  const total = data.reduce((sum, item) => sum + Number(item.value || 0), 0)
+  if (!total) return "conic-gradient(#e5e7eb 0deg 360deg)"
+
+  let current = 0
+  const segments = data
+    .map((item, index) => ({ ...item, colorIndex: index }))
+    .filter((item) => Number(item.value || 0) > 0)
+    .map((item) => {
+      const value = Number(item.value || 0)
+      const start = (current / total) * 360
+      current += value
+      const end = (current / total) * 360
+      return `${CHART_COLORS[item.colorIndex % CHART_COLORS.length]} ${start}deg ${end}deg`
+    })
+
+  return `conic-gradient(${segments.join(", ")})`
+}
+
+function PieChartCard({ title, data }) {
+  const total = data.reduce((sum, item) => sum + Number(item.value || 0), 0)
+  const background = buildPieBackground(data)
+
+  return (
+    <div className="rounded-md border p-4">
+      <p className="mb-3 text-sm font-medium">{title}</p>
+      <div className="flex flex-col gap-4 md:flex-row md:items-center">
+        <div
+          className="h-36 w-36 rounded-full border"
+          style={{ background }}
+          aria-label={`${title} pie chart`}
+        />
+        <div className="space-y-2">
+          {data.map((item, index) => {
+            const value = Number(item.value || 0)
+            const percent = total ? Math.round((value / total) * 100) : 0
+            return (
+              <div key={item.label} className="flex items-center gap-2 text-sm">
+                <span
+                  className="h-3 w-3 rounded-sm"
+                  style={{
+                    backgroundColor:
+                      CHART_COLORS[index % CHART_COLORS.length],
+                  }}
+                />
+                <span className="min-w-36">{item.label}</span>
+                <span className="text-muted-foreground">
+                  {value} ({percent}%)
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function ReportsPage() {
   const [itemTypes, setItemTypes] = useState([
     { itemCode: 1, itemType: "BOOK" },
@@ -159,6 +219,18 @@ export default function ReportsPage() {
   const filteredGenres = genres.filter((genre) =>
     genre.toLowerCase().includes(genreQuery.trim().toLowerCase())
   )
+  const checkoutPieData = Array.isArray(summary?.checkoutBuckets)
+    ? summary.checkoutBuckets.map((item) => ({
+        label: item.bucket,
+        value: Number(item.count || 0),
+      }))
+    : []
+  const durationPieData = Array.isArray(summary?.durationBuckets)
+    ? summary.durationBuckets.map((item) => ({
+        label: item.bucket,
+        value: Number(item.count || 0),
+      }))
+    : []
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -190,6 +262,7 @@ export default function ReportsPage() {
                 >
                   <option value="itemsCheckedOut">Items checked out</option>
                   <option value="finesOwed">Fines owed</option>
+                  <option value="userDemographics">User demographics</option>
                 </select>
               </Field>
               <Field>
@@ -390,6 +463,13 @@ export default function ReportsPage() {
                         {summary.overdueCount ?? 0}
                       </p>
                     </div>
+                  ) : filters.reportType === "userDemographics" ? (
+                    <div className="rounded-md border p-3">
+                      <p className="text-xs text-muted-foreground">Users</p>
+                      <p className="text-lg font-semibold">
+                        {summary.totalUsers ?? 0}
+                      </p>
+                    </div>
                   ) : (
                     <div className="rounded-md border p-3">
                       <p className="text-xs text-muted-foreground">
@@ -400,6 +480,19 @@ export default function ReportsPage() {
                       </p>
                     </div>
                   )}
+                </div>
+              )}
+
+              {filters.reportType === "userDemographics" && (
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <PieChartCard
+                    title="Users by checked out items"
+                    data={checkoutPieData}
+                  />
+                  <PieChartCard
+                    title="Borrowing time distribution"
+                    data={durationPieData}
+                  />
                 </div>
               )}
 
@@ -415,6 +508,12 @@ export default function ReportsPage() {
                         <th className="px-3 py-2">Checkout</th>
                         <th className="px-3 py-2">Due</th>
                         <th className="px-3 py-2">Overdue</th>
+                      </tr>
+                    ) : filters.reportType === "userDemographics" ? (
+                      <tr>
+                        <th className="px-3 py-2">Category</th>
+                        <th className="px-3 py-2">Bucket</th>
+                        <th className="px-3 py-2">Count</th>
                       </tr>
                     ) : (
                       <tr>
@@ -436,7 +535,11 @@ export default function ReportsPage() {
                         <td
                           className="px-3 py-4 text-muted-foreground"
                           colSpan={
-                            filters.reportType === "itemsCheckedOut" ? 7 : 9
+                            filters.reportType === "itemsCheckedOut"
+                              ? 7
+                              : filters.reportType === "userDemographics"
+                                ? 3
+                                : 9
                           }
                         >
                           No report data.
@@ -459,6 +562,23 @@ export default function ReportsPage() {
                           </td>
                           <td className="px-3 py-2">
                             {Number(row.isOverdue) === 1 ? "Yes" : "No"}
+                          </td>
+                        </tr>
+                      ))
+                    ) : filters.reportType === "userDemographics" ? (
+                      rows.map((row) => (
+                        <tr
+                          key={`${row.category}-${row.bucket}`}
+                          className="border-t"
+                        >
+                          <td className="px-3 py-2">
+                            {row.category === "checkedOutItems"
+                              ? "Checked out items"
+                              : "Borrowing time"}
+                          </td>
+                          <td className="px-3 py-2">{row.bucket || "-"}</td>
+                          <td className="px-3 py-2">
+                            {Number(row.count || 0)}
                           </td>
                         </tr>
                       ))
@@ -501,7 +621,11 @@ export default function ReportsPage() {
                     variant="outline"
                     size="sm"
                     onClick={() => goToPage((summary?.page ?? page) - 1)}
-                    disabled={(summary?.page ?? page) <= 1 || isLoading}
+                    disabled={
+                      filters.reportType === "userDemographics" ||
+                      (summary?.page ?? page) <= 1 ||
+                      isLoading
+                    }
                   >
                     Previous
                   </Button>
@@ -510,7 +634,11 @@ export default function ReportsPage() {
                     variant="outline"
                     size="sm"
                     onClick={() => goToPage((summary?.page ?? page) + 1)}
-                    disabled={!summary?.hasMore || isLoading}
+                    disabled={
+                      filters.reportType === "userDemographics" ||
+                      !summary?.hasMore ||
+                      isLoading
+                    }
                   >
                     Next
                   </Button>

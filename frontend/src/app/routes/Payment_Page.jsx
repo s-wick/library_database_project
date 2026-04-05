@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react"
-import { Link, useLocation, useNavigate } from "react-router-dom"
+import { useLocation, useNavigate } from "react-router-dom"
 import { useTheme } from "@/components/theme-provider"
 import { API_BASE_URL } from "@/lib/api-config"
+import { Navbar } from "@/components/navbar"
 
 export default function PaymentPage() {
   const { setTheme, theme } = useTheme()
@@ -182,18 +183,7 @@ export default function PaymentPage() {
   // Main content
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/80 px-6 backdrop-blur">
-        {/* Logo Placeholder */}
-        <Link
-          to="/"
-          className="flex items-center gap-2 transition-opacity hover:opacity-90"
-          aria-label="Back to home"
-        >
-          <div className="inline-flex h-8 min-w-[2.5rem] items-center justify-center rounded-md bg-primary px-2 text-[12px] font-bold whitespace-nowrap text-primary-foreground ring-1 ring-border">
-            LIBRARY LOGO HERE
-          </div>
-        </Link>
-      </header>
+      <Navbar />
 
       {/* Card information content */}
       <div className="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-6 py-10 md:grid-cols-2">

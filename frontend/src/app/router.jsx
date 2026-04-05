@@ -13,6 +13,7 @@ import ItemPage from "./routes/item"
 import RoomBookingPage from "./routes/room-booking"
 import PaymentPage from "./routes/Payment_Page"
 import { NotFoundRoute } from "./routes/not-found"
+import RootLayout from "./routes/root-layout"
 
 function getStoredUser() {
   try {
@@ -56,115 +57,122 @@ function RedirectStaffToManagement({ children }) {
 export const router = createBrowserRouter([
   {
     path: "/",
-    element: (
-      <RedirectStaffToManagement>
-        <LandingSearchPage />
-      </RedirectStaffToManagement>
-    ),
+    element: <RootLayout />,
     errorElement: <NotFoundRoute />,
-  },
-  {
-    path: "/search",
-    element: (
-      <RedirectStaffToManagement>
-        <SearchPage />
-      </RedirectStaffToManagement>
-    ),
-    errorElement: <NotFoundRoute />,
-  },
-  {
-    path: "/auth",
-    element: <AuthPage />,
-    errorElement: <NotFoundRoute />,
-  },
-  {
-    path: "/user-dashboard",
-    element: (
-      <RedirectStaffToManagement>
-        <UserDashboardPage />
-      </RedirectStaffToManagement>
-    ),
-    errorElement: <NotFoundRoute />,
-  },
-  {
-    path: "/management-dashboard",
-    element: (
-      <RequireManagementAccess>
-        <ManagementDashboardPage />
-      </RequireManagementAccess>
-    ),
-    errorElement: <NotFoundRoute />,
-  },
-  {
-    path: "/management-dashboard/add-librarian",
-    element: (
-      <RequireManagementAccess>
-        <AddLibrarianPage />
-      </RequireManagementAccess>
-    ),
-    errorElement: <NotFoundRoute />,
-  },
-  {
-    path: "/management-dashboard/add-item",
-    element: (
-      <RequireManagementAccess>
-        <AddItemPage />
-      </RequireManagementAccess>
-    ),
-    errorElement: <NotFoundRoute />,
-  },
-  {
-    path: "/management-dashboard/manage-items",
-    element: (
-      <RequireManagementAccess>
-        <ManageItemsPage />
-      </RequireManagementAccess>
-    ),
-    errorElement: <NotFoundRoute />,
-  },
-  {
-    path: "/management-dashboard/reports",
-    element: (
-      <RequireManagementAccess>
-        <ReportsPage />
-      </RequireManagementAccess>
-    ),
-    errorElement: <NotFoundRoute />,
-  },
-  {
-    path: "/checkout",
-    element: (
-      <RedirectStaffToManagement>
-        <CheckoutPage />
-      </RedirectStaffToManagement>
-    ),
-    errorElement: <NotFoundRoute />,
-  },
-  {
-    path: "/item/:id",
-    element: (
-      <RedirectStaffToManagement>
-        <ItemPage />
-      </RedirectStaffToManagement>
-    ),
-    errorElement: <NotFoundRoute />,
-  },
-  {
-    path: "/rooms",
-    element: (
-      <RedirectStaffToManagement>
-        <RoomBookingPage />
-      </RedirectStaffToManagement>
-    ),
-    errorElement: <NotFoundRoute />,
-  },
-  {
-    path: "/payment",
-    element: (
-      <RedirectStaffToManagement>
-        <PaymentPage />
-      </RedirectStaffToManagement>
-    ),
-    errorElement: <NotFoundRoute />,
+    children: [
+      {
+        index: true,
+        element: (
+          <RedirectStaffToManagement>
+            <LandingSearchPage />
+          </RedirectStaffToManagement>
+        ),
+        handle: { title: "Hungry Library" },
+      },
+      {
+        path: "search",
+        element: (
+          <RedirectStaffToManagement>
+            <SearchPage />
+          </RedirectStaffToManagement>
+        ),
+        handle: { title: "Search" },
+      },
+      {
+        path: "auth",
+        element: <AuthPage />,
+        handle: { title: "Sign In" },
+      },
+      {
+        path: "user-dashboard",
+        element: (
+          <RedirectStaffToManagement>
+            <UserDashboardPage />
+          </RedirectStaffToManagement>
+        ),
+        handle: { title: "User Dashboard" },
+      },
+      {
+        path: "management-dashboard",
+        element: (
+          <RequireManagementAccess>
+            <ManagementDashboardPage />
+          </RequireManagementAccess>
+        ),
+        handle: { title: "Management Dashboard" },
+      },
+      {
+        path: "management-dashboard/add-librarian",
+        element: (
+          <RequireManagementAccess>
+            <AddLibrarianPage />
+          </RequireManagementAccess>
+        ),
+        handle: { title: "Add Librarian" },
+      },
+      {
+        path: "management-dashboard/add-item",
+        element: (
+          <RequireManagementAccess>
+            <AddItemPage />
+          </RequireManagementAccess>
+        ),
+        handle: { title: "Add Item" },
+      },
+      {
+        path: "management-dashboard/manage-items",
+        element: (
+          <RequireManagementAccess>
+            <ManageItemsPage />
+          </RequireManagementAccess>
+        ),
+        handle: { title: "Manage Items" },
+      },
+      {
+        path: "management-dashboard/reports",
+        element: (
+          <RequireManagementAccess>
+            <ReportsPage />
+          </RequireManagementAccess>
+        ),
+        handle: { title: "Reports" },
+      },
+      {
+        path: "checkout",
+        element: (
+          <RedirectStaffToManagement>
+            <CheckoutPage />
+          </RedirectStaffToManagement>
+        ),
+        handle: { title: "Checkout" },
+      },
+      {
+        path: "item/:id",
+        element: (
+          <RedirectStaffToManagement>
+            <ItemPage />
+          </RedirectStaffToManagement>
+        ),
+        handle: { title: "Item Details" },
+      },
+      {
+        path: "rooms",
+        element: (
+          <RedirectStaffToManagement>
+            <RoomBookingPage />
+          </RedirectStaffToManagement>
+        ),
+        handle: { title: "Room Booking" },
+      },
+      {
+        path: "payment",
+        element: (
+          <RedirectStaffToManagement>
+            <PaymentPage />
+          </RedirectStaffToManagement>
+        ),
+        handle: { title: "Payment" },
+      },
+    ],
   },
 ])

@@ -538,6 +538,30 @@ export default function UserDashboard() {
     fetchDashboardData(null)
   }, [])
 
+  useEffect(() => {
+    const checkAuth = () => {
+      try {
+        const storedUser = localStorage.getItem("user")
+        if (!storedUser) {
+          navigate("/")
+        }
+      } catch {
+        navigate("/")
+      }
+    }
+
+    checkAuth()
+    const intervalId = setInterval(checkAuth, 1000)
+    window.addEventListener("storage", checkAuth)
+    window.addEventListener("focus", checkAuth)
+
+    return () => {
+      clearInterval(intervalId)
+      window.removeEventListener("storage", checkAuth)
+      window.removeEventListener("focus", checkAuth)
+    }
+  }, [navigate])
+
   const handleCancelHold = async (hold) => {
     try {
       const userStr = localStorage.getItem("user")

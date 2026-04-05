@@ -1,6 +1,6 @@
 import React, { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
-import { Moon, Sun, ArrowLeft, ShoppingCart } from "lucide-react"
+import { Moon, Sun, ArrowLeft, ShoppingCart, BookOpen } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -65,8 +65,9 @@ export function Navbar({ showBack = false }) {
           className="flex items-center gap-2 transition-opacity hover:opacity-90"
           aria-label="Back to home"
         >
-          <div className="inline-flex h-8 min-w-[2.5rem] items-center justify-center rounded-md bg-primary px-2 text-[12px] font-bold whitespace-nowrap text-primary-foreground ring-1 ring-border">
-            LIBRARY LOGO
+          <div className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-sm font-bold whitespace-nowrap text-primary-foreground ring-1 ring-border">
+            <BookOpen className="h-4 w-4" aria-hidden="true" />
+            <span>Hungry Library</span>
           </div>
         </Link>
       </div>

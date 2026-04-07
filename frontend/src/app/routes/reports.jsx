@@ -15,6 +15,27 @@ import { API_BASE_URL } from "@/lib/api-config"
 
 const CHART_COLORS = ["#2563eb", "#16a34a", "#f59e0b", "#dc2626", "#7c3aed"]
 
+function formatItemTypeForDisplay(value) {
+  if (!value) return "-"
+  const v = String(value).trim()
+  if (v === "RENTAL_EQUIPMENT") return "Rental equipment"
+  return v
+    .split("_")
+    .map((w) => w.charAt(0) + w.slice(1).toLowerCase())
+    .join(" ")
+}
+
+function formatUserTypeForDisplay(value) {
+  if (!value) return "-"
+  const v = String(value).trim().toUpperCase()
+  if (v === "FACULTY") return "Faculty"
+  if (v === "STUDENT") return "Student"
+  return (
+    String(value).charAt(0).toUpperCase() +
+    String(value).slice(1).toLowerCase()
+  )
+}
+
 function buildPieBackground(data) {
   const total = data.reduce((sum, item) => sum + Number(item.value || 0), 0)
   if (!total) return "conic-gradient(#e5e7eb 0deg 360deg)"
@@ -41,7 +62,7 @@ function PieChartCard({ title, data }) {
   return (
     <div className="rounded-md border p-4">
       <p className="mb-3 text-sm font-medium">{title}</p>
-      <div className="flex flex-col gap-4 md:flex-row md:items-center">
+      <div className="flex flex-col items-center gap-4 md:flex-row md:items-center md:justify-center">
         <div
           className="h-36 w-36 rounded-full border"
           style={{ background }}
@@ -56,8 +77,7 @@ function PieChartCard({ title, data }) {
                 <span
                   className="h-3 w-3 rounded-sm"
                   style={{
-                    backgroundColor:
-                      CHART_COLORS[index % CHART_COLORS.length],
+                    backgroundColor: CHART_COLORS[index % CHART_COLORS.length],
                   }}
                 />
                 <span className="min-w-36">{item.label}</span>
@@ -231,6 +251,22 @@ export default function ReportsPage() {
         value: Number(item.count || 0),
       }))
     : []
+  const itemTypePieData =
+    filters.reportType === "itemsCheckedOut"
+      ? Object.entries(
+          rows.reduce((acc, row) => {
+            const key = row.itemType || "UNKNOWN"
+            acc[key] = (acc[key] || 0) + 1
+            return acc
+          }, {})
+        ).map(([label, value]) => ({
+          label:
+            label === "UNKNOWN"
+              ? "Unknown"
+              : formatItemTypeForDisplay(label),
+          value: Number(value || 0),
+        }))
+      : []
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -261,7 +297,7 @@ export default function ReportsPage() {
                   className="h-9 w-full rounded-md border border-input bg-transparent px-2.5 py-1 text-sm"
                 >
                   <option value="itemsCheckedOut">Items checked out</option>
-                  <option value="finesOwed">Fines owed</option>
+                  <option value="revenue">Revenue</option>
                   <option value="userDemographics">User demographics</option>
                 </select>
               </Field>
@@ -333,7 +369,7 @@ export default function ReportsPage() {
                   <option value="">All</option>
                   {itemTypes.map((type) => (
                     <option key={type.itemCode} value={type.itemType}>
-                      {type.itemType}
+                      {formatItemTypeForDisplay(type.itemType)}
                     </option>
                   ))}
                 </select>
@@ -445,12 +481,20 @@ export default function ReportsPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               {summary && (
-                <div className="grid gap-4 md:grid-cols-3">
-                  <div className="rounded-md border p-3">
-                    <p className="text-xs text-muted-foreground">
+                <div
+                  className={`grid gap-4 ${filters.reportType === "revenue" ? "md:grid-cols-4" : "md:grid-cols-3"}`}
+                >
+                  <div
+                    className={`rounded-md border p-3 ${filters.reportType === "revenue" ? "border-indigo-200 bg-indigo-50/70 dark:border-indigo-900/50 dark:bg-indigo-950/20" : ""}`}
+                  >
+                    <p
+                      className={`text-xs ${filters.reportType === "revenue" ? "text-indigo-700 dark:text-indigo-300" : "text-muted-foreground"}`}
+                    >
                       Records shown
                     </p>
-                    <p className="text-lg font-semibold">
+                    <p
+                      className={`text-lg font-semibold ${filters.reportType === "revenue" ? "text-indigo-900 dark:text-indigo-100" : ""}`}
+                    >
                       {summary.totalRecords ?? 0}
                     </p>
                   </div>
@@ -470,6 +514,33 @@ export default function ReportsPage() {
                         {summary.totalUsers ?? 0}
                       </p>
                     </div>
+                  ) : filters.reportType === "revenue" ? (
+                    <>
+                      <div className="rounded-md border border-amber-200 bg-amber-50/70 p-3 dark:border-amber-900/50 dark:bg-amber-950/20">
+                        <p className="text-xs text-amber-700 dark:text-amber-300">
+                          Fines owed
+                        </p>
+                        <p className="text-lg font-semibold text-amber-900 dark:text-amber-100">
+                          ${Number(summary.totalFineOwed || 0).toFixed(2)}
+                        </p>
+                      </div>
+                      <div className="rounded-md border border-sky-200 bg-sky-50/70 p-3 dark:border-sky-900/50 dark:bg-sky-950/20">
+                        <p className="text-xs text-sky-700 dark:text-sky-300">
+                          Item value
+                        </p>
+                        <p className="text-lg font-semibold text-sky-900 dark:text-sky-100">
+                          ${Number(summary.totalItemValue || 0).toFixed(2)}
+                        </p>
+                      </div>
+                      <div className="rounded-md border border-emerald-200 bg-emerald-50/70 p-3 dark:border-emerald-900/50 dark:bg-emerald-950/20">
+                        <p className="text-xs text-emerald-700 dark:text-emerald-300">
+                          Revenue
+                        </p>
+                        <p className="text-lg font-semibold text-emerald-900 dark:text-emerald-100">
+                          ${Number(summary.totalRevenue || 0).toFixed(2)}
+                        </p>
+                      </div>
+                    </>
                   ) : (
                     <div className="rounded-md border p-3">
                       <p className="text-xs text-muted-foreground">
@@ -495,6 +566,12 @@ export default function ReportsPage() {
                   />
                 </div>
               )}
+              {filters.reportType === "itemsCheckedOut" && (
+                <PieChartCard
+                  title="Checked out by item type"
+                  data={itemTypePieData}
+                />
+              )}
 
               <div className="overflow-x-auto rounded-md border">
                 <table className="w-full text-sm">
@@ -505,25 +582,33 @@ export default function ReportsPage() {
                         <th className="px-3 py-2">Item type</th>
                         <th className="px-3 py-2">User type</th>
                         <th className="px-3 py-2">Borrower</th>
+                        <th className="px-3 py-2">Genre</th>
                         <th className="px-3 py-2">Checkout</th>
                         <th className="px-3 py-2">Due</th>
                         <th className="px-3 py-2">Overdue</th>
                       </tr>
                     ) : filters.reportType === "userDemographics" ? (
                       <tr>
-                        <th className="px-3 py-2">Category</th>
-                        <th className="px-3 py-2">Bucket</th>
-                        <th className="px-3 py-2">Count</th>
+                        <th className="px-3 py-2">User</th>
+                        <th className="px-3 py-2">Email</th>
+                        <th className="px-3 py-2">User type</th>
+                        <th className="px-3 py-2">Checked out items</th>
+                        <th className="px-3 py-2">Total borrows</th>
+                        <th className="px-3 py-2">Borrow days</th>
                       </tr>
                     ) : (
                       <tr>
-                        <th className="px-3 py-2">Fine ID</th>
+                        <th className="px-3 py-2">Borrow date</th>
                         <th className="px-3 py-2">Item</th>
+                        <th className="px-3 py-2">Item type</th>
                         <th className="px-3 py-2">User type</th>
                         <th className="px-3 py-2">Borrower</th>
-                        <th className="px-3 py-2">Amount</th>
+                        <th className="px-3 py-2">Genre</th>
+                        <th className="px-3 py-2">Fines owed</th>
+                        <th className="px-3 py-2">Item value</th>
+                        <th className="px-3 py-2">Revenue</th>
                         <th className="px-3 py-2">Paid off</th>
-                        <th className="px-3 py-2">Reason</th>
+                        <th className="px-3 py-2">Source</th>
                         <th className="px-3 py-2">Assigned</th>
                         <th className="px-3 py-2">Overdue</th>
                       </tr>
@@ -536,10 +621,10 @@ export default function ReportsPage() {
                           className="px-3 py-4 text-muted-foreground"
                           colSpan={
                             filters.reportType === "itemsCheckedOut"
-                              ? 7
+                              ? 8
                               : filters.reportType === "userDemographics"
-                                ? 3
-                                : 9
+                                ? 6
+                                : 13
                           }
                         >
                           No report data.
@@ -549,11 +634,16 @@ export default function ReportsPage() {
                       rows.map((row) => (
                         <tr key={row.borrowTransactionId} className="border-t">
                           <td className="px-3 py-2">{row.itemName || "-"}</td>
-                          <td className="px-3 py-2">{row.itemType || "-"}</td>
-                          <td className="px-3 py-2">{row.userType || "-"}</td>
+                          <td className="px-3 py-2">
+                            {formatItemTypeForDisplay(row.itemType)}
+                          </td>
+                          <td className="px-3 py-2">
+                            {formatUserTypeForDisplay(row.userType)}
+                          </td>
                           <td className="px-3 py-2">
                             {row.borrowerName || row.borrowerId || "-"}
                           </td>
+                          <td className="px-3 py-2">{row.genres || "-"}</td>
                           <td className="px-3 py-2">
                             {formatDate(row.checkoutDate)}
                           </td>
@@ -567,37 +657,57 @@ export default function ReportsPage() {
                       ))
                     ) : filters.reportType === "userDemographics" ? (
                       rows.map((row) => (
-                        <tr
-                          key={`${row.category}-${row.bucket}`}
-                          className="border-t"
-                        >
+                        <tr key={row.userId || row.userEmail} className="border-t">
                           <td className="px-3 py-2">
-                            {row.category === "checkedOutItems"
-                              ? "Checked out items"
-                              : "Borrowing time"}
+                            {row.userName || row.userId || "-"}
                           </td>
-                          <td className="px-3 py-2">{row.bucket || "-"}</td>
+                          <td className="px-3 py-2">{row.userEmail || "-"}</td>
                           <td className="px-3 py-2">
-                            {Number(row.count || 0)}
+                            {formatUserTypeForDisplay(row.userType)}
+                          </td>
+                          <td className="px-3 py-2">
+                            {Number(row.checkedOutCount || 0)}
+                          </td>
+                          <td className="px-3 py-2">
+                            {Number(row.totalBorrowCount || 0)}
+                          </td>
+                          <td className="px-3 py-2">
+                            {row.borrowDays === null ? "-" : Number(row.borrowDays)}
                           </td>
                         </tr>
                       ))
                     ) : (
                       rows.map((row) => (
                         <tr key={row.fineId} className="border-t">
-                          <td className="px-3 py-2">{row.fineId}</td>
+                          <td className="px-3 py-2">
+                            {formatDate(row.checkoutDate)}
+                          </td>
                           <td className="px-3 py-2">{row.itemName || "-"}</td>
-                          <td className="px-3 py-2">{row.userType || "-"}</td>
+                          <td className="px-3 py-2">
+                            {formatItemTypeForDisplay(row.itemType)}
+                          </td>
+                          <td className="px-3 py-2">
+                            {formatUserTypeForDisplay(row.userType)}
+                          </td>
                           <td className="px-3 py-2">
                             {row.borrowerName || row.borrowerId || "-"}
                           </td>
+                          <td className="px-3 py-2">{row.genres || "-"}</td>
                           <td className="px-3 py-2">
-                            ${Number(row.amount || 0)}
+                            ${Number(row.fineOwed || 0).toFixed(2)}
+                          </td>
+                          <td className="px-3 py-2">
+                            ${Number(row.itemValue || 0).toFixed(2)}
+                          </td>
+                          <td className="px-3 py-2">
+                            ${Number(row.revenueAmount || 0).toFixed(2)}
                           </td>
                           <td className="px-3 py-2">
                             {Number(row.isPaidOff) === 1 ? "Yes" : "No"}
                           </td>
-                          <td className="px-3 py-2">{row.fineReason || "-"}</td>
+                          <td className="px-3 py-2">
+                            {row.revenueSource || "-"}
+                          </td>
                           <td className="px-3 py-2">
                             {formatDate(row.dateAssigned)}
                           </td>

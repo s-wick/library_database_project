@@ -155,7 +155,7 @@ async function getCheckedOutRows(url) {
   }
 }
 
-async function getFineRows(url) {
+async function getRevenueRows(url) {
   const { whereClause, params } = buildWhereFilters(url)
   const { page, pageSize, offset } = getPagination(url)
   const limit = pageSize + 1
@@ -164,19 +164,29 @@ async function getFineRows(url) {
 
   const rows = await query(
     `SELECT
-       CONCAT(ff.item_id, '-', ff.user_id, '-', DATE_FORMAT(ff.checkout_date, '%Y-%m-%d %H:%i:%s')) AS fineId,
-       ff.item_id AS itemId,
-       ff.user_id AS borrowerId,
+       CONCAT(b.item_id, '-', b.user_id, '-', DATE_FORMAT(b.checkout_date, '%Y-%m-%d %H:%i:%s')) AS fineId,
+       b.item_id AS itemId,
+       b.user_id AS borrowerId,
        i.title AS itemName,
+       i.monetary_value AS itemValue,
        it.item_type AS itemType,
        CASE WHEN ua.is_faculty = 1 THEN 'FACULTY' ELSE 'STUDENT' END AS userType,
        CONCAT(ua.first_name, ' ', ua.last_name) AS borrowerName,
        ua.email AS borrowerEmail,
-       ff.amount AS amount,
+       ff.amount AS fineAmount,
        ff.amount_paid AS amountPaid,
-      CASE WHEN COALESCE(ff.amount_paid, 0) >= COALESCE(ff.amount, 0) THEN 1 ELSE 0 END AS isPaidOff,
-       'Overdue item' AS fineReason,
-       ff.checkout_date AS dateAssigned,
+       GREATEST(COALESCE(ff.amount, 0) - COALESCE(ff.amount_paid, 0), 0) AS fineOwed,
+       GREATEST(COALESCE(ff.amount, 0) - COALESCE(ff.amount_paid, 0), 0) + COALESCE(i.monetary_value, 0) AS revenueAmount,
+       CASE
+         WHEN ff.item_id IS NULL THEN 1
+         WHEN COALESCE(ff.amount_paid, 0) >= COALESCE(ff.amount, 0) THEN 1
+         ELSE 0
+       END AS isPaidOff,
+       CASE
+         WHEN ff.item_id IS NULL THEN 'Item value'
+         ELSE 'Fine + item value'
+       END AS revenueSource,
+       b.checkout_date AS dateAssigned,
        b.checkout_date AS checkoutDate,
        b.due_date AS dueDate,
        b.return_date AS returnDate,
@@ -185,14 +195,14 @@ async function getFineRows(url) {
          ELSE CASE WHEN b.return_date > b.due_date THEN 1 ELSE 0 END
        END AS isOverdue,
        COALESCE(ig.genres, '') AS genres
-     FROM fined_for ff
-     INNER JOIN borrow b
-       ON b.item_id = ff.item_id
-      AND b.user_id = ff.user_id
-      AND b.checkout_date = ff.checkout_date
-     INNER JOIN item i ON i.item_id = ff.item_id
+     FROM borrow b
+     LEFT JOIN fined_for ff
+       ON ff.item_id = b.item_id
+      AND ff.user_id = b.user_id
+      AND ff.checkout_date = b.checkout_date
+     INNER JOIN item i ON i.item_id = b.item_id
      LEFT JOIN item_type it ON it.item_code = i.item_type_code
-     INNER JOIN user_account ua ON ua.user_id = ff.user_id
+     INNER JOIN user_account ua ON ua.user_id = b.user_id
      LEFT JOIN (
        SELECT
          ag.item_id,
@@ -202,7 +212,7 @@ async function getFineRows(url) {
        GROUP BY ag.item_id
      ) ig ON ig.item_id = i.item_id
      ${whereClause}
-    ORDER BY ff.checkout_date DESC
+    ORDER BY b.checkout_date DESC
     LIMIT ${safeOffset}, ${safeLimit}`,
     params
   )
@@ -309,17 +319,37 @@ async function getUserDemographicsRows(url) {
     userAlias: "ua",
   })
 
-  const checkoutCounts = await query(
+  const rows = await query(
     `SELECT
        ua.user_id AS userId,
-       COALESCE(COUNT(b.item_id), 0) AS checkoutCount
+       CONCAT(ua.first_name, ' ', ua.last_name) AS userName,
+       ua.email AS userEmail,
+       CASE WHEN ua.is_faculty = 1 THEN 'FACULTY' ELSE 'STUDENT' END AS userType,
+       COALESCE(SUM(CASE WHEN b.return_date IS NULL THEN 1 ELSE 0 END), 0) AS checkedOutCount,
+       COALESCE(COUNT(b.item_id), 0) AS totalBorrowCount,
+       ROUND(
+         AVG(
+           CASE
+             WHEN b.item_id IS NULL THEN NULL
+             ELSE GREATEST(
+               1,
+               TIMESTAMPDIFF(
+                 DAY,
+                 b.checkout_date,
+                 COALESCE(b.return_date, NOW())
+               )
+             )
+           END
+         ),
+         1
+       ) AS avgBorrowDays
      FROM user_account ua
      LEFT JOIN borrow b
        ON b.user_id = ua.user_id
-      AND b.return_date IS NULL
      LEFT JOIN item i ON i.item_id = b.item_id
      ${checkoutFilters.whereClause}
-     GROUP BY ua.user_id`,
+     GROUP BY ua.user_id, ua.first_name, ua.last_name, ua.email, ua.is_faculty
+     ORDER BY checkedOutCount DESC, totalBorrowCount DESC, ua.email ASC`,
     checkoutFilters.params
   )
 
@@ -330,8 +360,8 @@ async function getUserDemographicsRows(url) {
     "50+ items checked out": 0,
   }
 
-  for (const row of checkoutCounts) {
-    const bucket = getCheckoutBucketLabel(Number(row.checkoutCount || 0))
+  for (const row of rows) {
+    const bucket = getCheckoutBucketLabel(Number(row.checkedOutCount || 0))
     checkoutBuckets[bucket] += 1
   }
 
@@ -388,10 +418,19 @@ async function getUserDemographicsRows(url) {
   )
 
   return {
-    rows: [...checkoutBucketRows, ...durationBucketRows],
+    rows: rows.map((row) => ({
+      userId: row.userId,
+      userName: row.userName,
+      userEmail: row.userEmail,
+      userType: row.userType,
+      checkedOutCount: Number(row.checkedOutCount || 0),
+      totalBorrowCount: Number(row.totalBorrowCount || 0),
+      borrowDays:
+        row.avgBorrowDays === null ? null : Math.round(Number(row.avgBorrowDays)),
+    })),
     checkoutBuckets: checkoutBucketRows,
     durationBuckets: durationBucketRows,
-    totalUsers: checkoutCounts.length,
+    totalUsers: rows.length,
     totalBorrows: borrowDurations.length,
   }
 }
@@ -423,20 +462,30 @@ async function handleGetReports(_req, res, url) {
       return
     }
 
-    if (reportType === "finesOwed") {
-      const { rows, page, pageSize, hasMore } = await getFineRows(url)
-      const totalAmount = rows.reduce(
-        (sum, row) => sum + Number(row.amount || 0),
+    if (reportType === "revenue" || reportType === "finesOwed") {
+      const { rows, page, pageSize, hasMore } = await getRevenueRows(url)
+      const totalFineOwed = rows.reduce(
+        (sum, row) => sum + Number(row.fineOwed || 0),
+        0
+      )
+      const totalItemValue = rows.reduce(
+        (sum, row) => sum + Number(row.itemValue || 0),
+        0
+      )
+      const totalRevenue = rows.reduce(
+        (sum, row) => sum + Number(row.revenueAmount || 0),
         0
       )
 
       sendJson(res, 200, {
         ok: true,
-        reportType,
+        reportType: "revenue",
         rows,
         summary: {
           totalRecords: rows.length,
-          totalAmount,
+          totalFineOwed,
+          totalItemValue,
+          totalRevenue,
           page,
           pageSize,
           hasMore,

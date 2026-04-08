@@ -73,7 +73,9 @@ async function handleCheckin(req, res) {
         return
       }
 
-      const userIds = [...new Set(records.map((record) => Number(record?.userId)))]
+      const userIds = [
+        ...new Set(records.map((record) => Number(record?.userId))),
+      ]
 
       for (const currentUserId of userIds) {
         if (!currentUserId) {

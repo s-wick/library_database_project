@@ -235,7 +235,9 @@ export default function CheckInPage() {
   }
 
   function selectAllVisible() {
-    setSelectedBorrowIds(activeBorrows.map((borrow) => borrow.borrowTransactionId))
+    setSelectedBorrowIds(
+      activeBorrows.map((borrow) => borrow.borrowTransactionId)
+    )
     setFieldErrors((prev) => ({
       ...prev,
       selectedBorrowIds: "",
@@ -282,8 +284,8 @@ export default function CheckInPage() {
                       />
                     </div>
                     <FieldDescription>
-                      This list only shows items that are currently checked out and
-                      refreshes automatically every 15 seconds.
+                      This list only shows items that are currently checked out
+                      and refreshes automatically every 15 seconds.
                     </FieldDescription>
                   </Field>
 
@@ -365,21 +367,28 @@ export default function CheckInPage() {
                                 />
                               </TableCell>
                               <TableCell className="align-top whitespace-normal">
-                                <div className="font-medium">{borrow.itemName}</div>
+                                <div className="font-medium">
+                                  {borrow.itemName}
+                                </div>
                                 <div className="text-xs text-muted-foreground">
                                   {borrow.itemType} · Item #{borrow.itemId}
                                 </div>
                               </TableCell>
                               <TableCell className="align-top whitespace-normal">
                                 <div className="font-medium">
-                                  {borrow.borrowerName || `User #${borrow.borrowerId}`}
+                                  {borrow.borrowerName ||
+                                    `User #${borrow.borrowerId}`}
                                 </div>
                                 <div className="text-xs text-muted-foreground">
                                   {borrow.borrowerEmail} · {borrow.borrowerType}
                                 </div>
                               </TableCell>
-                              <TableCell>{formatDateTime(borrow.checkoutDate)}</TableCell>
-                              <TableCell>{formatDateTime(borrow.dueDate)}</TableCell>
+                              <TableCell>
+                                {formatDateTime(borrow.checkoutDate)}
+                              </TableCell>
+                              <TableCell>
+                                {formatDateTime(borrow.dueDate)}
+                              </TableCell>
                               <TableCell>
                                 <Button
                                   type="button"
@@ -425,17 +434,23 @@ export default function CheckInPage() {
                         <div className="space-y-1">
                           {selectedBorrows.slice(0, 5).map((borrow) => (
                             <p key={borrow.borrowTransactionId}>
-                              {borrow.itemName} - {borrow.borrowerName || `User #${borrow.borrowerId}`}
+                              {borrow.itemName} -{" "}
+                              {borrow.borrowerName ||
+                                `User #${borrow.borrowerId}`}
                             </p>
                           ))}
                           {selectedBorrows.length > 5 ? (
-                            <p>And {selectedBorrows.length - 5} more selected item(s).</p>
+                            <p>
+                              And {selectedBorrows.length - 5} more selected
+                              item(s).
+                            </p>
                           ) : null}
                         </div>
                       </div>
                     ) : (
                       <p className="text-muted-foreground">
-                        Select one or more rows from the active borrow catalog above.
+                        Select one or more rows from the active borrow catalog
+                        above.
                       </p>
                     )}
                   </div>
@@ -521,7 +536,9 @@ export default function CheckInPage() {
                     <p>{lastCheckIn.rows.length} item(s) checked in.</p>
                     {lastCheckIn.rows.slice(0, 3).map((borrow) => (
                       <p key={borrow.borrowTransactionId}>
-                        {borrow.itemName || `Item #${borrow.itemId}`} - {borrow.borrowerName || `User #${borrow.userId || borrow.borrowerId}`}
+                        {borrow.itemName || `Item #${borrow.itemId}`} -{" "}
+                        {borrow.borrowerName ||
+                          `User #${borrow.userId || borrow.borrowerId}`}
                       </p>
                     ))}
                     <p>Returned at: {formatDateTime(lastCheckIn.returnDate)}</p>

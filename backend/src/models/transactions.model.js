@@ -22,13 +22,15 @@ function normalizeReturnDateValue(returnDate) {
     throw new Error("Invalid return date")
   }
 
-  return normalizedReturnDate
-    .toISOString()
-    .slice(0, 19)
-    .replace("T", " ")
+  return normalizedReturnDate.toISOString().slice(0, 19).replace("T", " ")
 }
 
-async function getBorrowRowForCheckin(connection, itemId, userId, checkoutDate) {
+async function getBorrowRowForCheckin(
+  connection,
+  itemId,
+  userId,
+  checkoutDate
+) {
   const checkoutDateKey = normalizeCheckoutDateKey(checkoutDate)
   const borrowLookupQuery = checkoutDateKey
     ? `SELECT checkout_date
@@ -107,7 +109,12 @@ async function createBorrowTransaction(userId, itemId, borrowDays = 7) {
   }
 }
 
-async function createCheckinTransaction(userId, itemId, returnDate, checkoutDate) {
+async function createCheckinTransaction(
+  userId,
+  itemId,
+  returnDate,
+  checkoutDate
+) {
   const connection = await pool.getConnection()
 
   try {

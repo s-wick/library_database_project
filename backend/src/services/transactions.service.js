@@ -1,9 +1,11 @@
 const { sendJson, parseJsonBody } = require("../utils")
 const {
   createBorrowTransaction,
+  createBatchCheckinTransactions,
   createCheckinTransaction,
   createHold,
   cancelHold,
+  getActiveBorrowCatalog,
   getUserAccountById,
   getActiveBorrowCount,
   OutOfStockError,
@@ -59,7 +61,45 @@ async function handleBorrow(req, res) {
 async function handleCheckin(req, res) {
   try {
     const body = await parseJsonBody(req)
-    const { itemId, userId, returnDate } = body
+    const { itemId, userId, returnDate, checkoutDate } = body
+    const records = Array.isArray(body.records) ? body.records : null
+
+    if (records?.length) {
+      if (!returnDate) {
+        sendJson(res, 400, {
+          ok: false,
+          message: "returnDate is required",
+        })
+        return
+      }
+
+      const userIds = [...new Set(records.map((record) => Number(record?.userId)))]
+
+      for (const currentUserId of userIds) {
+        if (!currentUserId) {
+          sendJson(res, 400, {
+            ok: false,
+            message: "Each selected record must include a valid user.",
+          })
+          return
+        }
+
+        const user = await getUserAccountById(currentUserId)
+        if (!user) {
+          sendJson(res, 404, { ok: false, message: "User account not found" })
+          return
+        }
+      }
+
+      const results = await createBatchCheckinTransactions(records, returnDate)
+
+      sendJson(res, 200, {
+        ok: true,
+        message: `${results.length} item(s) checked in successfully.`,
+        data: results,
+      })
+      return
+    }
 
     if (!itemId || !userId || !returnDate) {
       sendJson(res, 400, {
@@ -78,7 +118,8 @@ async function handleCheckin(req, res) {
     const result = await createCheckinTransaction(
       user.user_id,
       itemId,
-      returnDate
+      returnDate,
+      checkoutDate
     )
 
     sendJson(res, 200, {
@@ -108,9 +149,43 @@ async function handleCheckin(req, res) {
       return
     }
 
+    if (error.message === "Invalid checkout date") {
+      sendJson(res, 400, {
+        ok: false,
+        message: "Checkout record reference is invalid.",
+      })
+      return
+    }
+
+    if (error.message === "Invalid check-in record") {
+      sendJson(res, 400, {
+        ok: false,
+        message: "One or more selected records are invalid.",
+      })
+      return
+    }
+
     sendJson(res, 500, {
       ok: false,
       message: "Failed to check in item",
+      error: error.message,
+    })
+  }
+}
+
+async function handleGetActiveBorrowCatalog(_req, res, url) {
+  try {
+    const search = url.searchParams.get("q") || ""
+    const rows = await getActiveBorrowCatalog(search)
+
+    sendJson(res, 200, {
+      ok: true,
+      rows,
+    })
+  } catch (error) {
+    sendJson(res, 500, {
+      ok: false,
+      message: "Failed to fetch active borrow catalog",
       error: error.message,
     })
   }
@@ -261,6 +336,7 @@ module.exports = {
   handleCheckout,
   handleBorrow,
   handleCheckin,
+  handleGetActiveBorrowCatalog,
   handleHold,
   handleCancelHold,
   handleBorrowStatus,

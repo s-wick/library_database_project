@@ -4,7 +4,12 @@ import { ArrowLeft, CalendarClock, PackageCheck } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldLabel,
+} from "@/components/ui/field"
 import { API_BASE_URL } from "@/lib/api-config"
 
 function getDefaultReturnDateTime() {
@@ -41,7 +46,10 @@ export default function CheckInPage() {
       return `${name === "itemId" ? "Item" : "User"} ID is required.`
     }
 
-    if ((name === "itemId" || name === "userId") && !/^\d+$/.test(trimmedValue)) {
+    if (
+      (name === "itemId" || name === "userId") &&
+      !/^\d+$/.test(trimmedValue)
+    ) {
       return `${name === "itemId" ? "Item" : "User"} ID must be a whole number.`
     }
 
@@ -184,7 +192,9 @@ export default function CheckInPage() {
                 </Field>
 
                 <Field data-invalid={!!fieldErrors.returnDate}>
-                  <FieldLabel htmlFor="returnDate">Return date and time</FieldLabel>
+                  <FieldLabel htmlFor="returnDate">
+                    Return date and time
+                  </FieldLabel>
                   <Input
                     id="returnDate"
                     name="returnDate"
@@ -196,7 +206,8 @@ export default function CheckInPage() {
                     required
                   />
                   <FieldDescription>
-                    The selected timestamp will be saved to the borrow record and the item stock will increase by 1.
+                    The selected timestamp will be saved to the borrow record
+                    and the item stock will increase by 1.
                   </FieldDescription>
                   <FieldError>{fieldErrors.returnDate}</FieldError>
                 </Field>
@@ -213,7 +224,11 @@ export default function CheckInPage() {
                   </div>
                 ) : null}
 
-                <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full sm:w-auto"
+                >
                   {isSubmitting ? "Checking in..." : "Record check-in"}
                 </Button>
               </form>
@@ -238,7 +253,8 @@ export default function CheckInPage() {
               <div className="rounded-lg border bg-muted/20 p-3">
                 <p className="font-medium">What this updates</p>
                 <p className="mt-1 text-muted-foreground">
-                  The matching active borrow record gets its return time, and the item inventory in the database is incremented by one copy.
+                  The matching active borrow record gets its return time, and
+                  the item inventory in the database is incremented by one copy.
                 </p>
               </div>
 
@@ -248,7 +264,10 @@ export default function CheckInPage() {
                   <div className="mt-1 space-y-1 text-muted-foreground">
                     <p>Item ID: {lastCheckIn.itemId}</p>
                     <p>User ID: {lastCheckIn.userId}</p>
-                    <p>Returned at: {new Date(lastCheckIn.returnDate).toLocaleString()}</p>
+                    <p>
+                      Returned at:{" "}
+                      {new Date(lastCheckIn.returnDate).toLocaleString()}
+                    </p>
                   </div>
                 ) : (
                   <p className="mt-1 text-muted-foreground">

@@ -75,7 +75,11 @@ async function handleCheckin(req, res) {
       return
     }
 
-    const result = await createCheckinTransaction(user.user_id, itemId, returnDate)
+    const result = await createCheckinTransaction(
+      user.user_id,
+      itemId,
+      returnDate
+    )
 
     sendJson(res, 200, {
       ok: true,

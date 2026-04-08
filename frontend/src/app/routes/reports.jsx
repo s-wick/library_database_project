@@ -25,14 +25,22 @@ function formatItemTypeForDisplay(value) {
     .join(" ")
 }
 
+function formatItemTypesSummary(value) {
+  if (!value || !String(value).trim()) return "-"
+  return String(value)
+    .split(", ")
+    .map((part) => formatItemTypeForDisplay(part.trim()))
+    .filter((part) => part !== "-")
+    .join(", ") || "-"
+}
+
 function formatUserTypeForDisplay(value) {
   if (!value) return "-"
   const v = String(value).trim().toUpperCase()
   if (v === "FACULTY") return "Faculty"
   if (v === "STUDENT") return "Student"
   return (
-    String(value).charAt(0).toUpperCase() +
-    String(value).slice(1).toLowerCase()
+    String(value).charAt(0).toUpperCase() + String(value).slice(1).toLowerCase()
   )
 }
 
@@ -261,9 +269,7 @@ export default function ReportsPage() {
           }, {})
         ).map(([label, value]) => ({
           label:
-            label === "UNKNOWN"
-              ? "Unknown"
-              : formatItemTypeForDisplay(label),
+            label === "UNKNOWN" ? "Unknown" : formatItemTypeForDisplay(label),
           value: Number(value || 0),
         }))
       : []
@@ -589,9 +595,12 @@ export default function ReportsPage() {
                       </tr>
                     ) : filters.reportType === "userDemographics" ? (
                       <tr>
-                        <th className="px-3 py-2">User</th>
+                        <th className="px-3 py-2">Name</th>
                         <th className="px-3 py-2">Email</th>
                         <th className="px-3 py-2">User type</th>
+                        <th className="px-3 py-2">Item type</th>
+                        <th className="px-3 py-2">Genre</th>
+                        <th className="px-3 py-2">Overdue</th>
                         <th className="px-3 py-2">Checked out items</th>
                         <th className="px-3 py-2">Total borrows</th>
                         <th className="px-3 py-2">Borrow days</th>
@@ -623,7 +632,7 @@ export default function ReportsPage() {
                             filters.reportType === "itemsCheckedOut"
                               ? 8
                               : filters.reportType === "userDemographics"
-                                ? 6
+                                ? 9
                                 : 13
                           }
                         >
@@ -657,7 +666,10 @@ export default function ReportsPage() {
                       ))
                     ) : filters.reportType === "userDemographics" ? (
                       rows.map((row) => (
-                        <tr key={row.userId || row.userEmail} className="border-t">
+                        <tr
+                          key={row.userId || row.userEmail}
+                          className="border-t"
+                        >
                           <td className="px-3 py-2">
                             {row.userName || row.userId || "-"}
                           </td>
@@ -666,13 +678,24 @@ export default function ReportsPage() {
                             {formatUserTypeForDisplay(row.userType)}
                           </td>
                           <td className="px-3 py-2">
+                            {formatItemTypesSummary(row.itemTypesSummary)}
+                          </td>
+                          <td className="px-3 py-2">
+                            {row.genresSummary?.trim() || "-"}
+                          </td>
+                          <td className="px-3 py-2">
+                            {Number(row.hasOverdueBorrow) === 1 ? "Yes" : "No"}
+                          </td>
+                          <td className="px-3 py-2">
                             {Number(row.checkedOutCount || 0)}
                           </td>
                           <td className="px-3 py-2">
                             {Number(row.totalBorrowCount || 0)}
                           </td>
                           <td className="px-3 py-2">
-                            {row.borrowDays === null ? "-" : Number(row.borrowDays)}
+                            {row.borrowDays === null
+                              ? "-"
+                              : Number(row.borrowDays)}
                           </td>
                         </tr>
                       ))

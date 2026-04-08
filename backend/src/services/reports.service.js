@@ -342,11 +342,23 @@ async function getUserDemographicsRows(url) {
            END
          ),
          1
-       ) AS avgBorrowDays
+       ) AS avgBorrowDays,
+       GROUP_CONCAT(DISTINCT NULLIF(it.item_type, '') ORDER BY it.item_type SEPARATOR ', ') AS itemTypesSummary,
+       GROUP_CONCAT(DISTINCT NULLIF(g.genre_text, '') ORDER BY g.genre_text SEPARATOR ', ') AS genresSummary,
+       MAX(
+         CASE
+           WHEN b.item_id IS NULL THEN 0
+           WHEN b.return_date IS NULL THEN CASE WHEN b.due_date < NOW() THEN 1 ELSE 0 END
+           ELSE CASE WHEN b.return_date > b.due_date THEN 1 ELSE 0 END
+         END
+       ) AS hasOverdueBorrow
      FROM user_account ua
      LEFT JOIN borrow b
        ON b.user_id = ua.user_id
      LEFT JOIN item i ON i.item_id = b.item_id
+     LEFT JOIN item_type it ON it.item_code = i.item_type_code
+     LEFT JOIN assigned_genres ag ON ag.item_id = i.item_id
+     LEFT JOIN genre g ON g.genre_id = ag.genre_id
      ${checkoutFilters.whereClause}
      GROUP BY ua.user_id, ua.first_name, ua.last_name, ua.email, ua.is_faculty
      ORDER BY checkedOutCount DESC, totalBorrowCount DESC, ua.email ASC`,
@@ -423,6 +435,9 @@ async function getUserDemographicsRows(url) {
       userName: row.userName,
       userEmail: row.userEmail,
       userType: row.userType,
+      itemTypesSummary: row.itemTypesSummary || "",
+      genresSummary: row.genresSummary || "",
+      hasOverdueBorrow: Number(row.hasOverdueBorrow || 0),
       checkedOutCount: Number(row.checkedOutCount || 0),
       totalBorrowCount: Number(row.totalBorrowCount || 0),
       borrowDays:

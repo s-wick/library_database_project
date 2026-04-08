@@ -1,11 +1,14 @@
 const { sendJson, parseJsonBody } = require("../utils")
 const {
   createBorrowTransaction,
+  createCheckinTransaction,
   createHold,
   cancelHold,
   getUserAccountById,
   getActiveBorrowCount,
   OutOfStockError,
+  ItemNotFoundError,
+  ActiveBorrowNotFoundError,
 } = require("../models/transactions.model")
 const { getCartRowsByUserId } = require("../models/cart.model")
 const { deleteCartItem } = require("../models/cart.model")
@@ -48,6 +51,62 @@ async function handleBorrow(req, res) {
     sendJson(res, 500, {
       ok: false,
       message: "Failed to borrow item",
+      error: error.message,
+    })
+  }
+}
+
+async function handleCheckin(req, res) {
+  try {
+    const body = await parseJsonBody(req)
+    const { itemId, userId, returnDate } = body
+
+    if (!itemId || !userId || !returnDate) {
+      sendJson(res, 400, {
+        ok: false,
+        message: "itemId, userId, and returnDate are required",
+      })
+      return
+    }
+
+    const user = await getUserAccountById(userId)
+    if (!user) {
+      sendJson(res, 404, { ok: false, message: "User account not found" })
+      return
+    }
+
+    const result = await createCheckinTransaction(user.user_id, itemId, returnDate)
+
+    sendJson(res, 200, {
+      ok: true,
+      message: "Item checked in successfully.",
+      data: result,
+    })
+  } catch (error) {
+    if (error instanceof ItemNotFoundError) {
+      sendJson(res, 404, { ok: false, message: "Item not found" })
+      return
+    }
+
+    if (error instanceof ActiveBorrowNotFoundError) {
+      sendJson(res, 404, {
+        ok: false,
+        message: "No active borrow record was found for this item and user.",
+      })
+      return
+    }
+
+    if (error.message === "Invalid return date") {
+      sendJson(res, 400, {
+        ok: false,
+        message: "Return date must be a valid date and time.",
+      })
+      return
+    }
+
+    sendJson(res, 500, {
+      ok: false,
+      message: "Failed to check in item",
       error: error.message,
     })
   }
@@ -197,6 +256,7 @@ async function handleCancelHold(req, res) {
 module.exports = {
   handleCheckout,
   handleBorrow,
+  handleCheckin,
   handleHold,
   handleCancelHold,
   handleBorrowStatus,

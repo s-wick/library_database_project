@@ -41,6 +41,13 @@ const actions = [
     to: "/management-dashboard/reports",
     icon: FileBarChart2,
   },
+
+  { 
+    title: "Check-in book",
+    description: "Check in borrowed books and update inventory."
+     ,to: "/management-dashboard/check-in"
+     ,icon: Users
+  }
 ]
 
 export default function ManagementDashboardPage() {

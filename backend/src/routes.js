@@ -16,6 +16,7 @@ const {
   handleBorrow,
   handleHold,
   handleCheckout,
+  handleCheckin,
   handleCancelHold,
   handleBorrowStatus,
 } = require("./services/transactions.service")
@@ -131,6 +132,11 @@ async function handleApiRoute(req, res, url) {
 
   if (req.method === "POST" && pathname === "/api/checkout") {
     await handleCheckout(req, res)
+    return
+  }
+
+  if (req.method === "POST" && pathname === "/api/check-in") {
+    await handleCheckin(req, res)
     return
   }
 

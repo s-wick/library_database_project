@@ -27,11 +27,13 @@ function formatItemTypeForDisplay(value) {
 
 function formatItemTypesSummary(value) {
   if (!value || !String(value).trim()) return "-"
-  return String(value)
-    .split(", ")
-    .map((part) => formatItemTypeForDisplay(part.trim()))
-    .filter((part) => part !== "-")
-    .join(", ") || "-"
+  return (
+    String(value)
+      .split(", ")
+      .map((part) => formatItemTypeForDisplay(part.trim()))
+      .filter((part) => part !== "-")
+      .join(", ") || "-"
+  )
 }
 
 function formatUserTypeForDisplay(value) {

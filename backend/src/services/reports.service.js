@@ -441,7 +441,9 @@ async function getUserDemographicsRows(url) {
       checkedOutCount: Number(row.checkedOutCount || 0),
       totalBorrowCount: Number(row.totalBorrowCount || 0),
       borrowDays:
-        row.avgBorrowDays === null ? null : Math.round(Number(row.avgBorrowDays)),
+        row.avgBorrowDays === null
+          ? null
+          : Math.round(Number(row.avgBorrowDays)),
     })),
     checkoutBuckets: checkoutBucketRows,
     durationBuckets: durationBucketRows,

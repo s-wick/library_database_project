@@ -8,6 +8,8 @@ import AddLibrarianPage from "./routes/add-librarian"
 import AddItemPage from "./routes/add-item"
 import ManageItemsPage from "./routes/manage-items"
 import ReportsPage from "./routes/reports"
+import CheckInPage from "./routes/check-in"
+import RoomManagePage from "./routes/room-manage"
 import CheckoutPage from "./routes/checkout"
 import ItemPage from "./routes/item"
 import RoomBookingPage from "./routes/room-booking"
@@ -136,6 +138,24 @@ export const router = createBrowserRouter([
           </RequireManagementAccess>
         ),
         handle: { title: "Reports" },
+      },
+      {
+        path: "management-dashboard/check-in",
+        element: (
+          <RequireManagementAccess>
+            <CheckInPage />
+          </RequireManagementAccess>
+        ),
+        handle: { title: "Check In" },
+      },
+      {
+        path: "management-dashboard/room-manage",
+        element: (
+          <RequireManagementAccess>
+            <RoomManagePage />
+          </RequireManagementAccess>
+        ),
+        handle: { title: "Room Manage" },
       },
       {
         path: "checkout",

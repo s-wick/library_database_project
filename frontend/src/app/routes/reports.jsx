@@ -236,8 +236,7 @@ export default function ReportsPage() {
   }
 
   const supportsGenreForItemType =
-    filters.itemType === "" ||
-    filters.itemType === "BOOK"
+    filters.itemType === "" || filters.itemType === "BOOK"
   const filteredGenres = genres.filter((genre) =>
     genre.toLowerCase().includes(genreQuery.trim().toLowerCase())
   )

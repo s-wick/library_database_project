@@ -228,11 +228,11 @@ export default function RoomBookingPage() {
           </CardContent>
           {selectedRoomDetails && (
             <CardContent className="pt-0 text-sm text-muted-foreground">
-              Room {selectedRoomDetails.roomNumber} fits up to {selectedRoomDetails.capacity} people.
-              {" "}
-              Projector: {selectedRoomDetails.features.hasProjector ? "Yes" : "No"}.
-              {" "}
-              Whiteboard: {selectedRoomDetails.features.hasWhiteboard ? "Yes" : "No"}.
+              Room {selectedRoomDetails.roomNumber} fits up to{" "}
+              {selectedRoomDetails.capacity} people. Projector:{" "}
+              {selectedRoomDetails.features.hasProjector ? "Yes" : "No"}.{" "}
+              Whiteboard:{" "}
+              {selectedRoomDetails.features.hasWhiteboard ? "Yes" : "No"}.
             </CardContent>
           )}
           <CardContent className="pt-0">

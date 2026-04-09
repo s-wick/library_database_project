@@ -184,7 +184,8 @@ export default function RoomManagePage() {
       if (!response.ok) {
         if (response.status === 409) {
           setFieldErrors({
-            roomNumber: data.message || "A room with this number already exists.",
+            roomNumber:
+              data.message || "A room with this number already exists.",
           })
           return
         }
@@ -327,7 +328,11 @@ export default function RoomManagePage() {
                       : "Add room"}
                 </Button>
                 {isEditing && (
-                  <Button type="button" variant="outline" onClick={handleCancelEdit}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleCancelEdit}
+                  >
                     Cancel
                   </Button>
                 )}
@@ -377,7 +382,10 @@ export default function RoomManagePage() {
                             variant="outline"
                             size="icon-sm"
                             onClick={() => handleEditRoom(room)}
-                            disabled={submitting || deletingRoomNumber === room.roomNumber}
+                            disabled={
+                              submitting ||
+                              deletingRoomNumber === room.roomNumber
+                            }
                             aria-label={`Edit room ${room.roomNumber}`}
                           >
                             <Pencil className="h-4 w-4" />
@@ -387,7 +395,10 @@ export default function RoomManagePage() {
                             variant="destructive"
                             size="icon-sm"
                             onClick={() => handleDeleteRoom(room.roomNumber)}
-                            disabled={deletingRoomNumber === room.roomNumber || submitting}
+                            disabled={
+                              deletingRoomNumber === room.roomNumber ||
+                              submitting
+                            }
                             aria-label={`Delete room ${room.roomNumber}`}
                           >
                             <X className="h-4 w-4" />

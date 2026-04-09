@@ -1,12 +1,5 @@
 const { query } = require("../database")
 
-const DEFAULT_ROOMS = [
-  { room_number: "101", capacity: 4, has_projector: 1, has_whiteboard: 1 },
-  { room_number: "102", capacity: 6, has_projector: 0, has_whiteboard: 1 },
-  { room_number: "201", capacity: 8, has_projector: 1, has_whiteboard: 1 },
-  { room_number: "202", capacity: 10, has_projector: 1, has_whiteboard: 0 },
-]
-
 function mapRoomRow(row) {
   const floor = String(row.room_number || "").charAt(0) || "1"
   const hasProjector = Number(row.has_projector || 0) === 1
@@ -34,8 +27,84 @@ async function getMeetingRooms() {
      ORDER BY room_number ASC`
   )
 
-  const source = rows.length ? rows : DEFAULT_ROOMS
-  return source.map(mapRoomRow)
+  return rows.map(mapRoomRow)
+}
+
+async function getMeetingRoomByNumber(roomNumber) {
+  const rows = await query(
+    `SELECT room_number, capacity, has_projector, has_whiteboard
+     FROM meeting_room
+     WHERE room_number = ?
+     LIMIT 1`,
+    [roomNumber]
+  )
+
+  return rows[0] || null
+}
+
+async function createMeetingRoom(
+  roomNumber,
+  capacity,
+  hasProjector,
+  hasWhiteboard
+) {
+  await query(
+    `INSERT INTO meeting_room (
+      room_number,
+      capacity,
+      has_projector,
+      has_whiteboard
+    ) VALUES (?, ?, ?, ?)`,
+    [roomNumber, capacity, hasProjector ? 1 : 0, hasWhiteboard ? 1 : 0]
+  )
+
+  return getMeetingRoomByNumber(roomNumber)
+}
+
+async function countUpcomingRoomBookings(roomNumber) {
+  const rows = await query(
+    `SELECT COUNT(*) AS booking_count
+     FROM book_room
+     WHERE room_number = ?
+       AND end_time > NOW()`,
+    [roomNumber]
+  )
+
+  return Number(rows[0]?.booking_count || 0)
+}
+
+async function updateMeetingRoom(
+  currentRoomNumber,
+  nextRoomNumber,
+  capacity,
+  hasProjector,
+  hasWhiteboard
+) {
+  await query(
+    `UPDATE meeting_room
+     SET room_number = ?,
+         capacity = ?,
+         has_projector = ?,
+         has_whiteboard = ?
+     WHERE room_number = ?`,
+    [
+      nextRoomNumber,
+      capacity,
+      hasProjector ? 1 : 0,
+      hasWhiteboard ? 1 : 0,
+      currentRoomNumber,
+    ]
+  )
+
+  return getMeetingRoomByNumber(nextRoomNumber)
+}
+
+async function deleteMeetingRoom(roomNumber) {
+  await query(
+    `DELETE FROM meeting_room
+     WHERE room_number = ?`,
+    [roomNumber]
+  )
 }
 
 async function getUserActiveBooking(userId) {
@@ -76,6 +145,11 @@ async function createRoomBooking(userId, roomNumber, startTime, endTime) {
 
 module.exports = {
   getMeetingRooms,
+  getMeetingRoomByNumber,
+  createMeetingRoom,
+  countUpcomingRoomBookings,
+  updateMeetingRoom,
+  deleteMeetingRoom,
   getUserActiveBooking,
   hasRoomOverlap,
   createRoomBooking,

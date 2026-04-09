@@ -6,6 +6,7 @@ import {
   Trash2,
   FileBarChart2,
   LogOut,
+  DoorOpen,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -41,6 +42,13 @@ const actions = [
     to: "/management-dashboard/reports",
     icon: FileBarChart2,
   },
+  {
+    title: "Room manage",
+    description: "Add and review study rooms for booking.",
+    to: "/management-dashboard/room-manage",
+    icon: DoorOpen,
+    adminOnly: true,
+  },
 
   {
     title: "Check-in book",
@@ -53,12 +61,9 @@ const actions = [
 export default function ManagementDashboardPage() {
   const navigate = useNavigate()
   const authUser = JSON.parse(localStorage.getItem("authUser") || "{}")
-  const visibleActions =
-    authUser.role === "admin"
-      ? actions
-      : actions.filter(
-          (action) => action.to !== "/management-dashboard/add-librarian"
-        )
+  const visibleActions = actions.filter(
+    (action) => !action.adminOnly || authUser.role === "admin"
+  )
 
   return (
     <div className="min-h-screen bg-background p-6">

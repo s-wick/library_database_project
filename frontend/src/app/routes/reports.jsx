@@ -27,11 +27,13 @@ function formatItemTypeForDisplay(value) {
 
 function formatItemTypesSummary(value) {
   if (!value || !String(value).trim()) return "-"
-  return String(value)
-    .split(", ")
-    .map((part) => formatItemTypeForDisplay(part.trim()))
-    .filter((part) => part !== "-")
-    .join(", ") || "-"
+  return (
+    String(value)
+      .split(", ")
+      .map((part) => formatItemTypeForDisplay(part.trim()))
+      .filter((part) => part !== "-")
+      .join(", ") || "-"
+  )
 }
 
 function formatUserTypeForDisplay(value) {
@@ -152,13 +154,7 @@ export default function ReportsPage() {
     }
     setFilters((prev) => {
       if (name === "itemType") {
-        if (value === "RENTAL_EQUIPMENT") {
-          return { ...prev, itemType: value, genre: ["NOT_APPLICABLE"] }
-        }
-        if (
-          Array.isArray(prev.genre) &&
-          prev.genre.includes("NOT_APPLICABLE")
-        ) {
+        if (value !== "" && value !== "BOOK") {
           return { ...prev, itemType: value, genre: [] }
         }
       }
@@ -241,9 +237,7 @@ export default function ReportsPage() {
 
   const supportsGenreForItemType =
     filters.itemType === "" ||
-    filters.itemType === "BOOK" ||
-    filters.itemType === "AUDIO" ||
-    filters.itemType === "VIDEO"
+    filters.itemType === "BOOK"
   const filteredGenres = genres.filter((genre) =>
     genre.toLowerCase().includes(genreQuery.trim().toLowerCase())
   )
@@ -390,17 +384,21 @@ export default function ReportsPage() {
                       <Button
                         type="button"
                         variant="outline"
-                        className="min-h-9 w-full justify-between px-2 py-1.5"
+                        className="min-h-9 w-full justify-between overflow-hidden px-2 py-1.5"
                       >
-                        <div className="flex flex-wrap items-center gap-1">
+                        <div className="flex max-w-[calc(100%-1.5rem)] items-center gap-1 overflow-x-auto">
                           {filters.genre.length === 0 ? (
                             <span className="text-muted-foreground">
                               Select genres
                             </span>
                           ) : (
                             filters.genre.map((genre) => (
-                              <Badge key={genre} variant="secondary">
-                                {genre}
+                              <Badge
+                                key={genre}
+                                variant="secondary"
+                                className="max-w-[160px] shrink-0"
+                              >
+                                <span className="truncate">{genre}</span>
                                 <button
                                   type="button"
                                   className="ml-1"
@@ -540,10 +538,13 @@ export default function ReportsPage() {
                       </div>
                       <div className="rounded-md border border-emerald-200 bg-emerald-50/70 p-3 dark:border-emerald-900/50 dark:bg-emerald-950/20">
                         <p className="text-xs text-emerald-700 dark:text-emerald-300">
-                          Revenue
+                          Balance
                         </p>
                         <p className="text-lg font-semibold text-emerald-900 dark:text-emerald-100">
                           ${Number(summary.totalRevenue || 0).toFixed(2)}
+                        </p>
+                        <p className="text-xs text-emerald-700/80 dark:text-emerald-300/80">
+                          Sum of fines owed and item value
                         </p>
                       </div>
                     </>
@@ -613,12 +614,11 @@ export default function ReportsPage() {
                         <th className="px-3 py-2">User type</th>
                         <th className="px-3 py-2">Borrower</th>
                         <th className="px-3 py-2">Genre</th>
-                        <th className="px-3 py-2">Fines owed</th>
+                        <th className="px-3 py-2">Fine Amount</th>
                         <th className="px-3 py-2">Item value</th>
-                        <th className="px-3 py-2">Revenue</th>
                         <th className="px-3 py-2">Paid off</th>
                         <th className="px-3 py-2">Source</th>
-                        <th className="px-3 py-2">Assigned</th>
+                        <th className="px-3 py-2">Checkout</th>
                         <th className="px-3 py-2">Overdue</th>
                       </tr>
                     )}
@@ -633,7 +633,7 @@ export default function ReportsPage() {
                               ? 8
                               : filters.reportType === "userDemographics"
                                 ? 9
-                                : 13
+                                : 12
                           }
                         >
                           No report data.
@@ -721,9 +721,6 @@ export default function ReportsPage() {
                           </td>
                           <td className="px-3 py-2">
                             ${Number(row.itemValue || 0).toFixed(2)}
-                          </td>
-                          <td className="px-3 py-2">
-                            ${Number(row.revenueAmount || 0).toFixed(2)}
                           </td>
                           <td className="px-3 py-2">
                             {Number(row.isPaidOff) === 1 ? "Yes" : "No"}

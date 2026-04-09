@@ -24,6 +24,12 @@ const actions = [
     icon: PackagePlus,
   },
   {
+    title: "Edit librarian",
+    description: "Update librarian details and retirement date.",
+    to: "/management-dashboard/edit-librarian",
+    icon: Pencil,
+  },
+  {
     title: "Edit item",
     description: "Update existing catalog item details.",
     to: "/management-dashboard/manage-items?mode=edit",
@@ -50,7 +56,9 @@ export default function ManagementDashboardPage() {
     authUser.role === "admin"
       ? actions
       : actions.filter(
-          (action) => action.to !== "/management-dashboard/add-librarian"
+          (action) =>
+            action.to !== "/management-dashboard/add-librarian" &&
+            action.to !== "/management-dashboard/edit-librarian"
         )
 
   return (

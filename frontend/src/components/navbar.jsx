@@ -12,6 +12,7 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useTheme } from "@/components/theme-provider"
 import { useCart } from "@/app/cart-provider"
+import icon from "@/assets/icon.png"
 
 export function Navbar({ showBack = false }) {
   const navigate = useNavigate()
@@ -62,12 +63,17 @@ export function Navbar({ showBack = false }) {
         )}
         <Link
           to="/"
-          className="flex items-center gap-2 transition-opacity hover:opacity-90"
+          className="group flex items-center gap-2 transition-opacity hover:opacity-90"
           aria-label="Back to home"
         >
-          <div className="inline-flex h-8 min-w-[2.5rem] items-center justify-center rounded-md bg-primary px-2 text-[12px] font-bold whitespace-nowrap text-primary-foreground ring-1 ring-border">
-            LIBRARY LOGO
-          </div>
+          <img
+            src={icon}
+            alt="Hungry Library"
+            className="mr-3 h-10 w-10 object-contain"
+          />
+          <span className="[font-family:var(--font-logo)] text-3xl font-bold tracking-wide whitespace-nowrap text-green-700 drop-shadow-[0_1px_0_rgba(255,255,255,0.35)] dark:drop-shadow-none">
+            LIBRARY
+          </span>
         </Link>
       </div>
 

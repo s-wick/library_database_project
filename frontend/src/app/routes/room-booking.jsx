@@ -40,6 +40,11 @@ export default function RoomBookingPage() {
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
 
+  const selectedRoomDetails = useMemo(
+    () => rooms.find((room) => room.roomNumber === selectedRoom) || null,
+    [rooms, selectedRoom]
+  )
+
   const now = useMemo(() => new Date(), [])
   const minStart = useMemo(
     () => formatDateTimeLocal(new Date(now.getTime() + 5 * 60 * 1000)),
@@ -67,7 +72,8 @@ export default function RoomBookingPage() {
       const roomRes = await fetch(`${apiBaseUrl}/api/rooms`)
       if (!roomRes.ok) throw new Error("Failed to load rooms")
       const roomData = await roomRes.json()
-      setRooms(roomData.rooms || [])
+      const nextRooms = roomData.rooms || []
+      setRooms(nextRooms)
 
       if (user?.id) {
         const bookingRes = await fetch(
@@ -79,8 +85,13 @@ export default function RoomBookingPage() {
         }
       }
 
-      if ((roomData.rooms || []).length > 0 && !selectedRoom) {
-        setSelectedRoom(roomData.rooms[0].roomNumber)
+      if (nextRooms.length === 0) {
+        setSelectedRoom("")
+      } else if (
+        !selectedRoom ||
+        !nextRooms.some((room) => room.roomNumber === selectedRoom)
+      ) {
+        setSelectedRoom(nextRooms[0].roomNumber)
       }
     } catch (err) {
       setError(err.message || "Failed to load room booking data")
@@ -215,6 +226,15 @@ export default function RoomBookingPage() {
               </select>
             </label>
           </CardContent>
+          {selectedRoomDetails && (
+            <CardContent className="pt-0 text-sm text-muted-foreground">
+              Room {selectedRoomDetails.roomNumber} fits up to{" "}
+              {selectedRoomDetails.capacity} people. Projector:{" "}
+              {selectedRoomDetails.features.hasProjector ? "Yes" : "No"}.{" "}
+              Whiteboard:{" "}
+              {selectedRoomDetails.features.hasWhiteboard ? "Yes" : "No"}.
+            </CardContent>
+          )}
           <CardContent className="pt-0">
             <Button
               onClick={handleBookRoom}

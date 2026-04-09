@@ -16,6 +16,8 @@ const {
   handleBorrow,
   handleHold,
   handleCheckout,
+  handleCheckin,
+  handleGetActiveBorrowCatalog,
   handleCancelHold,
   handleBorrowStatus,
 } = require("./services/transactions.service")
@@ -27,6 +29,9 @@ const {
 const {
   handleGetRooms,
   handleGetMyRoomBooking,
+  handleCreateRoom,
+  handleUpdateRoom,
+  handleDeleteRoom,
   handleBookRoom,
 } = require("./services/rooms.service")
 const { handleGetFines, handlePayFines } = require("./services/fines.service")
@@ -138,6 +143,16 @@ async function handleApiRoute(req, res, url) {
     return
   }
 
+  if (req.method === "POST" && pathname === "/api/check-in") {
+    await handleCheckin(req, res)
+    return
+  }
+
+  if (req.method === "GET" && pathname === "/api/check-in/catalog") {
+    await handleGetActiveBorrowCatalog(req, res, url)
+    return
+  }
+
   if (req.method === "GET" && pathname === "/api/borrow-status") {
     await handleBorrowStatus(req, res, url)
     return
@@ -161,6 +176,28 @@ async function handleApiRoute(req, res, url) {
   if (req.method === "GET" && pathname === "/api/rooms") {
     await handleGetRooms(req, res)
     return
+  }
+
+  if (req.method === "POST" && pathname === "/api/rooms") {
+    await handleCreateRoom(req, res)
+    return
+  }
+
+  if (
+    (req.method === "PUT" || req.method === "DELETE") &&
+    pathname.startsWith("/api/rooms/")
+  ) {
+    const parts = pathname.split("/").filter(Boolean)
+    if (parts.length === 3) {
+      const roomNumber = parts[2]
+      if (req.method === "PUT") {
+        await handleUpdateRoom(req, res, roomNumber)
+        return
+      }
+
+      await handleDeleteRoom(req, res, roomNumber)
+      return
+    }
   }
 
   if (req.method === "GET" && pathname === "/api/rooms/my-booking") {

@@ -1,37 +1,22 @@
 import React, { useState, useEffect } from "react"
-import { Link, useNavigate } from "react-router-dom"
+import { useNavigate } from "react-router-dom"
 import {
   BookOpen,
   Clock,
   AlertCircle,
   CreditCard,
-  Calendar,
   ChevronRight,
-  Bell,
-  User,
-  LogOut,
-  Sun,
-  Moon,
   Home,
   CheckCircle2,
   XCircle,
   BookMarked,
   RotateCcw,
   DollarSign,
-  ArrowUpRight,
   ShieldCheck,
 } from "lucide-react"
-import { useTheme } from "@/components/theme-provider"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import {
   Card,
   CardHeader,
@@ -40,6 +25,7 @@ import {
   CardFooter,
 } from "@/components/ui/card"
 import { API_BASE_URL } from "@/lib/api-config"
+import { Navbar } from "@/components/navbar"
 
 // ── Borrow Limit Card ─────────────────────────────────────────────────────────
 function BorrowLimitCard({ borrowStatus }) {
@@ -466,7 +452,6 @@ function BorrowHistory({ borrowHistory = [] }) {
 
 // Main Dashboard
 export default function UserDashboard() {
-  const { theme, setTheme } = useTheme()
   const [activeTab, setActiveTab] = useState("overview")
   const navigate = useNavigate()
 
@@ -553,6 +538,30 @@ export default function UserDashboard() {
     fetchDashboardData(null)
   }, [])
 
+  useEffect(() => {
+    const checkAuth = () => {
+      try {
+        const storedUser = localStorage.getItem("user")
+        if (!storedUser) {
+          navigate("/")
+        }
+      } catch {
+        navigate("/")
+      }
+    }
+
+    checkAuth()
+    const intervalId = setInterval(checkAuth, 1000)
+    window.addEventListener("storage", checkAuth)
+    window.addEventListener("focus", checkAuth)
+
+    return () => {
+      clearInterval(intervalId)
+      window.removeEventListener("storage", checkAuth)
+      window.removeEventListener("focus", checkAuth)
+    }
+  }, [navigate])
+
   const handleCancelHold = async (hold) => {
     try {
       const userStr = localStorage.getItem("user")
@@ -585,12 +594,6 @@ export default function UserDashboard() {
     }
   }
 
-  const handleSignOut = () => {
-    localStorage.setItem("isLoggedIn", "false")
-    localStorage.removeItem("user")
-    navigate("/")
-  }
-
   const tabs = [
     { id: "overview", label: "Overview", icon: Home },
     { id: "borrowed", label: "Borrowed", icon: BookOpen },
@@ -601,67 +604,7 @@ export default function UserDashboard() {
 
   return (
     <div className="min-h-screen bg-background font-sans">
-      {/* Top Nav */}
-      <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/80 px-6 backdrop-blur">
-        <div className="flex items-center gap-3">
-          <Link
-            to="/"
-            className="flex items-center gap-2 transition-opacity hover:opacity-90"
-            aria-label="Back to home"
-          >
-            <div className="inline-flex h-8 min-w-[2.5rem] items-center justify-center rounded-md bg-primary px-2 text-[12px] font-bold whitespace-nowrap text-primary-foreground ring-1 ring-border">
-              LIBRARY LOGO HERE
-            </div>
-          </Link>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() =>
-              setTheme(
-                theme === "dark" ||
-                  (theme === "system" &&
-                    window.matchMedia("(prefers-color-scheme: dark)").matches)
-                  ? "light"
-                  : "dark"
-              )
-            }
-          >
-            {theme === "dark" ? (
-              <Sun className="h-4 w-4" />
-            ) : (
-              <Moon className="h-4 w-4" />
-            )}
-          </Button>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="ml-1 flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-violet-600 shadow-md transition-opacity outline-none hover:opacity-90">
-                <Avatar className="h-9 w-9 bg-transparent">
-                  <AvatarFallback className="bg-transparent text-sm font-bold text-white">
-                    {userData.avatarInitials}
-                  </AvatarFallback>
-                </Avatar>
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem asChild>
-                <Link to="/user-dashboard" className="w-full cursor-pointer">
-                  Dashboard
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={handleSignOut}
-                className="w-full cursor-pointer"
-              >
-                Sign out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </header>
+      <Navbar />
 
       <div className="mx-auto max-w-6xl px-4 py-8 md:px-6">
         {/* Profile Header */}

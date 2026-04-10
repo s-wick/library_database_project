@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
-import { ArrowLeft, Calendar, Check, ChevronsUpDown, X } from "lucide-react"
+import {
+  ArrowLeft,
+  Calendar as CalendarIcon,
+  Check,
+  ChevronsUpDown,
+  X,
+} from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,6 +17,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { Calendar } from "@/components/ui/calendar"
 import { API_BASE_URL } from "@/lib/api-config"
 
 const CHART_COLORS = ["#2563eb", "#16a34a", "#f59e0b", "#dc2626", "#7c3aed"]
@@ -235,6 +242,20 @@ export default function ReportsPage() {
     return date.toLocaleDateString()
   }
 
+  function parseDateValue(value) {
+    if (!value) return undefined
+    const date = new Date(`${value}T00:00:00`)
+    return Number.isNaN(date.getTime()) ? undefined : date
+  }
+
+  function toDateValue(date) {
+    if (!date) return ""
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, "0")
+    const day = String(date.getDate()).padStart(2, "0")
+    return `${year}-${month}-${day}`
+  }
+
   const supportsGenreForItemType =
     filters.itemType === "" || filters.itemType === "BOOK"
   const filteredGenres = genres.filter((genre) =>
@@ -302,45 +323,64 @@ export default function ReportsPage() {
               </Field>
               <Field>
                 <FieldLabel htmlFor="startDate">From date</FieldLabel>
-                <div className="relative">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className={`h-9 w-full justify-start text-left font-normal ${!filters.startDate ? "text-muted-foreground" : ""}`}
-                  >
-                    <Calendar className="mr-2 h-4 w-4" />
-                    {formatPickerDate(filters.startDate)}
-                  </Button>
-                  <input
-                    id="startDate"
-                    name="startDate"
-                    type="date"
-                    value={filters.startDate}
-                    onChange={onChange}
-                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                  />
-                </div>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className={`h-9 w-full justify-start text-left font-normal ${!filters.startDate ? "text-muted-foreground" : ""}`}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {formatPickerDate(filters.startDate)}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={parseDateValue(filters.startDate)}
+                      onSelect={(date) =>
+                        setFilters((prev) => ({
+                          ...prev,
+                          startDate: toDateValue(date),
+                        }))
+                      }
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               </Field>
               <Field>
                 <FieldLabel htmlFor="endDate">To date</FieldLabel>
-                <div className="relative">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className={`h-9 w-full justify-start text-left font-normal ${!filters.endDate ? "text-muted-foreground" : ""}`}
-                  >
-                    <Calendar className="mr-2 h-4 w-4" />
-                    {formatPickerDate(filters.endDate)}
-                  </Button>
-                  <input
-                    id="endDate"
-                    name="endDate"
-                    type="date"
-                    value={filters.endDate}
-                    onChange={onChange}
-                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                  />
-                </div>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className={`h-9 w-full justify-start text-left font-normal ${!filters.endDate ? "text-muted-foreground" : ""}`}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {formatPickerDate(filters.endDate)}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={parseDateValue(filters.endDate)}
+                      onSelect={(date) =>
+                        setFilters((prev) => ({
+                          ...prev,
+                          endDate: toDateValue(date),
+                        }))
+                      }
+                      disabled={(date) => {
+                        const minDate = parseDateValue(filters.startDate)
+                        if (!minDate) return false
+                        return date < minDate
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               </Field>
               <Field>
                 <FieldLabel htmlFor="userType">User type</FieldLabel>

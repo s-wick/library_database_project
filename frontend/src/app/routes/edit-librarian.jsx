@@ -1,10 +1,16 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
-import { ArrowLeft, Calendar } from "lucide-react"
+import { ArrowLeft, Calendar as CalendarIcon } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Field, FieldError, FieldLabel } from "@/components/ui/field"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { Calendar } from "@/components/ui/calendar"
 import { API_BASE_URL } from "@/lib/api-config"
 
 function formatUsPhone(value = "") {
@@ -24,6 +30,20 @@ function formatPickerDate(value) {
   const date = new Date(`${value}T00:00:00`)
   if (Number.isNaN(date.getTime())) return value
   return date.toLocaleDateString()
+}
+
+function parseDateValue(value) {
+  if (!value) return undefined
+  const date = new Date(`${value}T00:00:00`)
+  return Number.isNaN(date.getTime()) ? undefined : date
+}
+
+function toDateValue(date) {
+  if (!date) return ""
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
 }
 
 function getRetiredDateValue(value) {
@@ -405,28 +425,40 @@ export default function EditLibrarianPage() {
                       />
                       Set retire date
                     </label>
-                    <div className="relative">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className={`h-9 w-full justify-start text-left font-normal ${!form.isRetired ? "text-muted-foreground" : ""}`}
-                        disabled={!hasRetirementDate}
-                      >
-                        <Calendar className="mr-2 h-4 w-4" />
-                        {formatPickerDate(form.isRetired)}
-                      </Button>
-                      <input
-                        id="isRetired"
-                        name="isRetired"
-                        type="date"
-                        min={todayDate}
-                        value={form.isRetired}
-                        onChange={onChange}
-                        onBlur={onBlur}
-                        disabled={!hasRetirementDate}
-                        className="absolute inset-0 h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
-                      />
-                    </div>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          id="isRetired"
+                          type="button"
+                          variant="outline"
+                          className={`h-9 w-full justify-start text-left font-normal ${!form.isRetired ? "text-muted-foreground" : ""}`}
+                          disabled={!hasRetirementDate}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {formatPickerDate(form.isRetired)}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={parseDateValue(form.isRetired)}
+                          onSelect={(date) => {
+                            setFieldErrors((prev) => ({
+                              ...prev,
+                              isRetired: "",
+                            }))
+                            setForm((prev) => ({
+                              ...prev,
+                              isRetired: toDateValue(date),
+                            }))
+                          }}
+                          disabled={(date) =>
+                            date < new Date(`${todayDate}T00:00:00`)
+                          }
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
                     <p className="mt-2 text-sm text-muted-foreground">
                       {form.isRetired
                         ? hasRetirementReached(form.isRetired)

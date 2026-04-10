@@ -294,6 +294,18 @@ async function getActiveBorrowCount(userId) {
   return Number(rows[0]?.cnt || 0)
 }
 
+async function hasOutstandingFines(userId) {
+  const rows = await query(
+    `SELECT COUNT(*) AS cnt
+     FROM fined_for
+     WHERE user_id = ?
+       AND COALESCE(amount_paid, 0) < amount`,
+    [userId]
+  )
+
+  return Number(rows[0]?.cnt || 0) > 0
+}
+
 async function getActiveBorrowCatalog(searchTerm = "") {
   const normalizedSearch = String(searchTerm || "")
     .trim()
@@ -353,6 +365,7 @@ module.exports = {
   getActiveBorrowCatalog,
   getUserAccountById,
   getActiveBorrowCount,
+  hasOutstandingFines,
   OutOfStockError,
   ItemNotFoundError,
   ActiveBorrowNotFoundError,

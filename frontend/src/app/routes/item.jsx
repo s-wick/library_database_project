@@ -20,6 +20,8 @@ export default function ItemPage() {
   const [loading, setLoading] = useState(true)
   const [availability, setAvailability] = useState("Available")
   const [activeHoldsCount, setActiveHoldsCount] = useState(0)
+  const [actionError, setActionError] = useState("")
+  const [isSubmittingAction, setIsSubmittingAction] = useState(false)
 
   const isFaculty = false // Change according to user type logic if needed
   const borrowDuration = isFaculty ? 14 : 7 // days
@@ -53,6 +55,8 @@ export default function ItemPage() {
   const getTag = () => book?.genre || book?.category || "Misc"
 
   const handleAction = async () => {
+    setActionError("")
+
     const isLoggedIn = localStorage.getItem("isLoggedIn") === "true"
     if (!isLoggedIn) {
       navigate("/auth")
@@ -60,6 +64,8 @@ export default function ItemPage() {
     }
 
     try {
+      setIsSubmittingAction(true)
+
       const userStr = localStorage.getItem("user")
       const user = userStr ? JSON.parse(userStr) : null
       if (!user?.id) {
@@ -68,7 +74,7 @@ export default function ItemPage() {
       }
 
       if (availability === "Available") {
-        await fetch(`${apiBaseUrl}/api/borrow`, {
+        const res = await fetch(`${apiBaseUrl}/api/borrow`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -76,9 +82,22 @@ export default function ItemPage() {
             userId: user.id,
           }),
         })
+
+        if (!res.ok) {
+          let payload = {}
+          try {
+            payload = await res.json()
+          } catch {
+            payload = {}
+          }
+
+          setActionError(payload.message || "Unable to borrow item.")
+          return
+        }
+
         alert("Item successfully borrowed!")
       } else {
-        await fetch(`${apiBaseUrl}/api/hold`, {
+        const res = await fetch(`${apiBaseUrl}/api/hold`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -86,12 +105,27 @@ export default function ItemPage() {
             userId: user.id,
           }),
         })
+
+        if (!res.ok) {
+          let payload = {}
+          try {
+            payload = await res.json()
+          } catch {
+            payload = {}
+          }
+
+          setActionError(payload.message || "Unable to place hold.")
+          return
+        }
+
         alert("Hold placed successfully!")
       }
       navigate("/user-dashboard")
     } catch (err) {
       console.error("Action failed", err)
-      alert("An error occurred.")
+      setActionError("An error occurred.")
+    } finally {
+      setIsSubmittingAction(false)
     }
   }
 
@@ -257,13 +291,25 @@ export default function ItemPage() {
                     Current waitlist: {activeHoldsCount} people
                   </p>
                 )}
+                {actionError ? (
+                  <p className="text-sm font-medium text-red-600 dark:text-red-400">
+                    {actionError}
+                  </p>
+                ) : null}
               </div>
               <Button
                 size="lg"
                 className="w-full sm:w-auto"
                 onClick={handleAction}
+                disabled={isSubmittingAction}
               >
-                {availability === "Available" ? "Borrow Item" : "Place Hold"}
+                {isSubmittingAction
+                  ? availability === "Available"
+                    ? "Borrowing..."
+                    : "Placing hold..."
+                  : availability === "Available"
+                    ? "Borrow Item"
+                    : "Place Hold"}
               </Button>
             </CardContent>
           </Card>

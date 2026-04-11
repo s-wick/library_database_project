@@ -189,7 +189,7 @@ export default function SearchPage() {
   const filteredItems = (allLibraryItems || []).filter((item) => {
     if (minStock) {
       const min = Number(minStock)
-      if (Number.isFinite(min) && Number(item.in_stock || 0) < min) return false
+      if (Number.isFinite(min) && Number(item.stock || 0) < min) return false
     }
 
     if (selectedType === "Book") {

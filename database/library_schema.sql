@@ -157,7 +157,7 @@ CREATE TABLE `genre` (
   PRIMARY KEY (`genre_id`),
   KEY `created_by` (`created_by`),
   CONSTRAINT `genre_ibfk_1` FOREIGN KEY (`created_by`) REFERENCES `staff_account` (`staff_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -189,9 +189,9 @@ CREATE TABLE `item` (
   `item_id` int unsigned NOT NULL AUTO_INCREMENT,
   `item_type_code` tinyint unsigned NOT NULL,
   `title` varchar(100) NOT NULL,
-  `thumbnail_image` blob,
+  `thumbnail_image` longblob,
   `monetary_value` decimal(8,2) NOT NULL,
-  `items_in_stock` tinyint unsigned NOT NULL DEFAULT '0',
+  `inventory` tinyint unsigned NOT NULL DEFAULT '0',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `created_by` int unsigned NOT NULL,
   PRIMARY KEY (`item_id`),
@@ -199,7 +199,7 @@ CREATE TABLE `item` (
   KEY `fk_item_created_by` (`created_by`),
   CONSTRAINT `fk_item_created_by` FOREIGN KEY (`created_by`) REFERENCES `staff_account` (`staff_id`),
   CONSTRAINT `fk_item_type` FOREIGN KEY (`item_type_code`) REFERENCES `item_type` (`item_code`)
-) ENGINE=InnoDB AUTO_INCREMENT=42 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=43 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -263,6 +263,7 @@ CREATE TABLE `staff_account` (
   `phone_number` char(15) NOT NULL,
   `is_admin` tinyint(1) NOT NULL DEFAULT '0',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `is_retired` datetime DEFAULT NULL,
   PRIMARY KEY (`staff_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -312,4 +313,4 @@ CREATE TABLE `video` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-03-26  5:47:13
+-- Dump completed on 2026-04-11 14:17:40

@@ -2,9 +2,7 @@ const { sendJson } = require("./utils")
 const { handleHealth } = require("./services/health.service")
 const { handleSignup, handleSignin } = require("./services/auth.service")
 const { handleGetDashboard } = require("./services/dashboard.service")
-const {
-  handleGetNotifications,
-} = require("./services/notifications.service")
+const { handleGetNotifications } = require("./services/notifications.service")
 const { handleGetReports } = require("./services/reports.service")
 const {
   handleGetItemsAll,

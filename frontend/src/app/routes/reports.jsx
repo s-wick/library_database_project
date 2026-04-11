@@ -21,6 +21,15 @@ import { Calendar } from "@/components/ui/calendar"
 import { API_BASE_URL } from "@/lib/api-config"
 
 const CHART_COLORS = ["#2563eb", "#16a34a", "#f59e0b", "#dc2626", "#7c3aed"]
+const INITIAL_FILTERS = {
+  reportType: "itemsCheckedOut",
+  startDate: "",
+  endDate: "",
+  userType: "",
+  itemType: "",
+  genre: [],
+  overdue: "all",
+}
 
 function formatItemTypeForDisplay(value) {
   if (!value) return "-"
@@ -72,16 +81,16 @@ function buildPieBackground(data) {
   return `conic-gradient(${segments.join(", ")})`
 }
 
-function PieChartCard({ title, data }) {
+function PieChartCard({ title, data, className = "" }) {
   const total = data.reduce((sum, item) => sum + Number(item.value || 0), 0)
   const background = buildPieBackground(data)
 
   return (
-    <div className="rounded-md border p-4">
+    <div className={`flex flex-col rounded-md border p-4 ${className}`}>
       <p className="mb-3 text-sm font-medium">{title}</p>
-      <div className="flex flex-col items-center gap-4 md:flex-row md:items-center md:justify-center">
+      <div className="flex flex-1 flex-col items-center justify-center gap-4 md:flex-row md:items-center md:justify-center">
         <div
-          className="h-36 w-36 rounded-full border"
+          className="h-36 w-36 shrink-0 rounded-full border aspect-square"
           style={{ background }}
           aria-label={`${title} pie chart`}
         />
@@ -110,6 +119,51 @@ function PieChartCard({ title, data }) {
   )
 }
 
+function BarChartCard({ data, chartHeading = "Financial Summary" }) {
+  const max = data.length
+    ? Math.max(...data.map((item) => Number(item.value || 0)))
+    : 0
+  const barColors = ["#d97706", "#0284c7", "#059669"]
+
+  return (
+    <div className="rounded-md border p-4">
+      {data.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No data.</p>
+      ) : (
+        <div className="rounded-md border bg-background p-4">
+          <div className="mb-4 text-center">
+            <p className="text-xl font-semibold">{chartHeading}</p>
+          </div>
+          <div className="flex h-72 items-end justify-center gap-6">
+          {data.map((item, index) => {
+            const value = Number(item.value || 0)
+            const height = max > 0 ? (value / max) * 100 : 0
+            return (
+              <div
+                key={item.label}
+                className="flex w-32 flex-col items-center justify-end gap-2"
+              >
+                <span className="text-sm font-medium">${value.toFixed(2)}</span>
+                <div className="flex h-56 w-full items-end">
+                  <div
+                    className="w-full rounded-t-md"
+                    style={{
+                      height: `${height}%`,
+                      backgroundColor: barColors[index % barColors.length],
+                    }}
+                  />
+                </div>
+                <span className="text-sm">{item.label}</span>
+              </div>
+            )
+          })}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function ReportsPage() {
   const [itemTypes, setItemTypes] = useState([
     { itemCode: 1, itemType: "BOOK" },
@@ -118,15 +172,7 @@ export default function ReportsPage() {
     { itemCode: 4, itemType: "RENTAL_EQUIPMENT" },
   ])
   const [genres, setGenres] = useState([])
-  const [filters, setFilters] = useState({
-    reportType: "itemsCheckedOut",
-    startDate: "",
-    endDate: "",
-    userType: "",
-    itemType: "",
-    genre: [],
-    overdue: "all",
-  })
+  const [filters, setFilters] = useState({ ...INITIAL_FILTERS })
   const [rows, setRows] = useState([])
   const [summary, setSummary] = useState(null)
   const [error, setError] = useState("")
@@ -228,6 +274,17 @@ export default function ReportsPage() {
     await fetchReport(nextPage)
   }
 
+  function resetFilters() {
+    setFilters({ ...INITIAL_FILTERS })
+    setRows([])
+    setSummary(null)
+    setError("")
+    setHasGenerated(false)
+    setPage(1)
+    setGenreQuery("")
+    setIsGenreOpen(false)
+  }
+
   function formatDate(value) {
     if (!value) return "-"
     const date = new Date(value)
@@ -284,6 +341,49 @@ export default function ReportsPage() {
         ).map(([label, value]) => ({
           label:
             label === "UNKNOWN" ? "Unknown" : formatItemTypeForDisplay(label),
+          value: Number(value || 0),
+        }))
+      : []
+  const userTypePieData =
+    filters.reportType === "itemsCheckedOut"
+      ? Object.entries(
+          rows.reduce((acc, row) => {
+            const key = formatUserTypeForDisplay(row.userType)
+            acc[key] = (acc[key] || 0) + 1
+            return acc
+          }, {})
+        ).map(([label, value]) => ({
+          label,
+          value: Number(value || 0),
+        }))
+      : []
+  const revenueBarData =
+    filters.reportType === "revenue"
+      ? [
+          {
+            label: "Fines owed",
+            value: Number(summary?.totalFineOwed || 0),
+          },
+          {
+            label: "Item value",
+            value: Number(summary?.totalItemValue || 0),
+          },
+          {
+            label: "Balance",
+            value: Number(summary?.totalRevenue || 0),
+          },
+        ]
+      : []
+  const revenueUserTypeBarData =
+    filters.reportType === "revenue"
+      ? Object.entries(
+          rows.reduce((acc, row) => {
+            const key = formatUserTypeForDisplay(row.userType)
+            acc[key] = (acc[key] || 0) + Number(row.revenueAmount || 0)
+            return acc
+          }, {})
+        ).map(([label, value]) => ({
+          label,
           value: Number(value || 0),
         }))
       : []
@@ -503,9 +603,22 @@ export default function ReportsPage() {
                   <option value="notOverdue">Not overdue</option>
                 </select>
               </Field>
-              <div className="flex items-end">
-                <Button type="submit" disabled={isLoading} className="w-full">
+              <div className="flex items-end justify-end gap-2">
+                <Button
+                  type="submit"
+                  disabled={isLoading}
+                  className="min-w-[160px] flex-1"
+                >
                   {isLoading ? "Generating..." : "Generate report"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={resetFilters}
+                  className="px-3"
+                >
+                  Reset filters
                 </Button>
               </div>
             </form>
@@ -613,10 +726,29 @@ export default function ReportsPage() {
                 </div>
               )}
               {filters.reportType === "itemsCheckedOut" && (
-                <PieChartCard
-                  title="Checked out by item type"
-                  data={itemTypePieData}
-                />
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <PieChartCard
+                    title="Checked out by item type"
+                    data={itemTypePieData}
+                  />
+                  <PieChartCard
+                    title="Checked out by user type"
+                    data={userTypePieData}
+                  />
+                </div>
+              )}
+              {filters.reportType === "revenue" && (
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <BarChartCard
+                    data={revenueBarData}
+                    chartHeading="Overall financial summary"
+                  />
+
+                  <BarChartCard
+                    data={revenueUserTypeBarData}
+                    chartHeading="Financial summary by user"
+                  />
+                </div>
               )}
 
               <div className="overflow-x-auto rounded-md border">
@@ -638,11 +770,12 @@ export default function ReportsPage() {
                         <th className="px-3 py-2">Name</th>
                         <th className="px-3 py-2">Email</th>
                         <th className="px-3 py-2">User type</th>
+                        <th className="px-3 py-2">Item</th>
                         <th className="px-3 py-2">Item type</th>
                         <th className="px-3 py-2">Genre</th>
+                        <th className="px-3 py-2">Checkout</th>
+                        <th className="px-3 py-2">Due</th>
                         <th className="px-3 py-2">Overdue</th>
-                        <th className="px-3 py-2">Checked out items</th>
-                        <th className="px-3 py-2">Total borrows</th>
                         <th className="px-3 py-2">Borrow days</th>
                       </tr>
                     ) : (
@@ -671,7 +804,7 @@ export default function ReportsPage() {
                             filters.reportType === "itemsCheckedOut"
                               ? 8
                               : filters.reportType === "userDemographics"
-                                ? 9
+                                ? 10
                                 : 12
                           }
                         >
@@ -706,7 +839,7 @@ export default function ReportsPage() {
                     ) : filters.reportType === "userDemographics" ? (
                       rows.map((row) => (
                         <tr
-                          key={row.userId || row.userEmail}
+                          key={row.userBorrowId || row.userId || row.userEmail}
                           className="border-t"
                         >
                           <td className="px-3 py-2">
@@ -717,19 +850,20 @@ export default function ReportsPage() {
                             {formatUserTypeForDisplay(row.userType)}
                           </td>
                           <td className="px-3 py-2">
-                            {formatItemTypesSummary(row.itemTypesSummary)}
+                            {row.itemName || row.itemId || "-"}
                           </td>
                           <td className="px-3 py-2">
-                            {row.genresSummary?.trim() || "-"}
+                            {formatItemTypeForDisplay(row.itemType)}
+                          </td>
+                          <td className="px-3 py-2">{row.genres?.trim() || "-"}</td>
+                          <td className="px-3 py-2">
+                            {formatDate(row.checkoutDate)}
                           </td>
                           <td className="px-3 py-2">
-                            {Number(row.hasOverdueBorrow) === 1 ? "Yes" : "No"}
+                            {formatDate(row.dueDate)}
                           </td>
                           <td className="px-3 py-2">
-                            {Number(row.checkedOutCount || 0)}
-                          </td>
-                          <td className="px-3 py-2">
-                            {Number(row.totalBorrowCount || 0)}
+                            {Number(row.isOverdue) === 1 ? "Yes" : "No"}
                           </td>
                           <td className="px-3 py-2">
                             {row.borrowDays === null

@@ -279,7 +279,7 @@ export default function EditLibrarianPage() {
 
   return (
     <div className="min-h-screen bg-background p-6">
-      <div className="mx-auto max-w-2xl space-y-6">
+      <div className="mx-auto max-w-6xl space-y-6">
         <Button asChild variant="outline">
           <Link to="/management-dashboard">
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -292,199 +292,202 @@ export default function EditLibrarianPage() {
             <CardTitle>Edit librarian</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <Field>
-                <FieldLabel htmlFor="selectedLibrarian">Librarian</FieldLabel>
-                <select
-                  id="selectedLibrarian"
-                  value={selectedId}
-                  onChange={(event) => setSelectedId(event.target.value)}
-                  className="h-9 w-full rounded-md border border-input bg-transparent px-2.5 py-1 text-sm"
-                  disabled={isLoading || librarians.length === 0}
-                >
-                  {librarians.length === 0 ? (
-                    <option value="">
-                      {isLoading
-                        ? "Loading librarians..."
-                        : "No librarians found"}
-                    </option>
-                  ) : (
-                    librarians.map((librarian) => (
-                      <option
-                        key={librarian.staff_id}
-                        value={String(librarian.staff_id)}
-                      >
-                        {`${librarian.first_name || ""} ${librarian.last_name || ""}`.trim()}
-                        {librarian.is_retired
-                          ? hasRetirementReached(librarian.is_retired)
-                            ? " - Retired"
-                            : " - Retirement scheduled"
-                          : ""}
-                      </option>
-                    ))
-                  )}
-                </select>
-              </Field>
-
-              {selectedLibrarian && (
-                <form className="space-y-4" onSubmit={onSubmit}>
-                  <Field data-invalid={!!fieldErrors.firstName}>
-                    <FieldLabel htmlFor="firstName">First name</FieldLabel>
-                    <Input
-                      id="firstName"
-                      name="firstName"
-                      type="text"
-                      value={form.firstName}
-                      onChange={onChange}
-                      onBlur={onBlur}
-                      aria-invalid={!!fieldErrors.firstName}
-                      required
-                    />
-                    <FieldError>{fieldErrors.firstName}</FieldError>
-                  </Field>
-                  <Field data-invalid={!!fieldErrors.middleName}>
-                    <FieldLabel htmlFor="middleName">
-                      Middle name (optional)
-                    </FieldLabel>
-                    <Input
-                      id="middleName"
-                      name="middleName"
-                      type="text"
-                      value={form.middleName}
-                      onChange={onChange}
-                      onBlur={onBlur}
-                      aria-invalid={!!fieldErrors.middleName}
-                    />
-                    <FieldError>{fieldErrors.middleName}</FieldError>
-                  </Field>
-                  <Field data-invalid={!!fieldErrors.lastName}>
-                    <FieldLabel htmlFor="lastName">Last name</FieldLabel>
-                    <Input
-                      id="lastName"
-                      name="lastName"
-                      type="text"
-                      value={form.lastName}
-                      onChange={onChange}
-                      onBlur={onBlur}
-                      aria-invalid={!!fieldErrors.lastName}
-                      required
-                    />
-                    <FieldError>{fieldErrors.lastName}</FieldError>
-                  </Field>
-                  <Field data-invalid={!!fieldErrors.email}>
-                    <FieldLabel htmlFor="email">Email</FieldLabel>
-                    <Input
-                      id="email"
-                      name="email"
-                      type="email"
-                      value={form.email}
-                      onChange={onChange}
-                      onBlur={onBlur}
-                      aria-invalid={!!fieldErrors.email}
-                      required
-                    />
-                    <FieldError>{fieldErrors.email}</FieldError>
-                  </Field>
-                  <Field>
-                    <FieldLabel htmlFor="password">
-                      Password (leave blank to keep current)
-                    </FieldLabel>
-                    <Input
-                      id="password"
-                      name="password"
-                      type="password"
-                      value={form.password}
-                      onChange={onChange}
-                    />
-                  </Field>
-                  <Field data-invalid={!!fieldErrors.phoneNumber}>
-                    <FieldLabel htmlFor="phoneNumber">Phone number</FieldLabel>
-                    <Input
-                      id="phoneNumber"
-                      name="phoneNumber"
-                      type="text"
-                      value={form.phoneNumber}
-                      onChange={onChange}
-                      onBlur={onBlur}
-                      maxLength={17}
-                      placeholder="+1 (555) 123-4567"
-                      aria-invalid={!!fieldErrors.phoneNumber}
-                      required
-                    />
-                    <FieldError>{fieldErrors.phoneNumber}</FieldError>
-                  </Field>
-                  <Field>
-                    <FieldLabel htmlFor="isRetired">Set retire date</FieldLabel>
-                    <label className="mb-2 flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        name="hasRetirementDate"
-                        checked={hasRetirementDate}
-                        value={hasRetirementDate ? "false" : "true"}
+            <div className="grid gap-4 md:grid-cols-[1.4fr_1fr]">
+              <div className="rounded-md border p-4">
+                {!selectedLibrarian ? (
+                  <p className="text-sm text-muted-foreground">
+                    {isLoading ? "Loading librarians..." : "Select a librarian to edit."}
+                  </p>
+                ) : (
+                  <form className="space-y-4" onSubmit={onSubmit}>
+                    <Field data-invalid={!!fieldErrors.firstName}>
+                      <FieldLabel htmlFor="firstName">First name</FieldLabel>
+                      <Input
+                        id="firstName"
+                        name="firstName"
+                        type="text"
+                        value={form.firstName}
+                        onChange={onChange}
+                        onBlur={onBlur}
+                        aria-invalid={!!fieldErrors.firstName}
+                        required
+                      />
+                      <FieldError>{fieldErrors.firstName}</FieldError>
+                    </Field>
+                    <Field data-invalid={!!fieldErrors.middleName}>
+                      <FieldLabel htmlFor="middleName">
+                        Middle name (optional)
+                      </FieldLabel>
+                      <Input
+                        id="middleName"
+                        name="middleName"
+                        type="text"
+                        value={form.middleName}
+                        onChange={onChange}
+                        onBlur={onBlur}
+                        aria-invalid={!!fieldErrors.middleName}
+                      />
+                      <FieldError>{fieldErrors.middleName}</FieldError>
+                    </Field>
+                    <Field data-invalid={!!fieldErrors.lastName}>
+                      <FieldLabel htmlFor="lastName">Last name</FieldLabel>
+                      <Input
+                        id="lastName"
+                        name="lastName"
+                        type="text"
+                        value={form.lastName}
+                        onChange={onChange}
+                        onBlur={onBlur}
+                        aria-invalid={!!fieldErrors.lastName}
+                        required
+                      />
+                      <FieldError>{fieldErrors.lastName}</FieldError>
+                    </Field>
+                    <Field data-invalid={!!fieldErrors.email}>
+                      <FieldLabel htmlFor="email">Email</FieldLabel>
+                      <Input
+                        id="email"
+                        name="email"
+                        type="email"
+                        value={form.email}
+                        onChange={onChange}
+                        onBlur={onBlur}
+                        aria-invalid={!!fieldErrors.email}
+                        required
+                      />
+                      <FieldError>{fieldErrors.email}</FieldError>
+                    </Field>
+                    <Field>
+                      <FieldLabel htmlFor="password">
+                        Password (leave blank to keep current)
+                      </FieldLabel>
+                      <Input
+                        id="password"
+                        name="password"
+                        type="password"
+                        value={form.password}
                         onChange={onChange}
                       />
-                      Set retire date
-                    </label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          id="isRetired"
-                          type="button"
-                          variant="outline"
-                          className={`h-9 w-full justify-start text-left font-normal ${!form.isRetired ? "text-muted-foreground" : ""}`}
-                          disabled={!hasRetirementDate}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {formatPickerDate(form.isRetired)}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={parseDateValue(form.isRetired)}
-                          onSelect={(date) => {
-                            setFieldErrors((prev) => ({
-                              ...prev,
-                              isRetired: "",
-                            }))
-                            setForm((prev) => ({
-                              ...prev,
-                              isRetired: toDateValue(date),
-                            }))
-                          }}
-                          disabled={(date) =>
-                            date < new Date(`${todayDate}T00:00:00`)
-                          }
-                          initialFocus
+                    </Field>
+                    <Field data-invalid={!!fieldErrors.phoneNumber}>
+                      <FieldLabel htmlFor="phoneNumber">Phone number</FieldLabel>
+                      <Input
+                        id="phoneNumber"
+                        name="phoneNumber"
+                        type="text"
+                        value={form.phoneNumber}
+                        onChange={onChange}
+                        onBlur={onBlur}
+                        maxLength={17}
+                        placeholder="+1 (555) 123-4567"
+                        aria-invalid={!!fieldErrors.phoneNumber}
+                        required
+                      />
+                      <FieldError>{fieldErrors.phoneNumber}</FieldError>
+                    </Field>
+                    <Field>
+                      <FieldLabel htmlFor="isRetired">Set retire date</FieldLabel>
+                      <label className="mb-2 flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          name="hasRetirementDate"
+                          checked={hasRetirementDate}
+                          value={hasRetirementDate ? "false" : "true"}
+                          onChange={onChange}
                         />
-                      </PopoverContent>
-                    </Popover>
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      {form.isRetired
-                        ? hasRetirementReached(form.isRetired)
-                          ? "Retired"
-                          : "Retirement scheduled"
-                        : "Active"}
-                    </p>
-                    <FieldError>{fieldErrors.isRetired}</FieldError>
-                  </Field>
+                        Set retire date
+                      </label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            id="isRetired"
+                            type="button"
+                            variant="outline"
+                            className={`h-9 w-full justify-start text-left font-normal ${!form.isRetired ? "text-muted-foreground" : ""}`}
+                            disabled={!hasRetirementDate}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {formatPickerDate(form.isRetired)}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={parseDateValue(form.isRetired)}
+                            onSelect={(date) => {
+                              setFieldErrors((prev) => ({
+                                ...prev,
+                                isRetired: "",
+                              }))
+                              setForm((prev) => ({
+                                ...prev,
+                                isRetired: toDateValue(date),
+                              }))
+                            }}
+                            disabled={(date) =>
+                              date < new Date(`${todayDate}T00:00:00`)
+                            }
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        {form.isRetired
+                          ? hasRetirementReached(form.isRetired)
+                            ? "Retired"
+                            : "Retirement scheduled"
+                          : "Active"}
+                      </p>
+                      <FieldError>{fieldErrors.isRetired}</FieldError>
+                    </Field>
 
-                  {error && (
-                    <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                      {error}
-                    </p>
-                  )}
-                  {success && (
-                    <p className="rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-primary">
-                      {success}
-                    </p>
-                  )}
+                    {error && (
+                      <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                        {error}
+                      </p>
+                    )}
+                    {success && (
+                      <p className="rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-primary">
+                        {success}
+                      </p>
+                    )}
 
-                  <Button type="submit" disabled={isSubmitting}>
-                    Save changes
-                  </Button>
-                </form>
-              )}
+                    <Button type="submit" disabled={isSubmitting}>
+                      Save changes
+                    </Button>
+                  </form>
+                )}
+              </div>
+
+              <div className="space-y-2 rounded-md border p-3">
+                {librarians.map((librarian) => (
+                  <button
+                    key={librarian.staff_id}
+                    type="button"
+                    onClick={() => setSelectedId(String(librarian.staff_id))}
+                    className={`w-full rounded-md border px-3 py-2 text-left transition hover:bg-muted/30 ${
+                      String(librarian.staff_id) === selectedId ? "border-primary" : ""
+                    }`}
+                  >
+                    <p className="font-medium">
+                      {`${librarian.first_name || ""} ${librarian.last_name || ""}`.trim()}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {librarian.email}
+                      {librarian.is_retired
+                        ? hasRetirementReached(librarian.is_retired)
+                          ? " • Retired"
+                          : " • Retirement scheduled"
+                        : " • Active"}
+                    </p>
+                  </button>
+                ))}
+                {!isLoading && librarians.length === 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    No librarians found.
+                  </p>
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>

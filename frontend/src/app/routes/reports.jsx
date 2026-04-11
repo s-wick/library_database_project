@@ -90,7 +90,7 @@ function PieChartCard({ title, data, className = "" }) {
       <p className="mb-3 text-sm font-medium">{title}</p>
       <div className="flex flex-1 flex-col items-center justify-center gap-4 md:flex-row md:items-center md:justify-center">
         <div
-          className="h-36 w-36 shrink-0 rounded-full border aspect-square"
+          className="aspect-square h-36 w-36 shrink-0 rounded-full border"
           style={{ background }}
           aria-label={`${title} pie chart`}
         />
@@ -135,28 +135,30 @@ function BarChartCard({ data, chartHeading = "Financial Summary" }) {
             <p className="text-xl font-semibold">{chartHeading}</p>
           </div>
           <div className="flex h-72 items-end justify-center gap-6">
-          {data.map((item, index) => {
-            const value = Number(item.value || 0)
-            const height = max > 0 ? (value / max) * 100 : 0
-            return (
-              <div
-                key={item.label}
-                className="flex w-32 flex-col items-center justify-end gap-2"
-              >
-                <span className="text-sm font-medium">${value.toFixed(2)}</span>
-                <div className="flex h-56 w-full items-end">
-                  <div
-                    className="w-full rounded-t-md"
-                    style={{
-                      height: `${height}%`,
-                      backgroundColor: barColors[index % barColors.length],
-                    }}
-                  />
+            {data.map((item, index) => {
+              const value = Number(item.value || 0)
+              const height = max > 0 ? (value / max) * 100 : 0
+              return (
+                <div
+                  key={item.label}
+                  className="flex w-32 flex-col items-center justify-end gap-2"
+                >
+                  <span className="text-sm font-medium">
+                    ${value.toFixed(2)}
+                  </span>
+                  <div className="flex h-56 w-full items-end">
+                    <div
+                      className="w-full rounded-t-md"
+                      style={{
+                        height: `${height}%`,
+                        backgroundColor: barColors[index % barColors.length],
+                      }}
+                    />
+                  </div>
+                  <span className="text-sm">{item.label}</span>
                 </div>
-                <span className="text-sm">{item.label}</span>
-              </div>
-            )
-          })}
+              )
+            })}
           </div>
         </div>
       )}
@@ -855,7 +857,9 @@ export default function ReportsPage() {
                           <td className="px-3 py-2">
                             {formatItemTypeForDisplay(row.itemType)}
                           </td>
-                          <td className="px-3 py-2">{row.genres?.trim() || "-"}</td>
+                          <td className="px-3 py-2">
+                            {row.genres?.trim() || "-"}
+                          </td>
                           <td className="px-3 py-2">
                             {formatDate(row.checkoutDate)}
                           </td>

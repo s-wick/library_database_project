@@ -296,7 +296,9 @@ export default function EditLibrarianPage() {
               <div className="rounded-md border p-4">
                 {!selectedLibrarian ? (
                   <p className="text-sm text-muted-foreground">
-                    {isLoading ? "Loading librarians..." : "Select a librarian to edit."}
+                    {isLoading
+                      ? "Loading librarians..."
+                      : "Select a librarian to edit."}
                   </p>
                 ) : (
                   <form className="space-y-4" onSubmit={onSubmit}>
@@ -370,7 +372,9 @@ export default function EditLibrarianPage() {
                       />
                     </Field>
                     <Field data-invalid={!!fieldErrors.phoneNumber}>
-                      <FieldLabel htmlFor="phoneNumber">Phone number</FieldLabel>
+                      <FieldLabel htmlFor="phoneNumber">
+                        Phone number
+                      </FieldLabel>
                       <Input
                         id="phoneNumber"
                         name="phoneNumber"
@@ -386,7 +390,9 @@ export default function EditLibrarianPage() {
                       <FieldError>{fieldErrors.phoneNumber}</FieldError>
                     </Field>
                     <Field>
-                      <FieldLabel htmlFor="isRetired">Set retire date</FieldLabel>
+                      <FieldLabel htmlFor="isRetired">
+                        Set retire date
+                      </FieldLabel>
                       <label className="mb-2 flex items-center gap-2 text-sm">
                         <input
                           type="checkbox"
@@ -466,7 +472,9 @@ export default function EditLibrarianPage() {
                     type="button"
                     onClick={() => setSelectedId(String(librarian.staff_id))}
                     className={`w-full rounded-md border px-3 py-2 text-left transition hover:bg-muted/30 ${
-                      String(librarian.staff_id) === selectedId ? "border-primary" : ""
+                      String(librarian.staff_id) === selectedId
+                        ? "border-primary"
+                        : ""
                     }`}
                   >
                     <p className="font-medium">

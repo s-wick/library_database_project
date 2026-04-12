@@ -1,18 +1,31 @@
-import React, { useState } from "react"
+import React, { useEffect, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
-import { Moon, Sun, ArrowLeft, ShoppingCart } from "lucide-react"
+import { Moon, Sun, ArrowLeft, ShoppingCart, Bell } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useTheme } from "@/components/theme-provider"
 import { useCart } from "@/app/cart-provider"
+import { API_BASE_URL } from "@/lib/api-config"
 import icon from "@/assets/icon.png"
+
+function formatShortDate(value) {
+  if (!value) return ""
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ""
+  return date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  })
+}
 
 export function Navbar({ showBack = false }) {
   const navigate = useNavigate()
@@ -24,24 +37,71 @@ export function Navbar({ showBack = false }) {
     return stored === "true"
   })
 
+  const [userProfile, setUserProfile] = useState(null)
+  const [notifications, setNotifications] = useState([])
+  const [notificationsStatus, setNotificationsStatus] = useState("idle")
+
   let avatarInitials = "U"
-  let isStaff = false
-  try {
-    const storedUser = localStorage.getItem("user")
-    if (storedUser) {
-      const parsed = JSON.parse(storedUser)
-      isStaff =
-        parsed?.accountType === "staff" || parsed?.roleGroup === "adminStaff"
-      if (parsed.firstName && parsed.lastName) {
-        avatarInitials =
-          `${parsed.firstName[0]}${parsed.lastName[0]}`.toUpperCase()
-      } else if (parsed.email) {
-        avatarInitials = parsed.email[0].toUpperCase()
+  const isStaff =
+    userProfile?.accountType === "staff" ||
+    userProfile?.roleGroup === "adminStaff"
+
+  if (userProfile?.firstName && userProfile?.lastName) {
+    avatarInitials =
+      `${userProfile.firstName[0]}${userProfile.lastName[0]}`.toUpperCase()
+  } else if (userProfile?.email) {
+    avatarInitials = userProfile.email[0].toUpperCase()
+  }
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      setUserProfile(null)
+      return
+    }
+
+    try {
+      const storedUser = localStorage.getItem("user")
+      setUserProfile(storedUser ? JSON.parse(storedUser) : null)
+    } catch (err) {
+      setUserProfile(null)
+    }
+  }, [isLoggedIn])
+
+  useEffect(() => {
+    if (!isLoggedIn || isStaff || !userProfile?.id) {
+      setNotifications([])
+      setNotificationsStatus("idle")
+      return undefined
+    }
+
+    const controller = new AbortController()
+    const loadNotifications = async () => {
+      try {
+        setNotificationsStatus("loading")
+        const response = await fetch(
+          `${API_BASE_URL}/api/notifications?userId=${userProfile.id}`,
+          { signal: controller.signal }
+        )
+        const data = await response.json().catch(() => ({}))
+
+        if (!response.ok || !data?.ok) {
+          throw new Error(data?.message || "Failed to load notifications")
+        }
+
+        setNotifications(
+          Array.isArray(data.notifications) ? data.notifications : []
+        )
+        setNotificationsStatus("ready")
+      } catch (error) {
+        if (error.name === "AbortError") return
+        setNotifications([])
+        setNotificationsStatus("error")
       }
     }
-  } catch (err) {
-    // Ignore error
-  }
+
+    loadNotifications()
+    return () => controller.abort()
+  }, [isLoggedIn, isStaff, userProfile?.id])
 
   const handleSignOut = () => {
     localStorage.setItem("isLoggedIn", "false")
@@ -92,6 +152,68 @@ export function Navbar({ showBack = false }) {
               )}
             </Link>
           </Button>
+        )}
+
+        {isLoggedIn && !isStaff && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="relative"
+                aria-label="Notifications"
+              >
+                <Bell className="h-5 w-5" />
+                {notifications.length > 0 && (
+                  <Badge
+                    variant="secondary"
+                    className="absolute -top-1 -right-1 flex h-4 min-w-[1rem] items-center justify-center rounded-full p-0 text-[10px]"
+                  >
+                    {notifications.length}
+                  </Badge>
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-80 p-0">
+              <DropdownMenuLabel className="px-3 py-2">
+                Notifications
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {notificationsStatus === "loading" && (
+                <div className="px-3 py-2 text-sm text-muted-foreground">
+                  Loading notifications...
+                </div>
+              )}
+              {notificationsStatus === "error" && (
+                <div className="px-3 py-2 text-sm text-destructive">
+                  Unable to load notifications.
+                </div>
+              )}
+              {notificationsStatus !== "loading" &&
+                notifications.length === 0 && (
+                  <div className="px-3 py-2 text-sm text-muted-foreground">
+                    You are all caught up.
+                  </div>
+                )}
+              {notifications.map((notification) => (
+                <DropdownMenuItem
+                  key={notification.notificationId}
+                  className="flex flex-col items-start gap-1 px-3 py-2"
+                  onSelect={(event) => event.preventDefault()}
+                >
+                  <div className="text-sm font-medium text-foreground">
+                    {notification.message}
+                  </div>
+                  <div className="flex w-full items-center justify-between text-xs text-muted-foreground">
+                    <span>{notification.type?.replaceAll("_", " ")}</span>
+                    {notification.notifyOn && (
+                      <span>Due {formatShortDate(notification.notifyOn)}</span>
+                    )}
+                  </div>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
 
         <Button

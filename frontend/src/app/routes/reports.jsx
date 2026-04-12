@@ -62,6 +62,30 @@ function formatUserTypeForDisplay(value) {
   )
 }
 
+function buildCheckoutBuckets(rows) {
+  const buckets = Array.from({ length: 6 }, (_, index) => ({
+    label: String(index + 1),
+    value: 0,
+  }))
+  const counts = new Map()
+
+  rows.forEach((row) => {
+    const key = String(row.userId || row.userEmail || row.userName || "")
+    if (!key) return
+    if (!counts.has(key)) counts.set(key, 0)
+    if (!row.returnDate) {
+      counts.set(key, (counts.get(key) || 0) + 1)
+    }
+  })
+
+  counts.forEach((count) => {
+    const clamped = Math.min(Math.max(count, 1), 6)
+    buckets[clamped - 1].value += 1
+  })
+
+  return buckets
+}
+
 function buildPieBackground(data) {
   const total = data.reduce((sum, item) => sum + Number(item.value || 0), 0)
   if (!total) return "conic-gradient(#e5e7eb 0deg 360deg)"
@@ -320,12 +344,10 @@ export default function ReportsPage() {
   const filteredGenres = genres.filter((genre) =>
     genre.toLowerCase().includes(genreQuery.trim().toLowerCase())
   )
-  const checkoutPieData = Array.isArray(summary?.checkoutBuckets)
-    ? summary.checkoutBuckets.map((item) => ({
-        label: item.bucket,
-        value: Number(item.count || 0),
-      }))
-    : []
+  const checkoutPieData =
+    filters.reportType === "userDemographics"
+      ? buildCheckoutBuckets(rows)
+      : []
   const durationPieData = Array.isArray(summary?.durationBuckets)
     ? summary.durationBuckets.map((item) => ({
         label: item.bucket,

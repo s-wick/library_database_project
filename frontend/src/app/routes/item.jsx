@@ -33,7 +33,12 @@ export default function ItemPage() {
         if (res.ok) {
           const data = await res.json()
           setBook(data.item)
-          setAvailability(data.availability || "Available")
+          setAvailability(
+            data.availability ||
+              (Number(data?.item?.stock || 0) > 0
+                ? "Available"
+                : "Not Available")
+          )
           setActiveHoldsCount(data.activeHoldsCount || 0)
         } else {
           setBook(null)
@@ -232,6 +237,18 @@ export default function ItemPage() {
                   <p>{book.edition || "N/A"}</p>
                 </div>
               )}
+              <div>
+                <span className="font-semibold text-muted-foreground">
+                  Stock:
+                </span>
+                <p>{book.stock}</p>
+              </div>
+              <div>
+                <span className="font-semibold text-muted-foreground">
+                  Inventory:
+                </span>
+                <p>{book.inventory}</p>
+              </div>
               <div className="sm:col-span-2">
                 <span className="font-semibold text-muted-foreground">
                   Description:

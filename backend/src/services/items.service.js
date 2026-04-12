@@ -13,6 +13,33 @@ function parseNullableNumber(value, fallback = 0) {
   return Number.isFinite(parsed) ? parsed : fallback
 }
 
+function parseInventoryForCreate(value) {
+  if (value === undefined || value === null || String(value).trim() === "") {
+    return 0
+  }
+
+  const parsed = Number(value)
+  if (!Number.isInteger(parsed) || parsed < 0 || parsed > 255) {
+    return null
+  }
+
+  return parsed
+}
+
+function parseInventoryForUpdate(value) {
+  const normalized = String(value ?? "").trim()
+  if (!normalized) {
+    return null
+  }
+
+  const parsed = Number(normalized)
+  if (!Number.isInteger(parsed) || parsed < 0 || parsed > 255) {
+    return null
+  }
+
+  return parsed
+}
+
 function parseOptionalString(value) {
   if (value === undefined) return undefined
   const normalized = String(value || "").trim()
@@ -68,6 +95,18 @@ async function getDefaultStaffId() {
   return rows[0]?.staff_id || null
 }
 
+async function getActiveBorrowCountForItem(itemId) {
+  const rows = await query(
+    `SELECT COUNT(*) AS active_borrow_count
+     FROM borrow
+     WHERE item_id = ?
+       AND return_date IS NULL`,
+    [itemId]
+  )
+
+  return Number(rows[0]?.active_borrow_count || 0)
+}
+
 function formatThumbnail(thumbnail) {
   if (thumbnail && thumbnail instanceof Buffer) {
     return `data:image/jpeg;base64,${thumbnail.toString("base64")}`
@@ -79,7 +118,7 @@ function formatListItem(item) {
   return {
     ...item,
     thumbnail_image: formatThumbnail(item.thumbnail_image),
-    availability: Number(item.in_stock) > 0 ? "Available" : "Not Available",
+    availability: Number(item.stock) > 0 ? "Available" : "Not Available",
   }
 }
 
@@ -127,7 +166,7 @@ async function handleGetItemById(_req, res, id) {
         genres,
         thumbnail_image: formatThumbnail(item.thumbnail_image),
       },
-      availability: Number(item.in_stock) > 0 ? "Available" : "Not Available",
+      availability: Number(item.stock) > 0 ? "Available" : "Not Available",
       activeHoldsCount,
     })
   } catch (error) {
@@ -206,8 +245,8 @@ async function handleCreateItem(req, res) {
     }
 
     const isBook = itemTypeCode === 1
-    const isVideo = itemTypeCode === 2
-    const isAudio = itemTypeCode === 3
+    const isAudio = itemTypeCode === 2
+    const isVideo = itemTypeCode === 3
     const isEquipment = itemTypeCode === 4
 
     const title = isBook
@@ -224,27 +263,21 @@ async function handleCreateItem(req, res) {
     }
 
     const monetaryValue = parseNullableNumber(body.monetaryValue, 0)
-    const itemsInStock = isBook
-      ? parseNullableNumber(body.booksInStock, 0)
-      : isVideo
-        ? parseNullableNumber(body.videosInStock, 0)
-        : isAudio
-          ? parseNullableNumber(body.audiosInStock, 0)
-          : parseNullableNumber(body.equipmentInStock, 0)
+    const inventory = parseInventoryForCreate(body.inventory)
+    if (inventory === null) {
+      sendJson(res, 400, {
+        ok: false,
+        message: "Inventory must be an integer between 0 and 255.",
+      })
+      return
+    }
 
     const thumbnailImage = parseNullableBlob(body.thumbnailImage)
 
     const insertItemResult = await query(
-      `INSERT INTO item (item_type_code, title, thumbnail_image, monetary_value, items_in_stock, created_by)
+      `INSERT INTO item (item_type_code, title, thumbnail_image, monetary_value, inventory, created_by)
        VALUES (?, ?, ?, ?, ?, ?)`,
-      [
-        itemTypeCode,
-        title,
-        thumbnailImage,
-        monetaryValue,
-        itemsInStock,
-        createdBy,
-      ]
+      [itemTypeCode, title, thumbnailImage, monetaryValue, inventory, createdBy]
     )
 
     const itemId = insertItemResult.insertId
@@ -397,8 +430,8 @@ async function handleUpdateItem(req, res, id) {
 
     const itemTypeCode = existingRows[0].item_type_code
     const isBook = itemTypeCode === 1
-    const isVideo = itemTypeCode === 2
-    const isAudio = itemTypeCode === 3
+    const isAudio = itemTypeCode === 2
+    const isVideo = itemTypeCode === 3
 
     const itemSet = []
     const itemParams = []
@@ -428,26 +461,28 @@ async function handleUpdateItem(req, res, id) {
       itemParams.push(parseNullableNumber(body.monetaryValue, 0))
     }
 
-    if (
-      body.itemsInStock !== undefined ||
-      body.booksInStock !== undefined ||
-      body.videosInStock !== undefined ||
-      body.audiosInStock !== undefined ||
-      body.equipmentInStock !== undefined
-    ) {
-      const stockValue =
-        body.itemsInStock !== undefined
-          ? body.itemsInStock
-          : isBook
-            ? body.booksInStock
-            : isVideo
-              ? body.videosInStock
-              : isAudio
-                ? body.audiosInStock
-                : body.equipmentInStock
+    if (body.inventory !== undefined) {
+      const parsedInventory = parseInventoryForUpdate(body.inventory)
+      if (parsedInventory === null) {
+        sendJson(res, 400, {
+          ok: false,
+          message: "Inventory must be an integer between 0 and 255.",
+        })
+        return
+      }
 
-      itemSet.push("items_in_stock = ?")
-      itemParams.push(parseNullableNumber(stockValue, 0))
+      const activeBorrowCount = await getActiveBorrowCountForItem(itemId)
+      if (parsedInventory < activeBorrowCount) {
+        sendJson(res, 400, {
+          ok: false,
+          message:
+            "Inventory cannot be lower than the current active borrow count for this item.",
+        })
+        return
+      }
+
+      itemSet.push("inventory = ?")
+      itemParams.push(parsedInventory)
     }
 
     if (body.thumbnailImage !== undefined) {

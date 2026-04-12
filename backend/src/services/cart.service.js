@@ -35,7 +35,7 @@ async function handleGetCart(_req, res, url) {
         cart_id: row.cart_id,
         thumbnail_image: formatThumbnail(item.thumbnail_image),
         tag: "Library Item",
-        availability: item.in_stock > 0 ? "Available" : "Not Available",
+        availability: item.stock > 0 ? "Available" : "Not Available",
       })
     }
 

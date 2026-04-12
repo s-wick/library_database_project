@@ -16,10 +16,19 @@ async function getStandardItemForCart(itemId) {
        i.item_type_code,
        i.title,
        i.thumbnail_image,
-       i.items_in_stock AS in_stock,
+       i.inventory,
+       GREATEST(i.inventory - COALESCE(ab.active_borrow_count, 0), 0) AS stock,
        b.author
      FROM item i
      LEFT JOIN book b ON b.item_id = i.item_id
+     LEFT JOIN (
+       SELECT
+         item_id,
+         COUNT(*) AS active_borrow_count
+       FROM borrow
+       WHERE return_date IS NULL
+       GROUP BY item_id
+     ) ab ON ab.item_id = i.item_id
      WHERE i.item_id = ?
      LIMIT 1`,
     [itemId]
@@ -43,7 +52,8 @@ async function getStandardItemForCart(itemId) {
     creator: row.item_type_code === 1 ? row.author || "" : "",
     standard_type: standardType,
     thumbnail_image: row.thumbnail_image,
-    in_stock: row.in_stock,
+    inventory: Number(row.inventory || 0),
+    stock: Number(row.stock || 0),
   }
 }
 

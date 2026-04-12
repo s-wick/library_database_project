@@ -296,6 +296,18 @@ async function getActiveBorrowCount(userId) {
   return Number(rows[0]?.cnt || 0)
 }
 
+async function hasOutstandingFines(userId) {
+  const rows = await query(
+    `SELECT COUNT(*) AS cnt
+     FROM fined_for
+     WHERE user_id = ?
+       AND COALESCE(amount_paid, 0) < amount`,
+    [userId]
+  )
+
+  return Number(rows[0]?.cnt || 0) > 0
+}
+
 function formatDateOnly(value) {
   const date = value instanceof Date ? value : new Date(value)
   if (Number.isNaN(date.getTime())) return null
@@ -418,12 +430,12 @@ async function processUserHoldsOnLogin(userId) {
 
     const borrowRows = await query(
       `SELECT checkout_date, due_date
-       FROM borrow
-       WHERE item_id = ?
-         AND user_id = ?
-         AND return_date IS NULL
-       ORDER BY checkout_date DESC
-       LIMIT 1`,
+                 FROM borrow
+                 WHERE item_id = ?
+                   AND user_id = ?
+                   AND return_date IS NULL
+                 ORDER BY checkout_date DESC
+                 LIMIT 1`,
       [hold.item_id, userId]
     )
 
@@ -433,12 +445,12 @@ async function processUserHoldsOnLogin(userId) {
 
     await query(
       `INSERT INTO user_notification (
-         user_id,
-         item_id,
-         notification_type,
-         message
-       )
-       VALUES (?, ?, ?, ?)`,
+                   user_id,
+                   item_id,
+                   notification_type,
+                   message
+                 )
+                 VALUES (?, ?, ?, ?)`,
       [
         userId,
         hold.item_id,
@@ -446,13 +458,11 @@ async function processUserHoldsOnLogin(userId) {
         `Your hold for "${hold.title}" has been checked out to your account. It is due on ${dueDateText}.`,
       ]
     )
-
     await query(
       `DELETE FROM hold_item
-       WHERE item_id = ? AND user_id = ? AND request_date = ?`,
+               WHERE item_id = ? AND user_id = ? AND request_date = ?`,
       [hold.item_id, userId, hold.request_date]
     )
-
     activeCount += 1
   }
 }
@@ -516,6 +526,7 @@ module.exports = {
   getActiveBorrowCatalog,
   getUserAccountById,
   getActiveBorrowCount,
+  hasOutstandingFines,
   processUserHoldsOnLogin,
   OutOfStockError,
   ItemNotFoundError,

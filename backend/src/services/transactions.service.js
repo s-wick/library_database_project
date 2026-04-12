@@ -8,6 +8,7 @@ const {
   getActiveBorrowCatalog,
   getUserAccountById,
   getActiveBorrowCount,
+  hasOutstandingFines,
   OutOfStockError,
   ItemNotFoundError,
   ActiveBorrowNotFoundError,
@@ -31,6 +32,15 @@ async function handleBorrow(req, res) {
     const user = await getUserAccountById(userId)
     if (!user) {
       sendJson(res, 404, { ok: false, message: "User account not found" })
+      return
+    }
+
+    const userHasOutstandingFines = await hasOutstandingFines(user.user_id)
+    if (userHasOutstandingFines) {
+      sendJson(res, 403, {
+        ok: false,
+        message: "Borrowing is blocked until all outstanding fines are paid.",
+      })
       return
     }
 
@@ -220,6 +230,15 @@ async function handleHold(req, res) {
       return
     }
 
+    const userHasOutstandingFines = await hasOutstandingFines(user.user_id)
+    if (userHasOutstandingFines) {
+      sendJson(res, 403, {
+        ok: false,
+        message: "Holds are blocked until all outstanding fines are paid.",
+      })
+      return
+    }
+
     const created = await createHold(itemId, user.user_id)
     if (!created) {
       sendJson(res, 200, { ok: true, message: "Hold already exists." })
@@ -257,6 +276,15 @@ async function handleCheckout(req, res) {
     const user = await getUserAccountById(userId)
     if (!user) {
       sendJson(res, 404, { ok: false, message: "User account not found" })
+      return
+    }
+
+    const userHasOutstandingFines = await hasOutstandingFines(user.user_id)
+    if (userHasOutstandingFines) {
+      sendJson(res, 403, {
+        ok: false,
+        message: "Checkout is blocked until all outstanding fines are paid.",
+      })
       return
     }
 
@@ -369,6 +397,7 @@ async function handleBorrowStatus(req, res, url) {
     const borrowLimit = user.is_faculty ? 6 : 3
     const borrowDays = user.is_faculty ? 14 : 7
     const activeCount = await getActiveBorrowCount(user.user_id)
+    const userHasOutstandingFines = await hasOutstandingFines(user.user_id)
     const cartRows = await getCartRowsByUserId(userId)
     const cartCount = cartRows.length
 
@@ -380,6 +409,10 @@ async function handleBorrowStatus(req, res, url) {
       activeCount,
       cartCount,
       remaining: Math.max(borrowLimit - activeCount, 0),
+      hasOutstandingFines: userHasOutstandingFines,
+      finesMessage: userHasOutstandingFines
+        ? "Checkout is blocked until all outstanding fines are paid."
+        : null,
     })
   } catch (error) {
     sendJson(res, 500, {

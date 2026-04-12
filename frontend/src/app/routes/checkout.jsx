@@ -160,6 +160,7 @@ export default function CheckoutPage() {
   const { cartItems, removeFromCart, clearCart } = useCart()
   const [isCheckingOut, setIsCheckingOut] = useState(false)
   const [showLimitModal, setShowLimitModal] = useState(false)
+  const [checkoutError, setCheckoutError] = useState("")
 
   // Borrow status from API
   const [borrowStatus, setBorrowStatus] = useState(null)
@@ -173,7 +174,16 @@ export default function CheckoutPage() {
     fetch(`${API_BASE_URL}/api/borrow-status?userId=${user.id}`)
       .then((r) => r.json())
       .then((data) => {
-        if (data.ok) setBorrowStatus(data)
+        if (!data.ok) return
+
+        setBorrowStatus(data)
+
+        if (data.hasOutstandingFines) {
+          setCheckoutError(
+            data.finesMessage ||
+              "Checkout is blocked until all outstanding fines are paid."
+          )
+        }
       })
       .catch(() => {})
   }, [cartItems])
@@ -184,14 +194,24 @@ export default function CheckoutPage() {
   const borrowDays = borrowStatus?.borrowDays ?? 7
   const isFaculty = borrowStatus?.isFaculty ?? false
   const activeCount = borrowStatus?.activeCount ?? 0
+  const hasOutstandingFines = Boolean(borrowStatus?.hasOutstandingFines)
   const remaining = Math.max(borrowLimit - activeCount, 0)
   const wouldExceedLimit = activeCount + cartItems.length > borrowLimit
 
   const handleCheckout = async () => {
     if (cartItems.length === 0) return
+    setCheckoutError("")
 
     if (wouldExceedLimit) {
       setShowLimitModal(true)
+      return
+    }
+
+    if (hasOutstandingFines) {
+      setCheckoutError(
+        borrowStatus?.finesMessage ||
+          "Checkout is blocked until all outstanding fines are paid."
+      )
       return
     }
 
@@ -200,7 +220,7 @@ export default function CheckoutPage() {
 
       const userStr = localStorage.getItem("user")
       if (!userStr) {
-        alert("You must be logged in to checkout.")
+        setCheckoutError("You must be logged in to checkout.")
         setIsCheckingOut(false)
         return
       }
@@ -222,19 +242,25 @@ export default function CheckoutPage() {
         clearCart()
         navigate("/user-dashboard")
       } else {
-        const error = await res.json()
+        let error = {}
+        try {
+          error = await res.json()
+        } catch {
+          error = {}
+        }
+
         if (
           error.activeCount !== undefined ||
           error.borrowLimit !== undefined
         ) {
           setShowLimitModal(true)
-        } else {
-          alert(error.message || "Checkout failed")
         }
+
+        setCheckoutError(error.message || "Checkout failed")
       }
     } catch (err) {
       console.error(err)
-      alert("An error occurred during checkout.")
+      setCheckoutError("An error occurred during checkout.")
     } finally {
       setIsCheckingOut(false)
     }
@@ -273,6 +299,12 @@ export default function CheckoutPage() {
             </Button>
           )}
         </div>
+
+        {checkoutError ? (
+          <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300">
+            {checkoutError}
+          </div>
+        ) : null}
 
         {/* Borrow Limit Info */}
         {borrowStatus && (
@@ -388,7 +420,11 @@ export default function CheckoutPage() {
                     className="w-full gap-2"
                     size="lg"
                     onClick={handleCheckout}
-                    disabled={isCheckingOut || cartItems.length === 0}
+                    disabled={
+                      isCheckingOut ||
+                      cartItems.length === 0 ||
+                      hasOutstandingFines
+                    }
                   >
                     <CheckCircle className="h-4 w-4" />
                     {isCheckingOut ? "Checking out..." : "Confirm Checkout"}

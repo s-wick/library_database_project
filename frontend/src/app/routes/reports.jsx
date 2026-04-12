@@ -438,6 +438,17 @@ export default function ReportsPage() {
           value: Number(value || 0),
         }))
       : []
+  const overdueUsers =
+    filters.reportType === "userDemographics"
+      ? new Set(
+          rows
+            .filter(
+              (row) => Number(row.isOverdue) === 1 && !row.returnDate
+            )
+            .map((row) => row.userId || row.userEmail || row.userName)
+            .filter(Boolean)
+        ).size
+      : 0
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -692,35 +703,47 @@ export default function ReportsPage() {
                   className={`grid gap-4 ${filters.reportType === "revenue" ? "md:grid-cols-4" : "md:grid-cols-3"}`}
                 >
                   <div
-                    className={`rounded-md border p-3 ${filters.reportType === "revenue" ? "border-indigo-200 bg-indigo-50/70 dark:border-indigo-900/50 dark:bg-indigo-950/20" : ""}`}
+                    className={`rounded-md border p-3 ${filters.reportType === "revenue" ? "border-indigo-200 bg-indigo-50/70 dark:border-indigo-900/50 dark:bg-indigo-950/20" : filters.reportType === "itemsCheckedOut" ? "border-sky-200 bg-sky-50/70 dark:border-sky-900/50 dark:bg-sky-950/20" : filters.reportType === "userDemographics" ? "border-emerald-200 bg-emerald-50/70 dark:border-emerald-900/50 dark:bg-emerald-950/20" : ""}`}
                   >
                     <p
-                      className={`text-xs ${filters.reportType === "revenue" ? "text-indigo-700 dark:text-indigo-300" : "text-muted-foreground"}`}
+                      className={`text-xs ${filters.reportType === "revenue" ? "text-indigo-700 dark:text-indigo-300" : filters.reportType === "itemsCheckedOut" ? "text-sky-700 dark:text-sky-300" : filters.reportType === "userDemographics" ? "text-emerald-700 dark:text-emerald-300" : "text-muted-foreground"}`}
                     >
                       Records shown
                     </p>
                     <p
-                      className={`text-lg font-semibold ${filters.reportType === "revenue" ? "text-indigo-900 dark:text-indigo-100" : ""}`}
+                      className={`text-lg font-semibold ${filters.reportType === "revenue" ? "text-indigo-900 dark:text-indigo-100" : filters.reportType === "itemsCheckedOut" ? "text-sky-900 dark:text-sky-100" : filters.reportType === "userDemographics" ? "text-emerald-900 dark:text-emerald-100" : ""}`}
                     >
                       {summary.totalRecords ?? 0}
                     </p>
                   </div>
                   {filters.reportType === "itemsCheckedOut" ? (
-                    <div className="rounded-md border p-3">
-                      <p className="text-xs text-muted-foreground">
+                    <div className="rounded-md border border-amber-200 bg-amber-50/70 p-3 dark:border-amber-900/50 dark:bg-amber-950/20">
+                      <p className="text-xs text-amber-700 dark:text-amber-300">
                         Overdue count
                       </p>
-                      <p className="text-lg font-semibold">
+                      <p className="text-lg font-semibold text-amber-900 dark:text-amber-100">
                         {summary.overdueCount ?? 0}
                       </p>
                     </div>
                   ) : filters.reportType === "userDemographics" ? (
-                    <div className="rounded-md border p-3">
-                      <p className="text-xs text-muted-foreground">Users</p>
-                      <p className="text-lg font-semibold">
-                        {summary.totalUsers ?? 0}
-                      </p>
-                    </div>
+                    <>
+                      <div className="rounded-md border border-lime-200 bg-lime-50/70 p-3 dark:border-lime-900/50 dark:bg-lime-950/20">
+                        <p className="text-xs text-lime-700 dark:text-lime-300">
+                          Users
+                        </p>
+                        <p className="text-lg font-semibold text-lime-900 dark:text-lime-100">
+                          {summary.totalUsers ?? 0}
+                        </p>
+                      </div>
+                      <div className="rounded-md border border-rose-200 bg-rose-50/70 p-3 dark:border-rose-900/50 dark:bg-rose-950/20">
+                        <p className="text-xs text-rose-700 dark:text-rose-300">
+                          Users with active overdue items
+                        </p>
+                        <p className="text-lg font-semibold text-rose-900 dark:text-rose-100">
+                          {overdueUsers}
+                        </p>
+                      </div>
+                    </>
                   ) : filters.reportType === "revenue" ? (
                     <>
                       <div className="rounded-md border border-amber-200 bg-amber-50/70 p-3 dark:border-amber-900/50 dark:bg-amber-950/20">

@@ -26,7 +26,7 @@ function getEditPayload(item, values) {
   const base = {
     title: values.title,
     monetaryValue: values.monetaryValue,
-    itemsInStock: values.itemsInStock,
+    inventory: values.inventory,
     genres: values.genres,
   }
 
@@ -65,7 +65,8 @@ function getInitialForm(item) {
   return {
     title: item.title || "",
     monetaryValue: item.monetary_value ?? item.monetaryValue ?? "",
-    itemsInStock: item.in_stock ?? item.items_in_stock ?? "",
+    inventory: item.inventory ?? "",
+    stock: item.stock ?? "",
     author: item.author || "",
     edition: item.edition || "",
     publication: item.publication || "",
@@ -301,7 +302,7 @@ export default function ManageItemsPage() {
                     >
                       <p className="font-medium">{item.title}</p>
                       <p className="text-xs text-muted-foreground">
-                        {item.standard_type} • Stock: {item.in_stock}
+                        {item.standard_type} • Stock: {item.stock}
                       </p>
                     </button>
                   ))}
@@ -370,8 +371,12 @@ export default function ManageItemsPage() {
                           {selected.standard_type}
                         </p>
                         <p>
-                          <span className="font-medium">In stock:</span>{" "}
-                          {selected.in_stock}
+                          <span className="font-medium">Stock:</span>{" "}
+                          {selected.stock}
+                        </p>
+                        <p>
+                          <span className="font-medium">Inventory:</span>{" "}
+                          {selected.inventory}
                         </p>
                         <p>
                           <span className="font-medium">Value:</span>{" "}
@@ -463,7 +468,7 @@ export default function ManageItemsPage() {
                     >
                       <p className="font-medium">{item.title}</p>
                       <p className="text-xs text-muted-foreground">
-                        {item.standard_type} • Stock: {item.in_stock}
+                        {item.standard_type} • Stock: {item.stock}
                       </p>
                     </button>
                   ))}
@@ -582,15 +587,23 @@ export default function ManageItemsPage() {
                         placeholder="Monetary value"
                       />
                       <Input
+                        value={String(form.stock ?? "")}
+                        readOnly
+                        disabled
+                        placeholder="Computed stock"
+                      />
+                      <Input
                         type="number"
-                        value={form.itemsInStock || ""}
+                        min="0"
+                        max="255"
+                        value={form.inventory || ""}
                         onChange={(e) =>
                           setForm((prev) => ({
                             ...prev,
-                            itemsInStock: e.target.value,
+                            inventory: e.target.value,
                           }))
                         }
-                        placeholder="Items in stock"
+                        placeholder="Inventory (total copies)"
                       />
                       <div className="space-y-2">
                         <div className="flex flex-wrap gap-2">

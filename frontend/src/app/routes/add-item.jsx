@@ -34,7 +34,11 @@ const itemFields = {
       type: "number",
       step: "0.01",
     },
-    { name: "booksInStock", label: "Books in stock", type: "number" },
+    {
+      name: "inventory",
+      label: "Inventory (total copies)",
+      type: "number",
+    },
   ],
   VIDEO: [
     { name: "videoName", label: "Video name", required: true },
@@ -50,7 +54,11 @@ const itemFields = {
       type: "number",
       step: "0.01",
     },
-    { name: "videosInStock", label: "Videos in stock", type: "number" },
+    {
+      name: "inventory",
+      label: "Inventory (total copies)",
+      type: "number",
+    },
   ],
   AUDIO: [
     { name: "audioName", label: "Audio name", required: true },
@@ -66,7 +74,11 @@ const itemFields = {
       type: "number",
       step: "0.01",
     },
-    { name: "audiosInStock", label: "Audios in stock", type: "number" },
+    {
+      name: "inventory",
+      label: "Inventory (total copies)",
+      type: "number",
+    },
   ],
   RENTAL_EQUIPMENT: [
     { name: "rentalName", label: "Rental name", required: true },
@@ -77,7 +89,11 @@ const itemFields = {
       type: "number",
       step: "0.01",
     },
-    { name: "equipmentInStock", label: "Equipment in stock", type: "number" },
+    {
+      name: "inventory",
+      label: "Inventory (total copies)",
+      type: "number",
+    },
   ],
 }
 

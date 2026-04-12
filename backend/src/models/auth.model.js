@@ -79,6 +79,7 @@ async function createStaffAccount(user) {
   )
 }
 
+// ...existing code...
 async function listLibrarianAccounts() {
   return query(
     `SELECT
@@ -154,6 +155,7 @@ async function updateLibrarianAccount(staffId, user) {
          phone_number = ?,
          is_retired = ?
      WHERE staff_id = ? AND is_admin = 0`,
+
     [
       user.email,
       user.firstName,
@@ -163,6 +165,15 @@ async function updateLibrarianAccount(staffId, user) {
       user.isRetired,
       staffId,
     ]
+  )
+}
+
+async function updateUserLastLogin(userId) {
+  await query(
+    `UPDATE user_account
+     SET last_login = NOW()
+     WHERE user_id = ?`,
+    [userId]
   )
 }
 
@@ -176,4 +187,5 @@ module.exports = {
   listLibrarianAccounts,
   findLibrarianAccountById,
   updateLibrarianAccount,
+  updateUserLastLogin,
 }

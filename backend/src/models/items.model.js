@@ -2,17 +2,17 @@ const { query } = require("../database")
 
 const ITEM_TYPE_CODE_MAP = {
   book: 1,
-  video: 2,
-  audiobook: 3,
-  audio: 3,
+  audio: 2,
+  audiobook: 2,
+  video: 3,
   equipment: 4,
   rental_equipment: 4,
 }
 
 const STANDARD_TYPE_BY_CODE = {
   1: "Book",
-  2: "Video",
-  3: "Audiobook",
+  2: "Audiobook",
+  3: "Video",
   4: "Equipment",
 }
 
@@ -39,7 +39,8 @@ function mapItemRow(row) {
     standard_type: standardType,
     creator,
     thumbnail_image: row.thumbnail_image,
-    in_stock: row.in_stock,
+    inventory: Number(row.inventory || 0),
+    stock: Number(row.stock || 0),
     author: row.author,
     genres,
     edition: row.edition,
@@ -98,7 +99,8 @@ async function searchItems({ queryText = "", itemType = "All", limit = 50 }) {
        i.title,
        i.monetary_value,
        i.thumbnail_image,
-       i.items_in_stock AS in_stock,
+       i.inventory,
+       GREATEST(i.inventory - COALESCE(ab.active_borrow_count, 0), 0) AS stock,
        b.author,
        b.edition,
        b.publication,
@@ -122,6 +124,14 @@ async function searchItems({ queryText = "", itemType = "All", limit = 50 }) {
      LEFT JOIN video v ON v.item_id = i.item_id
      LEFT JOIN (
        SELECT
+         item_id,
+         COUNT(*) AS active_borrow_count
+       FROM borrow
+       WHERE return_date IS NULL
+       GROUP BY item_id
+     ) ab ON ab.item_id = i.item_id
+     LEFT JOIN (
+       SELECT
          ag.item_id,
          GROUP_CONCAT(DISTINCT g.genre_text SEPARATOR ',') AS genres_csv
        FROM assigned_genres ag
@@ -143,7 +153,8 @@ async function getItemById(itemId) {
        i.title,
        i.monetary_value,
        i.thumbnail_image,
-       i.items_in_stock AS in_stock,
+       i.inventory,
+       GREATEST(i.inventory - COALESCE(ab.active_borrow_count, 0), 0) AS stock,
        b.author,
        b.edition,
        b.publication,
@@ -154,6 +165,14 @@ async function getItemById(itemId) {
      LEFT JOIN book b ON b.item_id = i.item_id
      LEFT JOIN audio a ON a.item_id = i.item_id
      LEFT JOIN video v ON v.item_id = i.item_id
+    LEFT JOIN (
+      SELECT
+        item_id,
+        COUNT(*) AS active_borrow_count
+      FROM borrow
+      WHERE return_date IS NULL
+      GROUP BY item_id
+    ) ab ON ab.item_id = i.item_id
      LEFT JOIN rental_equipment re ON re.item_id = i.item_id
      WHERE i.item_id = ?
      LIMIT 1`,

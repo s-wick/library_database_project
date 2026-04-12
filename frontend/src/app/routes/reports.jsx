@@ -241,6 +241,7 @@ export default function ReportsPage() {
   const [pageSize, setPageSize] = useState(100)
   const [isGenreOpen, setIsGenreOpen] = useState(false)
   const [genreQuery, setGenreQuery] = useState("")
+  const [reportCache, setReportCache] = useState({})
 
   useEffect(() => {
     fetch(`${API_BASE_URL}/api/genres/search?q=`)
@@ -258,6 +259,29 @@ export default function ReportsPage() {
   function onChange(event) {
     const { name, value } = event.target
     if (name === "reportType") {
+      setReportCache((prev) => ({
+        ...prev,
+        [filters.reportType]: {
+          filters,
+          rows,
+          summary,
+          hasGenerated,
+          page,
+          pageSize,
+          error,
+        },
+      }))
+      const cached = reportCache[value]
+      if (cached) {
+        setFilters(cached.filters)
+        setRows(cached.rows)
+        setSummary(cached.summary)
+        setHasGenerated(cached.hasGenerated)
+        setPage(cached.page)
+        setPageSize(cached.pageSize)
+        setError(cached.error || "")
+        return
+      }
       setHasGenerated(false)
       setRows([])
       setSummary(null)
@@ -312,6 +336,18 @@ export default function ReportsPage() {
 
       setRows(Array.isArray(data.rows) ? data.rows : [])
       setSummary(data.summary || null)
+      setReportCache((prev) => ({
+        ...prev,
+        [filters.reportType]: {
+          filters: { ...filters },
+          rows: Array.isArray(data.rows) ? data.rows : [],
+          summary: data.summary || null,
+          hasGenerated: true,
+          page: nextPage,
+          pageSize,
+          error: "",
+        },
+      }))
     } catch {
       setError("Unable to connect to server.")
       setRows([])

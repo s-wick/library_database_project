@@ -88,7 +88,10 @@ function updateFile(filePath, deltaMs, targetDateValue) {
   })
 
   if (baseDate !== targetDateValue) {
-    const baseDateRegex = new RegExp(baseDate.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&"), "g")
+    const baseDateRegex = new RegExp(
+      baseDate.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&"),
+      "g"
+    )
     updated = updated.replace(baseDateRegex, targetDateValue)
   }
 

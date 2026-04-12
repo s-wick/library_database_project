@@ -12,10 +12,10 @@ import {
   CardContent,
   CardFooter,
 } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Navbar } from "@/components/navbar"
 import { ItemCard } from "@/components/item-card"
-import { LayoutDashboard, Image as ImageIcon, Filter } from "lucide-react"
+import { Filter } from "lucide-react"
 import { API_BASE_URL } from "@/lib/api-config"
 
 // Background image import
@@ -305,6 +305,7 @@ export default function LandingSearchPage() {
           title="Books"
           description="Browse our collection"
           items={books}
+          loading={loading}
           emptyMessage="No books found"
           viewAllLink="/search?type=Book"
         />
@@ -313,6 +314,7 @@ export default function LandingSearchPage() {
           title="Audiobooks"
           description="Listen on the go"
           items={audios}
+          loading={loading}
           emptyMessage="New Audiobooks Coming Soon"
           viewAllLink="/search?type=Audiobook"
         />
@@ -321,6 +323,7 @@ export default function LandingSearchPage() {
           title="Videos"
           description="Watch movies, documentaries, and courses"
           items={videos}
+          loading={loading}
           emptyMessage="New Videos Coming Soon"
           viewAllLink="/search?type=Video"
         />
@@ -329,17 +332,18 @@ export default function LandingSearchPage() {
           title="Equipment"
           description="Tech rentals for students and faculty"
           items={equipments}
+          loading={loading}
           emptyMessage="No Equipment Found"
           viewAllLink="/search?type=Equipment"
         />
 
-        <RoomBookingSection rooms={rooms} />
+        <RoomBookingSection rooms={rooms} loading={loading} />
       </main>
     </div>
   )
 }
 
-function RoomBookingSection({ rooms = [] }) {
+function RoomBookingSection({ rooms = [], loading = false }) {
   return (
     <section>
       <div className="mb-4 flex items-center justify-between">
@@ -355,7 +359,26 @@ function RoomBookingSection({ rooms = [] }) {
         </Button>
       </div>
 
-      {rooms.length > 0 ? (
+      {loading ? (
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <Card key={`room-skeleton-${index}`} className="flex h-full flex-col">
+              <CardHeader>
+                <Skeleton className="h-5 w-24" />
+                <Skeleton className="mt-2 h-4 w-32" />
+              </CardHeader>
+              <CardContent className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-4 w-24" />
+              </CardContent>
+              <CardFooter>
+                <Skeleton className="h-9 w-full" />
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
+      ) : rooms.length > 0 ? (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {rooms.slice(0, 4).map((room) => (
             <Card key={room.roomNumber} className="flex h-full flex-col">
@@ -399,6 +422,7 @@ function CategorySection({
   title,
   description,
   items,
+  loading = false,
   emptyMessage,
   viewAllLink,
 }) {
@@ -416,7 +440,23 @@ function CategorySection({
         )}
       </div>
 
-      {items.length > 0 ? (
+      {loading ? (
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <Card key={`item-skeleton-${index}`} className="overflow-hidden">
+              <div className="space-y-3 p-4">
+                <Skeleton className="h-40 w-full rounded-md" />
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+                <div className="flex gap-2 pt-2">
+                  <Skeleton className="h-6 w-16" />
+                  <Skeleton className="h-6 w-20" />
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      ) : items.length > 0 ? (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {items.slice(0, 4).map((item) => (
             <ItemCard key={item.item_id} item={item} />

@@ -12,6 +12,7 @@
     "db:dump": "node scripts/dump-database.js",
     "db:import": "node scripts/import-database.js",
     "db:reset": "node scripts/reset-database.js",
+    "db:update-dates": "node scripts/update-sample-dates.js",
     "format": "prettier --write .",
     "lint": "npm run lint --prefix frontend && npm run lint --prefix backend"
   },

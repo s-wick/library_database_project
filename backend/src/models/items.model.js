@@ -2,17 +2,17 @@ const { query } = require("../database")
 
 const ITEM_TYPE_CODE_MAP = {
   book: 1,
-  video: 2,
-  audiobook: 3,
-  audio: 3,
+  audio: 2,
+  audiobook: 2,
+  video: 3,
   equipment: 4,
   rental_equipment: 4,
 }
 
 const STANDARD_TYPE_BY_CODE = {
   1: "Book",
-  2: "Video",
-  3: "Audiobook",
+  2: "Audiobook",
+  3: "Video",
   4: "Equipment",
 }
 

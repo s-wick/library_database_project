@@ -245,8 +245,8 @@ async function handleCreateItem(req, res) {
     }
 
     const isBook = itemTypeCode === 1
-    const isVideo = itemTypeCode === 2
-    const isAudio = itemTypeCode === 3
+    const isAudio = itemTypeCode === 2
+    const isVideo = itemTypeCode === 3
     const isEquipment = itemTypeCode === 4
 
     const title = isBook
@@ -430,8 +430,8 @@ async function handleUpdateItem(req, res, id) {
 
     const itemTypeCode = existingRows[0].item_type_code
     const isBook = itemTypeCode === 1
-    const isVideo = itemTypeCode === 2
-    const isAudio = itemTypeCode === 3
+    const isAudio = itemTypeCode === 2
+    const isVideo = itemTypeCode === 3
 
     const itemSet = []
     const itemParams = []

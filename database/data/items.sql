@@ -98,68 +98,68 @@ WHERE title IN (
 
 INSERT INTO item (item_type_code, title, thumbnail_image, monetary_value, inventory, created_by)
 VALUES
-	(@audio_code, 'Atomic Habits (Audio)', NULL, 24.99, 4, @librarian_id),
-	(@audio_code, 'Becoming (Audio)', NULL, 21.50, 3, @librarian_id),
-	(@audio_code, 'Educated (Audio)', NULL, 19.75, 2, @librarian_id),
-	(@audio_code, 'The Martian (Audio)', NULL, 17.25, 5, @librarian_id),
-	(@audio_code, 'Sapiens (Audio)', NULL, 22.40, 3, @librarian_id);
+	(@audio_code, 'Atomic Habits', NULL, 24.99, 4, @librarian_id),
+	(@audio_code, 'Becoming', NULL, 21.50, 3, @librarian_id),
+	(@audio_code, 'Educated', NULL, 19.75, 2, @librarian_id),
+	(@audio_code, 'The Martian', NULL, 17.25, 5, @librarian_id),
+	(@audio_code, 'Sapiens', NULL, 22.40, 3, @librarian_id);
 
 INSERT INTO audio (item_id, audio_length_seconds, audio_file)
 SELECT item_id, 36000, X''
 FROM item
-WHERE title = 'Atomic Habits (Audio)';
+WHERE title = 'Atomic Habits';
 
 INSERT INTO audio (item_id, audio_length_seconds, audio_file)
 SELECT item_id, 72000, X''
 FROM item
-WHERE title = 'Becoming (Audio)';
+WHERE title = 'Becoming';
 
 INSERT INTO audio (item_id, audio_length_seconds, audio_file)
 SELECT item_id, 36000, X''
 FROM item
-WHERE title = 'Educated (Audio)';
+WHERE title = 'Educated';
 
 INSERT INTO audio (item_id, audio_length_seconds, audio_file)
 SELECT item_id, 39600, X''
 FROM item
-WHERE title = 'The Martian (Audio)';
+WHERE title = 'The Martian';
 
 INSERT INTO audio (item_id, audio_length_seconds, audio_file)
 SELECT item_id, 54000, X''
 FROM item
-WHERE title = 'Sapiens (Audio)';
+WHERE title = 'Sapiens';
 
 -- Videos
 
 INSERT INTO item (item_type_code, title, thumbnail_image, monetary_value, inventory, created_by)
 VALUES
-	(@video_code, 'Apollo 13 (Video)', NULL, 14.99, 2, @librarian_id),
-	(@video_code, 'Inception (Video)', NULL, 13.50, 4, @librarian_id),
-	(@video_code, 'Hidden Figures (Video)', NULL, 12.75, 3, @librarian_id),
-	(@video_code, 'Interstellar (Video)', NULL, 15.25, 2, @librarian_id),
-	(@video_code, 'The Social Network (Video)', NULL, 11.40, 4, @librarian_id);
+	(@video_code, 'Apollo 13', NULL, 14.99, 2, @librarian_id),
+	(@video_code, 'Inception', NULL, 13.50, 4, @librarian_id),
+	(@video_code, 'Hidden Figures', NULL, 12.75, 3, @librarian_id),
+	(@video_code, 'Interstellar', NULL, 15.25, 2, @librarian_id),
+	(@video_code, 'The Social Network', NULL, 11.40, 4, @librarian_id);
 
 INSERT INTO video (item_id, video_length_seconds, video_file)
 SELECT item_id, 8400, X''
 FROM item
-WHERE title = 'Apollo 13 (Video)';
+WHERE title = 'Apollo 13';
 
 INSERT INTO video (item_id, video_length_seconds, video_file)
 SELECT item_id, 8880, X''
 FROM item
-WHERE title = 'Inception (Video)';
+WHERE title = 'Inception';
 
 INSERT INTO video (item_id, video_length_seconds, video_file)
 SELECT item_id, 7620, X''
 FROM item
-WHERE title = 'Hidden Figures (Video)';
+WHERE title = 'Hidden Figures';
 
 INSERT INTO video (item_id, video_length_seconds, video_file)
 SELECT item_id, 10140, X''
 FROM item
-WHERE title = 'Interstellar (Video)';
+WHERE title = 'Interstellar';
 
 INSERT INTO video (item_id, video_length_seconds, video_file)
 SELECT item_id, 7200, X''
 FROM item
-WHERE title = 'The Social Network (Video)';
+WHERE title = 'The Social Network';

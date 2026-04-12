@@ -10,7 +10,7 @@ import AddItemPage from "./routes/add-item"
 import ManageItemsPage from "./routes/manage-items"
 import ReportsPage from "./routes/reports"
 import CheckInPage from "./routes/check-in"
-import RoomManagePage from "./routes/room-manage"
+import RoomManagePage from "./routes/manage-room"
 import CheckoutPage from "./routes/checkout"
 import ItemPage from "./routes/item"
 import RoomBookingPage from "./routes/room-booking"
@@ -165,7 +165,7 @@ export const router = createBrowserRouter([
             <RoomManagePage />
           </RequireManagementAccess>
         ),
-        handle: { title: "Room Manage" },
+        handle: { title: "Manage Rooms" },
       },
       {
         path: "checkout",

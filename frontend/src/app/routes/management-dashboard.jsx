@@ -51,7 +51,7 @@ const actions = [
     icon: FileBarChart2,
   },
   {
-    title: "Room manage",
+    title: "Manage rooms",
     description: "Add and review study rooms for booking.",
     to: "/management-dashboard/room-manage",
     icon: DoorOpen,

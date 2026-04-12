@@ -185,8 +185,8 @@ export default function LandingSearchPage() {
                 </Button>
               </Field>
               <Button
-                variant={showFilters ? "secondary" : "ghost"}
-                className="ml-2 h-12 px-4 shadow-none hover:bg-muted"
+                variant="outline"
+                className="ml-2 h-12 px-4"
                 onClick={() => setShowFilters(!showFilters)}
               >
                 <Filter className="mr-2 h-4 w-4" />

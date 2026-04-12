@@ -130,7 +130,11 @@ async function handleGetRoomAvailability(_req, res, url) {
       return
     }
 
-    const bookings = await getRoomBookingsInWindow(roomNumber, startTime, endTime)
+    const bookings = await getRoomBookingsInWindow(
+      roomNumber,
+      startTime,
+      endTime
+    )
     sendJson(res, 200, {
       ok: true,
       bookings: bookings.map(formatBooking),
@@ -154,7 +158,10 @@ async function handleCancelMyRoomBooking(_req, res, url) {
 
     const booking = await getUserActiveBooking(userId)
     if (!booking) {
-      sendJson(res, 404, { ok: false, message: "No active room booking found." })
+      sendJson(res, 404, {
+        ok: false,
+        message: "No active room booking found.",
+      })
       return
     }
 

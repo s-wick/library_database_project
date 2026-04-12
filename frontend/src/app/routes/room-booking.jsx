@@ -89,7 +89,10 @@ export default function RoomBookingPage() {
   )
 
   const openedAt = useMemo(() => new Date(), [])
-  const bookingWindowStart = useMemo(() => roundUpToNextSlot(openedAt), [openedAt])
+  const bookingWindowStart = useMemo(
+    () => roundUpToNextSlot(openedAt),
+    [openedAt]
+  )
   const bookingWindowEnd = useMemo(
     () => new Date(openedAt.getTime() + BOOKING_WINDOW_HOURS * 60 * 60 * 1000),
     [openedAt]
@@ -161,7 +164,9 @@ export default function RoomBookingPage() {
           startTime: bookingWindowStart.toISOString(),
           endTime: bookingWindowEnd.toISOString(),
         })
-        const res = await fetch(`${apiBaseUrl}/api/rooms/availability?${params}`)
+        const res = await fetch(
+          `${apiBaseUrl}/api/rooms/availability?${params}`
+        )
         const data = await res.json().catch(() => ({}))
 
         if (!res.ok) {
@@ -425,7 +430,9 @@ export default function RoomBookingPage() {
             </label>
 
             <label className="text-sm">
-              <span className="mb-1 block text-muted-foreground">Start time</span>
+              <span className="mb-1 block text-muted-foreground">
+                Start time
+              </span>
               <select
                 className="h-10 w-full rounded-md border px-3"
                 value={selectedStartAt}

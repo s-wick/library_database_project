@@ -276,17 +276,24 @@ export function ItemCard({ item }) {
                   Add to Cart
                 </Button>
               ) : (
-                <Button
-                  className="w-full"
-                  onClick={handlePlaceHold}
-                  disabled={isPlacingHold || holdBlocked}
-                >
-                  {holdBlocked
-                    ? "Hold Unavailable"
-                    : isPlacingHold
-                      ? "Placing Hold..."
-                      : "Place Hold"}
-                </Button>
+                <>
+                  {holdBlocked && (
+                    <div className="mb-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                      Please pay your outstanding fines to place a hold.
+                    </div>
+                  )}
+                  <Button
+                    className="w-full"
+                    onClick={handlePlaceHold}
+                    disabled={isPlacingHold || holdBlocked}
+                  >
+                    {holdBlocked
+                      ? "Hold Unavailable"
+                      : isPlacingHold
+                        ? "Placing Hold..."
+                        : "Place Hold"}
+                  </Button>
+                </>
               )}
             </div>
           </div>

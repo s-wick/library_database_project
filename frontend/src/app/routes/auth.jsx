@@ -119,8 +119,17 @@ export default function AuthPage() {
       const data = await response.json().catch(() => ({}))
 
       if (!response.ok) {
+        if (
+          !isSignUp &&
+          response.status === 403 &&
+          data.message === "This librarian account is retired."
+        ) {
+          setErrors({
+            general: "Account no longer exists.",
+          })
+          return
+        }
         if (!isSignUp && response.status === 401) {
-          // setErrors({ general: "Account does not exist. Create an account." })
           setErrors({
             general: `Account does not exist. ${selectedRole === "staff" ? "Contact your administrator." : "Create an account."}`,
           })

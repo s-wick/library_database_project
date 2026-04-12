@@ -17,12 +17,20 @@ const actions = [
     description: "Create librarian account with email, password and phone.",
     to: "/management-dashboard/add-librarian",
     icon: Users,
+    adminOnly: true,
   },
   {
     title: "Add item",
     description: "Add catalog items by type from the database list.",
     to: "/management-dashboard/add-item",
     icon: PackagePlus,
+  },
+  {
+    title: "Edit librarian",
+    description: "Update librarian details and retirement date.",
+    to: "/management-dashboard/edit-librarian",
+    icon: Pencil,
+    adminOnly: true,
   },
   {
     title: "Edit item",
@@ -43,7 +51,7 @@ const actions = [
     icon: FileBarChart2,
   },
   {
-    title: "Room manage",
+    title: "Manage rooms",
     description: "Add and review study rooms for booking.",
     to: "/management-dashboard/room-manage",
     icon: DoorOpen,

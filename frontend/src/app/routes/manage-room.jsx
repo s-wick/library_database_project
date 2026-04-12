@@ -259,7 +259,7 @@ export default function RoomManagePage() {
         <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
           <Card>
             <CardHeader>
-              <CardTitle>{isEditing ? "Edit room" : "Room manage"}</CardTitle>
+              <CardTitle>{isEditing ? "Edit room" : "Manage rooms"}</CardTitle>
               <p className="text-sm text-muted-foreground">
                 {isEditing
                   ? "Update room details, then save them back to the booking catalog."

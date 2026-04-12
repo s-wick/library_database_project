@@ -39,6 +39,10 @@ const {
   handleBookRoom,
 } = require("./services/rooms.service")
 const { handleGetFines, handlePayFines } = require("./services/fines.service")
+const {
+  handleGetLibrarians,
+  handleUpdateLibrarian,
+} = require("./services/staff.service")
 
 async function handleApiRoute(req, res, url) {
   const { pathname } = url
@@ -228,6 +232,19 @@ async function handleApiRoute(req, res, url) {
   if (req.method === "POST" && pathname === "/api/fines/pay") {
     await handlePayFines(req, res)
     return
+  }
+
+  if (req.method === "GET" && pathname === "/api/staff") {
+    await handleGetLibrarians(req, res)
+    return
+  }
+
+  if (req.method === "PUT" && pathname.startsWith("/api/staff/")) {
+    const parts = pathname.split("/").filter(Boolean)
+    if (parts.length === 3) {
+      await handleUpdateLibrarian(req, res, parts[2])
+      return
+    }
   }
 
   sendJson(res, 404, { ok: false, message: "Route not found." })

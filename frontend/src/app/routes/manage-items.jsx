@@ -1,10 +1,16 @@
 import { useEffect, useState } from "react"
 import { Link, useSearchParams } from "react-router-dom"
-import { ArrowLeft, X } from "lucide-react"
+import { ArrowLeft, Calendar as CalendarIcon, X } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { Calendar } from "@/components/ui/calendar"
 import {
   Dialog,
   DialogContent,
@@ -72,6 +78,27 @@ function getInitialForm(item) {
     genres: Array.isArray(item.genres) ? item.genres : [],
     thumbnailImage: "",
   }
+}
+
+function formatPickerDate(value) {
+  if (!value) return "Select a date"
+  const date = new Date(`${value}T00:00:00`)
+  if (Number.isNaN(date.getTime())) return value
+  return date.toLocaleDateString()
+}
+
+function parseDateValue(value) {
+  if (!value) return undefined
+  const date = new Date(`${value}T00:00:00`)
+  return Number.isNaN(date.getTime()) ? undefined : date
+}
+
+function toDateValue(date) {
+  if (!date) return ""
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
 }
 
 async function fileToDataUrl(file) {
@@ -702,16 +729,34 @@ export default function ManageItemsPage() {
                             }
                             placeholder="Publication"
                           />
-                          <Input
-                            type="date"
-                            value={form.publicationDate || ""}
-                            onChange={(e) =>
-                              setForm((prev) => ({
-                                ...prev,
-                                publicationDate: e.target.value,
-                              }))
-                            }
-                          />
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                className={`h-9 w-full justify-start text-left font-normal ${!form.publicationDate ? "text-muted-foreground" : ""}`}
+                              >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {formatPickerDate(form.publicationDate)}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent
+                              className="w-auto p-0"
+                              align="start"
+                            >
+                              <Calendar
+                                mode="single"
+                                selected={parseDateValue(form.publicationDate)}
+                                onSelect={(date) =>
+                                  setForm((prev) => ({
+                                    ...prev,
+                                    publicationDate: toDateValue(date),
+                                  }))
+                                }
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
                         </>
                       )}
 

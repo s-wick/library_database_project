@@ -49,6 +49,20 @@ function parseBoolean(value, fallback = false) {
   return fallback
 }
 
+function hasRetirementReached(value) {
+  if (!value) return false
+  const retiredDate = new Date(String(value))
+  if (Number.isNaN(retiredDate.getTime())) return false
+  const today = new Date()
+  const retiredDay = retiredDate.toISOString().slice(0, 10)
+  const todayDay = new Date(
+    Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())
+  )
+    .toISOString()
+    .slice(0, 10)
+  return retiredDay <= todayDay
+}
+
 async function handleSignup(req, res) {
   try {
     const body = await parseJsonBody(req)
@@ -194,6 +208,14 @@ async function handleSignin(req, res) {
     }
 
     if (accountType === "staff") {
+      if (!account.is_admin && hasRetirementReached(account.is_retired)) {
+        sendJson(res, 403, {
+          ok: false,
+          message: "This librarian account is retired.",
+        })
+        return
+      }
+
       sendJson(res, 200, {
         ok: true,
         message: "Sign in successful.",

@@ -5,11 +5,12 @@ import AuthPage from "./routes/auth"
 import UserDashboardPage from "./routes/user-dashboard"
 import ManagementDashboardPage from "./routes/management-dashboard"
 import AddLibrarianPage from "./routes/add-librarian"
+import EditLibrarianPage from "./routes/edit-librarian"
 import AddItemPage from "./routes/add-item"
 import ManageItemsPage from "./routes/manage-items"
 import ReportsPage from "./routes/reports"
 import CheckInPage from "./routes/check-in"
-import RoomManagePage from "./routes/room-manage"
+import RoomManagePage from "./routes/manage-room"
 import CheckoutPage from "./routes/checkout"
 import ItemPage from "./routes/item"
 import RoomBookingPage from "./routes/room-booking"
@@ -113,6 +114,15 @@ export const router = createBrowserRouter([
         handle: { title: "Add Librarian" },
       },
       {
+        path: "management-dashboard/edit-librarian",
+        element: (
+          <RequireManagementAccess>
+            <EditLibrarianPage />
+          </RequireManagementAccess>
+        ),
+        handle: { title: "Edit Librarian" },
+      },
+      {
         path: "management-dashboard/add-item",
         element: (
           <RequireManagementAccess>
@@ -155,7 +165,7 @@ export const router = createBrowserRouter([
             <RoomManagePage />
           </RequireManagementAccess>
         ),
-        handle: { title: "Room Manage" },
+        handle: { title: "Manage Rooms" },
       },
       {
         path: "checkout",

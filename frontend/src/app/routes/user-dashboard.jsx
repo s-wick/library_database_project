@@ -203,13 +203,6 @@ function BorrowedBooks({ borrowedBooks = [] }) {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-3">
         <CardTitle className="text-lg">Currently Borrowed</CardTitle>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-xs text-muted-foreground"
-        >
-          View all <ChevronRight className="ml-1 h-3 w-3" />
-        </Button>
       </CardHeader>
       <CardContent className="space-y-3">
         {borrowedBooks.map((book) => {

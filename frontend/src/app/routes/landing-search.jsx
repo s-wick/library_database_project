@@ -161,7 +161,7 @@ export default function LandingSearchPage() {
         <div className="absolute inset-0 z-10 bg-black/60" />
 
         {/* Content stays sharp */}
-        <div className="relative z-20 w-full max-w-2xl px-4 text-center">
+        <div className="relative z-10 w-full max-w-2xl px-4 pt-10 text-center md:pt-12">
           <h1 className="mb-6 text-4xl font-bold tracking-tight text-white md:text-5xl">
             Browse the Catalog
           </h1>
@@ -170,7 +170,7 @@ export default function LandingSearchPage() {
           </p>
 
           <div className="backdrop-blur-medium relative flex max-w-3xl flex-col items-center overflow-visible rounded-md bg-background/95 p-2 shadow-lg">
-            <div className="relative z-20 flex w-full items-center">
+            <div className="relative z-10 flex w-full items-center">
               <Field className="flex-1" orientation="horizontal">
                 <Input
                   type="search"

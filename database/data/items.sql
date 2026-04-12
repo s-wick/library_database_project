@@ -3,9 +3,9 @@
 INSERT INTO item_type (item_type)
 VALUES
 	('Book'),
-	('Rental Equipment'),
 	('Audio'),
-	('Video');
+	('Video'),
+	('Rental Equipment');
 
 SET @librarian_id = (
  SELECT staff_id

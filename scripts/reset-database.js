@@ -1,9 +1,41 @@
 const fs = require("node:fs")
+const os = require("node:os")
 const path = require("node:path")
 const { spawnSync } = require("node:child_process")
 
 // Edit this list to control the order of data imports.
 const dataFiles = ["users.sql", "items.sql", "transactions.sql"]
+const thumbnailFiles = [
+  {
+    title: "To Kill a Mockingbird",
+    relativePath: path.join("books", "to-kill-a-mockingbird.jpg"),
+  },
+  { title: "1984", relativePath: path.join("books", "1984.jpg") },
+  {
+    title: "The Great Gatsby",
+    relativePath: path.join("books", "the-great-gatsby.jpg"),
+  },
+  {
+    title: "Pride and Prejudice",
+    relativePath: path.join("books", "pride-and-predjudice.jpg"),
+  },
+  {
+    title: "The Hobbit",
+    relativePath: path.join("books", "the-hobbit.jpg"),
+  },
+  {
+    title: "Canon EOS Rebel T7 Camera Kit",
+    relativePath: path.join("equipment", "canon-eos-rebel-t7-camera-kit.jpg"),
+  },
+  {
+    title: "Dell Latitude 5440 Laptop",
+    relativePath: path.join("equipment", "dell-latitude-5440-laptop.png"),
+  },
+  {
+    title: "Shure SM58 Microphone",
+    relativePath: path.join("equipment", "shure-sm58-microphone.jpg"),
+  },
+]
 
 function parseEnvFile(filePath) {
   const content = fs.readFileSync(filePath, "utf8")
@@ -35,9 +67,15 @@ function parseEnvFile(filePath) {
 function requiredEnv(env, key) {
   const value = env[key]
   if (!value) {
-    throw new Error(`Missing required backend/.env value: ${key}`)
+    throw new Error(
+      `Missing required database/.env value: ${key}. Check database/.env.`
+    )
   }
   return value
+}
+
+function escapeSqlString(value) {
+  return value.replace(/\\/g, "\\\\").replace(/'/g, "\\'")
 }
 
 function runMysql({ mysqlBin, args, inputPath, label }) {
@@ -68,14 +106,84 @@ function runMysql({ mysqlBin, args, inputPath, label }) {
   }
 }
 
+function runMysqlQuery({ mysqlBin, args, query, label }) {
+  const result = spawnSync(mysqlBin, [...args, "-N", "-B", "-e", query], {
+    stdio: ["ignore", "pipe", "pipe"],
+    encoding: "utf8",
+  })
+
+  if (result.error) {
+    throw result.error
+  }
+
+  if (result.status !== 0) {
+    const stderr = (result.stderr || "").trim()
+    throw new Error(`${label} failed${stderr ? `: ${stderr}` : ""}`)
+  }
+
+  return (result.stdout || "").trim()
+}
+
+function updateThumbnails({ mysqlBin, baseArgs, database, rootDir }) {
+  const imagesDir = path.join(rootDir, "database", "data", "images")
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "db-reset-"))
+  const tempSqlPath = path.join(tempDir, "thumbnail-updates.sql")
+
+  try {
+    const statements = []
+
+    for (const entry of thumbnailFiles) {
+      const filePath = path.join(imagesDir, entry.relativePath)
+
+      if (!fs.existsSync(filePath)) {
+        throw new Error(`Thumbnail file not found: ${filePath}`)
+      }
+
+      const hex = fs.readFileSync(filePath).toString("hex")
+      if (!hex) {
+        throw new Error(`Thumbnail file is empty: ${filePath}`)
+      }
+
+      statements.push(
+        `UPDATE item SET thumbnail_image = UNHEX('${hex}') WHERE title = '${escapeSqlString(
+          entry.title
+        )}';`
+      )
+    }
+
+    fs.writeFileSync(tempSqlPath, `${statements.join("\n")}\n`, "utf8")
+
+    runMysql({
+      mysqlBin,
+      args: [...baseArgs, database],
+      inputPath: tempSqlPath,
+      label: "Thumbnail updates",
+    })
+  } finally {
+    try {
+      fs.unlinkSync(tempSqlPath)
+    } catch (error) {
+      // Best-effort cleanup.
+    }
+
+    try {
+      fs.rmdirSync(tempDir)
+    } catch (error) {
+      // Best-effort cleanup.
+    }
+  }
+}
+
 function main() {
   const rootDir = path.resolve(__dirname, "..")
-  const envPath = path.join(rootDir, "backend", ".env")
+  const envPath = path.join(rootDir, "database", ".env")
   const schemaPath = path.join(rootDir, "database", "library_schema.sql")
   const dataDir = path.join(rootDir, "database", "data")
 
   if (!fs.existsSync(envPath)) {
-    throw new Error(`backend/.env not found at: ${envPath}`)
+    throw new Error(
+      `database/.env not found at: ${envPath}. Create it with DB_HOST, DB_USER, DB_NAME, and optional IMAGE_ROOT.`
+    )
   }
 
   if (!fs.existsSync(schemaPath)) {
@@ -133,12 +241,34 @@ function main() {
       throw new Error(`Data file not found: ${filePath}`)
     }
 
+    const args = [...baseArgs, database]
+
     runMysql({
       mysqlBin,
-      args: [...baseArgs, database],
+      args,
       inputPath: filePath,
       label: `Import data ${fileName}`,
     })
+
+    if (fileName === "items.sql") {
+      updateThumbnails({ mysqlBin, baseArgs, database, rootDir })
+
+      const quotedTitles = thumbnailFiles
+        .map((entry) => `'${escapeSqlString(entry.title)}'`)
+        .join(", ")
+      const nullCount = runMysqlQuery({
+        mysqlBin,
+        args: [...baseArgs, database],
+        query: `SELECT COUNT(*) FROM item WHERE title IN (${quotedTitles}) AND thumbnail_image IS NULL;`,
+        label: "Thumbnail validation",
+      })
+
+      if (Number(nullCount) > 0) {
+        throw new Error(
+          "Thumbnail images failed to load. Check that the image files exist and are readable from database/data/images, then rerun db:reset."
+        )
+      }
+    }
   }
 
   console.log("Database reset complete.")

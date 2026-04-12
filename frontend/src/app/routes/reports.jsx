@@ -86,6 +86,39 @@ function buildCheckoutBuckets(rows) {
   return buckets
 }
 
+function buildDurationBuckets(rows) {
+  const buckets = [
+    { label: "1-3 days", value: 0 },
+    { label: "4-7 days", value: 0 },
+    { label: "7-10 days", value: 0 },
+    { label: "10-14 days", value: 0 },
+    { label: "15+ days", value: 0 },
+  ]
+
+  rows.forEach((row) => {
+    const days = Number(row.borrowDays || 0)
+    if (days <= 3) {
+      buckets[0].value += 1
+      return
+    }
+    if (days <= 7) {
+      buckets[1].value += 1
+      return
+    }
+    if (days <= 10) {
+      buckets[2].value += 1
+      return
+    }
+    if (days <= 14) {
+      buckets[3].value += 1
+      return
+    }
+    buckets[4].value += 1
+  })
+
+  return buckets
+}
+
 function buildPieBackground(data) {
   const total = data.reduce((sum, item) => sum + Number(item.value || 0), 0)
   if (!total) return "conic-gradient(#e5e7eb 0deg 360deg)"
@@ -346,12 +379,8 @@ export default function ReportsPage() {
   )
   const checkoutPieData =
     filters.reportType === "userDemographics" ? buildCheckoutBuckets(rows) : []
-  const durationPieData = Array.isArray(summary?.durationBuckets)
-    ? summary.durationBuckets.map((item) => ({
-        label: item.bucket,
-        value: Number(item.count || 0),
-      }))
-    : []
+  const durationPieData =
+    filters.reportType === "userDemographics" ? buildDurationBuckets(rows) : []
   const itemTypePieData =
     filters.reportType === "itemsCheckedOut"
       ? Object.entries(

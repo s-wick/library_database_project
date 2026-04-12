@@ -230,6 +230,15 @@ async function handleHold(req, res) {
       return
     }
 
+    const userHasOutstandingFines = await hasOutstandingFines(user.user_id)
+    if (userHasOutstandingFines) {
+      sendJson(res, 403, {
+        ok: false,
+        message: "Holds are blocked until all outstanding fines are paid.",
+      })
+      return
+    }
+
     const created = await createHold(itemId, user.user_id)
     if (!created) {
       sendJson(res, 200, { ok: true, message: "Hold already exists." })

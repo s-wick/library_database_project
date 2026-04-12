@@ -7,6 +7,7 @@ const {
   updateMeetingRoom,
   deleteMeetingRoom,
   getUserActiveBooking,
+  getRoomBookingsInWindow,
   hasRoomOverlap,
   createRoomBooking,
 } = require("../models/rooms.model")
@@ -72,6 +73,47 @@ async function handleGetMyRoomBooking(_req, res, url) {
     sendJson(res, 500, {
       ok: false,
       message: "Failed to fetch user booking",
+      error: error.message,
+    })
+  }
+}
+
+async function handleGetRoomAvailability(_req, res, url) {
+  try {
+    const roomNumber = String(url.searchParams.get("roomNumber") || "").trim()
+    if (!roomNumber) {
+      sendJson(res, 400, { ok: false, message: "roomNumber is required" })
+      return
+    }
+
+    const room = await getMeetingRoomByNumber(roomNumber)
+    if (!room) {
+      sendJson(res, 404, { ok: false, message: "Room not found." })
+      return
+    }
+
+    const windowStart = new Date()
+    const windowEnd = new Date(
+      windowStart.getTime() + MAX_ADVANCE_HOURS * 60 * 60 * 1000
+    )
+
+    const bookings = await getRoomBookingsInWindow(
+      roomNumber,
+      windowStart,
+      windowEnd
+    )
+
+    sendJson(res, 200, {
+      ok: true,
+      room: formatRoom(room),
+      windowStart: windowStart.toISOString(),
+      windowEnd: windowEnd.toISOString(),
+      bookings: bookings.map(formatBooking),
+    })
+  } catch (error) {
+    sendJson(res, 500, {
+      ok: false,
+      message: "Failed to fetch room availability",
       error: error.message,
     })
   }
@@ -285,6 +327,14 @@ async function handleBookRoom(req, res) {
       return
     }
 
+    if (startTime.getMinutes() % 30 !== 0 || startTime.getSeconds() !== 0) {
+      sendJson(res, 400, {
+        ok: false,
+        message: "Room booking start time must be on a 30-minute boundary.",
+      })
+      return
+    }
+
     const minutes = Math.round(
       (endTime.getTime() - startTime.getTime()) / 60000
     )
@@ -292,6 +342,14 @@ async function handleBookRoom(req, res) {
       sendJson(res, 400, {
         ok: false,
         message: "Room booking duration must be between 1 and 180 minutes.",
+      })
+      return
+    }
+
+    if (minutes % 30 !== 0) {
+      sendJson(res, 400, {
+        ok: false,
+        message: "Room booking duration must use 30-minute increments.",
       })
       return
     }
@@ -323,16 +381,21 @@ async function handleBookRoom(req, res) {
       return
     }
 
-    await createRoomBooking(userId, roomNumber, startTime, endTime)
+    const booking = await createRoomBooking(
+      userId,
+      roomNumber,
+      startTime,
+      endTime
+    )
+
+    if (!booking) {
+      throw new Error("Room booking was not persisted")
+    }
 
     sendJson(res, 200, {
       ok: true,
       message: "Room booked successfully.",
-      booking: {
-        roomNumber,
-        startTime: startTime.toISOString(),
-        endTime: endTime.toISOString(),
-      },
+      booking: formatBooking(booking),
     })
   } catch (error) {
     sendJson(res, 500, {
@@ -346,6 +409,7 @@ async function handleBookRoom(req, res) {
 module.exports = {
   handleGetRooms,
   handleGetMyRoomBooking,
+  handleGetRoomAvailability,
   handleCreateRoom,
   handleUpdateRoom,
   handleDeleteRoom,

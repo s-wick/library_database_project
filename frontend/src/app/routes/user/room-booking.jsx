@@ -6,9 +6,31 @@ import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { API_BASE_URL } from "@/lib/api-config"
 
-function formatDateTimeLocal(date) {
-  const pad = (n) => String(n).padStart(2, "0")
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+const SLOT_INTERVAL_MINUTES = 30
+const SLOT_INTERVAL_MS = SLOT_INTERVAL_MINUTES * 60 * 1000
+const MAX_BOOKING_MINUTES = 180
+const ADVANCE_WINDOW_MS = 24 * 60 * 60 * 1000
+
+function roundUpToNextSlot(date) {
+  const next = new Date(date)
+  next.setSeconds(0, 0)
+
+  const remainder = next.getMinutes() % SLOT_INTERVAL_MINUTES
+  if (remainder !== 0) {
+    next.setMinutes(next.getMinutes() + (SLOT_INTERVAL_MINUTES - remainder))
+  }
+
+  return next
+}
+
+function formatSlotLabel(value) {
+  return new Date(value).toLocaleString([], {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  })
 }
 
 function FeatureRow({ label, enabled }) {
@@ -31,28 +53,23 @@ export default function RoomBookingPage() {
   const [activeBooking, setActiveBooking] = useState(null)
   const [selectedRoom, setSelectedRoom] = useState("")
   const [durationMinutes, setDurationMinutes] = useState(60)
-  const [startAt, setStartAt] = useState(() => {
-    const initial = new Date(Date.now() + 60 * 60 * 1000)
-    return formatDateTimeLocal(initial)
+  const [startAt, setStartAt] = useState("")
+  const [availability, setAvailability] = useState({
+    bookings: [],
+    windowStart: "",
+    windowEnd: "",
   })
+  const [availabilityRefreshKey, setAvailabilityRefreshKey] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [availabilityLoading, setAvailabilityLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
+  const [availabilityError, setAvailabilityError] = useState("")
 
   const selectedRoomDetails = useMemo(
     () => rooms.find((room) => room.roomNumber === selectedRoom) || null,
     [rooms, selectedRoom]
-  )
-
-  const now = useMemo(() => new Date(), [])
-  const minStart = useMemo(
-    () => formatDateTimeLocal(new Date(now.getTime() + 5 * 60 * 1000)),
-    [now]
-  )
-  const maxStart = useMemo(
-    () => formatDateTimeLocal(new Date(now.getTime() + 24 * 60 * 60 * 1000)),
-    [now]
   )
 
   const user = useMemo(() => {
@@ -104,6 +121,200 @@ export default function RoomBookingPage() {
     fetchData()
   }, [])
 
+  useEffect(() => {
+    if (!selectedRoom) {
+      setAvailability({ bookings: [], windowStart: "", windowEnd: "" })
+      setAvailabilityError("")
+      return
+    }
+
+    let cancelled = false
+
+    const fetchAvailability = async () => {
+      setAvailabilityLoading(true)
+      setAvailabilityError("")
+
+      try {
+        const res = await fetch(
+          `${apiBaseUrl}/api/rooms/availability?roomNumber=${encodeURIComponent(selectedRoom)}`
+        )
+        const data = await res.json().catch(() => ({}))
+
+        if (!res.ok) {
+          throw new Error(data.message || "Failed to load room availability")
+        }
+
+        if (!cancelled) {
+          setAvailability({
+            bookings: data.bookings || [],
+            windowStart: data.windowStart || "",
+            windowEnd: data.windowEnd || "",
+          })
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setAvailability({ bookings: [], windowStart: "", windowEnd: "" })
+          setAvailabilityError(
+            err.message || "Failed to load room availability"
+          )
+        }
+      } finally {
+        if (!cancelled) {
+          setAvailabilityLoading(false)
+        }
+      }
+    }
+
+    fetchAvailability()
+
+    return () => {
+      cancelled = true
+    }
+  }, [apiBaseUrl, availabilityRefreshKey, selectedRoom])
+
+  const availableStartSlots = useMemo(() => {
+    if (!selectedRoom || availabilityError) return []
+
+    const fallbackStart = new Date(Date.now())
+    const fallbackEnd = new Date(Date.now() + ADVANCE_WINDOW_MS)
+    const windowStart = availability.windowStart
+      ? new Date(availability.windowStart)
+      : fallbackStart
+    const windowEnd = availability.windowEnd
+      ? new Date(availability.windowEnd)
+      : fallbackEnd
+
+    if (
+      Number.isNaN(windowStart.getTime()) ||
+      Number.isNaN(windowEnd.getTime()) ||
+      windowStart >= windowEnd
+    ) {
+      return []
+    }
+
+    const bookings = availability.bookings
+      .map((booking) => ({
+        start: new Date(booking.startTime),
+        end: new Date(booking.endTime),
+      }))
+      .filter(
+        (booking) =>
+          !Number.isNaN(booking.start.getTime()) &&
+          !Number.isNaN(booking.end.getTime())
+      )
+
+    const earliestCandidate = new Date(
+      Math.max(windowStart.getTime(), Date.now() + 60 * 1000)
+    )
+    const firstSlot = roundUpToNextSlot(earliestCandidate)
+    const slots = []
+
+    for (
+      let cursor = firstSlot.getTime();
+      cursor + SLOT_INTERVAL_MS <= windowEnd.getTime();
+      cursor += SLOT_INTERVAL_MS
+    ) {
+      const slotStart = new Date(cursor)
+      const slotEnd = new Date(cursor + SLOT_INTERVAL_MS)
+      const overlaps = bookings.some(
+        (booking) => booking.start < slotEnd && booking.end > slotStart
+      )
+
+      if (!overlaps) {
+        slots.push({
+          value: slotStart.toISOString(),
+          label: formatSlotLabel(slotStart),
+        })
+      }
+    }
+
+    return slots
+  }, [
+    availability.bookings,
+    availability.windowEnd,
+    availability.windowStart,
+    availabilityError,
+    selectedRoom,
+  ])
+
+  const durationOptions = useMemo(() => {
+    if (!startAt) return []
+
+    const start = new Date(startAt)
+    if (Number.isNaN(start.getTime())) return []
+
+    const windowEnd = availability.windowEnd
+      ? new Date(availability.windowEnd)
+      : new Date(Date.now() + ADVANCE_WINDOW_MS)
+
+    const nextBooking = availability.bookings
+      .map((booking) => ({
+        start: new Date(booking.startTime),
+        end: new Date(booking.endTime),
+      }))
+      .filter(
+        (booking) =>
+          !Number.isNaN(booking.start.getTime()) &&
+          !Number.isNaN(booking.end.getTime()) &&
+          booking.start > start
+      )
+      .sort((left, right) => left.start - right.start)[0]
+
+    const maxEndTime = Math.min(
+      start.getTime() + MAX_BOOKING_MINUTES * 60 * 1000,
+      windowEnd.getTime(),
+      nextBooking ? nextBooking.start.getTime() : Number.POSITIVE_INFINITY
+    )
+
+    const maxMinutes = Math.floor((maxEndTime - start.getTime()) / SLOT_INTERVAL_MS) * SLOT_INTERVAL_MINUTES
+    const options = []
+
+    for (
+      let minutes = SLOT_INTERVAL_MINUTES;
+      minutes <= maxMinutes;
+      minutes += SLOT_INTERVAL_MINUTES
+    ) {
+      const label = minutes < 60
+        ? `${minutes} min`
+        : minutes % 60 === 0
+          ? `${minutes / 60} hour${minutes === 60 ? "" : "s"}`
+          : `${Math.floor(minutes / 60)}.5 hours`
+
+      options.push({ value: minutes, label })
+    }
+
+    return options
+  }, [availability.bookings, availability.windowEnd, startAt])
+
+  useEffect(() => {
+    if (availableStartSlots.length === 0) {
+      setStartAt("")
+      return
+    }
+
+    const hasCurrentSelection = availableStartSlots.some(
+      (slot) => slot.value === startAt
+    )
+
+    if (!hasCurrentSelection) {
+      setStartAt(availableStartSlots[0].value)
+    }
+  }, [availableStartSlots, startAt])
+
+  useEffect(() => {
+    if (durationOptions.length === 0) {
+      return
+    }
+
+    const hasCurrentSelection = durationOptions.some(
+      (option) => option.value === durationMinutes
+    )
+
+    if (!hasCurrentSelection) {
+      setDurationMinutes(durationOptions[0].value)
+    }
+  }, [durationMinutes, durationOptions])
+
   const handleBookRoom = async () => {
     setError("")
     setSuccess("")
@@ -144,8 +355,10 @@ export default function RoomBookingPage() {
 
       setSuccess("Room booked successfully.")
       await fetchData()
+      setAvailabilityRefreshKey((current) => current + 1)
     } catch (err) {
       setError(err.message || "Failed to book room")
+      setAvailabilityRefreshKey((current) => current + 1)
     } finally {
       setSubmitting(false)
     }
@@ -200,14 +413,22 @@ export default function RoomBookingPage() {
               <span className="mb-1 block text-muted-foreground">
                 Start time
               </span>
-              <input
-                type="datetime-local"
+              <select
                 className="h-10 w-full rounded-md border px-3"
                 value={startAt}
-                min={minStart}
-                max={maxStart}
                 onChange={(e) => setStartAt(e.target.value)}
-              />
+                disabled={availabilityLoading || availableStartSlots.length === 0}
+              >
+                {availableStartSlots.length === 0 ? (
+                  <option value="">No times available in the next 24 hours</option>
+                ) : (
+                  availableStartSlots.map((slot) => (
+                    <option key={slot.value} value={slot.value}>
+                      {slot.label}
+                    </option>
+                  ))
+                )}
+              </select>
             </label>
 
             <label className="text-sm">
@@ -216,13 +437,17 @@ export default function RoomBookingPage() {
                 className="h-10 w-full rounded-md border px-3"
                 value={durationMinutes}
                 onChange={(e) => setDurationMinutes(Number(e.target.value))}
+                disabled={durationOptions.length === 0}
               >
-                <option value={30}>30 min</option>
-                <option value={60}>1 hour</option>
-                <option value={90}>1.5 hours</option>
-                <option value={120}>2 hours</option>
-                <option value={150}>2.5 hours</option>
-                <option value={180}>3 hours</option>
+                {durationOptions.length === 0 ? (
+                  <option value={durationMinutes}>No valid duration</option>
+                ) : (
+                  durationOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))
+                )}
               </select>
             </label>
           </CardContent>
@@ -236,9 +461,23 @@ export default function RoomBookingPage() {
             </CardContent>
           )}
           <CardContent className="pt-0">
+            {!!availabilityError && (
+              <p className="mb-2 text-sm text-rose-600">{availabilityError}</p>
+            )}
+            {availableStartSlots.length > 0 && !availabilityLoading && (
+              <p className="mb-2 text-sm text-muted-foreground">
+                Choose from 30-minute slots available within the next 24 hours.
+              </p>
+            )}
             <Button
               onClick={handleBookRoom}
-              disabled={submitting || !selectedRoom || !!activeBooking}
+              disabled={
+                submitting ||
+                !selectedRoom ||
+                !startAt ||
+                durationOptions.length === 0 ||
+                !!activeBooking
+              }
             >
               {submitting ? "Booking..." : "Book Room"}
             </Button>

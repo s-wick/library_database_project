@@ -121,6 +121,20 @@ async function getUserActiveBooking(userId) {
   return rows[0] || null
 }
 
+async function getRoomBookingsInWindow(roomNumber, windowStart, windowEnd) {
+  const rows = await query(
+    `SELECT room_number, start_time, end_time
+     FROM book_room
+     WHERE room_number = ?
+       AND start_time < ?
+       AND end_time > ?
+     ORDER BY start_time ASC`,
+    [roomNumber, windowEnd, windowStart]
+  )
+
+  return rows
+}
+
 async function hasRoomOverlap(roomNumber, startTime, endTime) {
   const rows = await query(
     `SELECT 1
@@ -141,6 +155,19 @@ async function createRoomBooking(userId, roomNumber, startTime, endTime) {
      VALUES (?, ?, ?, ?)`,
     [roomNumber, userId, startTime, endTime]
   )
+
+  const rows = await query(
+    `SELECT room_number, start_time, end_time
+     FROM book_room
+     WHERE room_number = ?
+       AND user_id = ?
+       AND start_time = ?
+       AND end_time = ?
+     LIMIT 1`,
+    [roomNumber, userId, startTime, endTime]
+  )
+
+  return rows[0] || null
 }
 
 module.exports = {
@@ -151,6 +178,7 @@ module.exports = {
   updateMeetingRoom,
   deleteMeetingRoom,
   getUserActiveBooking,
+  getRoomBookingsInWindow,
   hasRoomOverlap,
   createRoomBooking,
 }

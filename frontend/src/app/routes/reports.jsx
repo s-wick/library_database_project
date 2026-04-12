@@ -176,6 +176,54 @@ function PieChartCard({ title, data, className = "" }) {
   )
 }
 
+function HorizontalBarChartCard({ title, data, className = "" }) {
+  const max = data.length
+    ? Math.max(...data.map((item) => Number(item.value || 0)))
+    : 0
+
+  return (
+    <div className={`flex flex-col rounded-md border p-4 ${className}`}>
+      <p className="mb-3 text-sm font-medium">{title}</p>
+      {data.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No data.</p>
+      ) : (
+        <div className="flex flex-1 items-center">
+          <div className="w-full rounded-md border bg-background p-4">
+            <div className="flex min-h-48 flex-col justify-center gap-4">
+              {data.map((item, index) => {
+                const value = Number(item.value || 0)
+                const percent = max > 0 ? (value / max) * 100 : 0
+                return (
+                  <div key={item.label} className="flex items-center gap-3">
+                    <span className="w-28 text-sm font-medium">
+                      {item.label}
+                    </span>
+                    <div className="flex-1">
+                      <div className="h-6 w-full rounded-md bg-muted">
+                        <div
+                          className="h-6 rounded-md"
+                          style={{
+                            width: `${percent}%`,
+                            backgroundColor:
+                              CHART_COLORS[index % CHART_COLORS.length],
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <span className="w-12 text-right text-sm font-medium text-muted-foreground">
+                      {value}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function BarChartCard({ data, chartHeading = "Financial Summary" }) {
   const max = data.length
     ? Math.max(...data.map((item) => Number(item.value || 0)))
@@ -751,14 +799,24 @@ export default function ReportsPage() {
                     </p>
                   </div>
                   {filters.reportType === "itemsCheckedOut" ? (
-                    <div className="rounded-md border border-amber-200 bg-amber-50/70 p-3 dark:border-amber-900/50 dark:bg-amber-950/20">
-                      <p className="text-xs text-amber-700 dark:text-amber-300">
-                        Overdue count
-                      </p>
-                      <p className="text-lg font-semibold text-amber-900 dark:text-amber-100">
-                        {summary.overdueCount ?? 0}
-                      </p>
-                    </div>
+                    <>
+                      <div className="rounded-md border border-amber-200 bg-amber-50/70 p-3 dark:border-amber-900/50 dark:bg-amber-950/20">
+                        <p className="text-xs text-amber-700 dark:text-amber-300">
+                          Overdue count
+                        </p>
+                        <p className="text-lg font-semibold text-amber-900 dark:text-amber-100">
+                          {summary.overdueCount ?? 0}
+                        </p>
+                      </div>
+                      <div className="rounded-md border border-emerald-200 bg-emerald-50/70 p-3 dark:border-emerald-900/50 dark:bg-emerald-950/20">
+                        <p className="text-xs text-emerald-700 dark:text-emerald-300">
+                          Items in library
+                        </p>
+                        <p className="text-lg font-semibold text-emerald-900 dark:text-emerald-100">
+                          {summary.itemsInLibrary ?? 0}
+                        </p>
+                      </div>
+                    </>
                   ) : filters.reportType === "userDemographics" ? (
                     <>
                       <div className="rounded-md border border-lime-200 bg-lime-50/70 p-3 dark:border-lime-900/50 dark:bg-lime-950/20">
@@ -839,7 +897,7 @@ export default function ReportsPage() {
                     title="Checked out by item type"
                     data={itemTypePieData}
                   />
-                  <PieChartCard
+                  <HorizontalBarChartCard
                     title="Checked out by user type"
                     data={userTypePieData}
                   />

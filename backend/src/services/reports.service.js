@@ -297,6 +297,75 @@ function buildBorrowOnlyFilters(url, options = {}) {
   }
 }
 
+function buildItemOnlyFilters(url, options = {}) {
+  const params = []
+  const clauses = []
+  const itemAlias = options.itemAlias || "i"
+  const itemTypeAlias = options.itemTypeAlias || "it"
+
+  const itemType = String(url.searchParams.get("itemType") || "").trim()
+  if (itemType) {
+    clauses.push(`${itemTypeAlias}.item_type = ?`)
+    params.push(itemType)
+  }
+
+  const genres = parseGenresFilter(url.searchParams.get("genre"))
+  if (genres.length) {
+    const placeholders = genres.map(() => "?").join(",")
+    clauses.push(`EXISTS (
+      SELECT 1
+      FROM assigned_genres agf
+      INNER JOIN genre gf ON gf.genre_id = agf.genre_id
+      WHERE agf.item_id = ${itemAlias}.item_id AND gf.genre_text IN (${placeholders})
+    )`)
+    params.push(...genres)
+  }
+
+  return {
+    whereClause: clauses.length ? `WHERE ${clauses.join(" AND ")}` : "",
+    params,
+  }
+}
+
+async function getItemAvailabilityStats(url) {
+  const itemFilters = buildItemOnlyFilters(url, {
+    itemAlias: "i",
+    itemTypeAlias: "it",
+  })
+
+  const itemsInLibraryRows = await query(
+    `SELECT COALESCE(SUM(i.inventory), 0) AS itemsInLibrary
+     FROM item i
+     LEFT JOIN item_type it ON it.item_code = i.item_type_code
+     ${itemFilters.whereClause}`,
+    itemFilters.params
+  )
+
+  const borrowFilters = buildBorrowOnlyFilters(url, {
+    borrowAlias: "b",
+    itemAlias: "i",
+    userAlias: "ua",
+  })
+  const activeClause = borrowFilters.whereClause
+    ? `${borrowFilters.whereClause} AND b.return_date IS NULL`
+    : "WHERE b.return_date IS NULL"
+
+  const itemsCheckedOutRows = await query(
+    `SELECT COUNT(*) AS itemsCheckedOut
+     FROM borrow b
+     INNER JOIN item i ON i.item_id = b.item_id
+     LEFT JOIN item_type it ON it.item_code = i.item_type_code
+     INNER JOIN user_account ua ON ua.user_id = b.user_id
+     ${activeClause}`,
+    borrowFilters.params
+  )
+
+  return {
+    itemsInLibrary: Number(itemsInLibraryRows[0]?.itemsInLibrary || 0),
+    itemsCheckedOut: Number(itemsCheckedOutRows[0]?.itemsCheckedOut || 0),
+  }
+}
+
 function getCheckoutBucketLabel(count) {
   if (count <= 0) return "0 items checked out"
   if (count < 10) return "1-9 items checked out"
@@ -441,6 +510,7 @@ async function handleGetReports(_req, res, url) {
     )
 
     if (reportType === "itemsCheckedOut") {
+      const availability = await getItemAvailabilityStats(url)
       const { rows, page, pageSize, hasMore } = await getCheckedOutRows(url)
       const overdueCount = rows.filter(
         (row) => Number(row.isOverdue) === 1
@@ -453,6 +523,8 @@ async function handleGetReports(_req, res, url) {
         summary: {
           totalRecords: rows.length,
           overdueCount,
+          itemsInLibrary: availability.itemsInLibrary,
+          itemsCheckedOut: availability.itemsCheckedOut,
           page,
           pageSize,
           hasMore,
@@ -462,6 +534,7 @@ async function handleGetReports(_req, res, url) {
     }
 
     if (reportType === "revenue" || reportType === "finesOwed") {
+      const availability = await getItemAvailabilityStats(url)
       const { rows, page, pageSize, hasMore } = await getRevenueRows(url)
       const totalFineOwed = rows.reduce(
         (sum, row) => sum + Number(row.fineOwed || 0),
@@ -485,6 +558,8 @@ async function handleGetReports(_req, res, url) {
           totalFineOwed,
           totalItemValue,
           totalRevenue,
+          itemsInLibrary: availability.itemsInLibrary,
+          itemsCheckedOut: availability.itemsCheckedOut,
           page,
           pageSize,
           hasMore,
@@ -494,6 +569,7 @@ async function handleGetReports(_req, res, url) {
     }
 
     if (reportType === "userDemographics") {
+      const availability = await getItemAvailabilityStats(url)
       const {
         rows,
         checkoutBuckets,
@@ -512,6 +588,8 @@ async function handleGetReports(_req, res, url) {
           totalBorrows,
           checkoutBuckets,
           durationBuckets,
+          itemsInLibrary: availability.itemsInLibrary,
+          itemsCheckedOut: availability.itemsCheckedOut,
           page: 1,
           pageSize: rows.length,
           hasMore: false,

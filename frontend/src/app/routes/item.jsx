@@ -62,7 +62,7 @@ export default function ItemPage() {
   const handleAction = async () => {
     setActionError("")
 
-    const isLoggedIn = localStorage.getItem("isLoggedIn") === "true"
+    const isLoggedIn = sessionStorage.getItem("isLoggedIn") === "true"
     if (!isLoggedIn) {
       navigate("/auth")
       return
@@ -71,7 +71,7 @@ export default function ItemPage() {
     try {
       setIsSubmittingAction(true)
 
-      const userStr = localStorage.getItem("user")
+      const userStr = sessionStorage.getItem("user")
       const user = userStr ? JSON.parse(userStr) : null
       if (!user?.id) {
         navigate("/auth")

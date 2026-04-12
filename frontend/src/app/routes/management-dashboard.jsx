@@ -68,7 +68,7 @@ const actions = [
 
 export default function ManagementDashboardPage() {
   const navigate = useNavigate()
-  const authUser = JSON.parse(localStorage.getItem("authUser") || "{}")
+  const authUser = JSON.parse(sessionStorage.getItem("authUser") || "{}")
   const visibleActions = actions.filter(
     (action) => !action.adminOnly || authUser.role === "admin"
   )
@@ -80,10 +80,10 @@ export default function ManagementDashboardPage() {
           <Button
             variant="ghost"
             onClick={() => {
-              localStorage.setItem("isLoggedIn", "false")
-              localStorage.removeItem("authToken")
-              localStorage.removeItem("authUser")
-              localStorage.removeItem("user")
+              sessionStorage.setItem("isLoggedIn", "false")
+              sessionStorage.removeItem("authToken")
+              sessionStorage.removeItem("authUser")
+              sessionStorage.removeItem("user")
               navigate("/auth")
             }}
           >

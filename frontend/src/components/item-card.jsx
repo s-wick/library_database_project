@@ -78,7 +78,7 @@ export function ItemCard({ item }) {
     .slice(0, 3)
 
   const handleAddToCart = () => {
-    const isLoggedIn = localStorage.getItem("isLoggedIn") === "true"
+    const isLoggedIn = sessionStorage.getItem("isLoggedIn") === "true"
     if (!isLoggedIn) {
       navigate("/auth")
       return
@@ -88,13 +88,13 @@ export function ItemCard({ item }) {
   }
 
   const handlePlaceHold = async () => {
-    const isLoggedIn = localStorage.getItem("isLoggedIn") === "true"
+    const isLoggedIn = sessionStorage.getItem("isLoggedIn") === "true"
     if (!isLoggedIn) {
       navigate("/auth")
       return
     }
 
-    const userStr = localStorage.getItem("user")
+    const userStr = sessionStorage.getItem("user")
     const user = userStr ? JSON.parse(userStr) : null
     if (!user?.id) {
       navigate("/auth")
@@ -137,7 +137,7 @@ export function ItemCard({ item }) {
       return
     }
 
-    const userStr = localStorage.getItem("user")
+    const userStr = sessionStorage.getItem("user")
     const user = userStr ? JSON.parse(userStr) : null
     if (!user?.id) {
       setHoldBlocked(false)

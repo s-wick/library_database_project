@@ -36,7 +36,7 @@ const emptyForm = {
 
 export default function RoomManagePage() {
   const apiBaseUrl = API_BASE_URL
-  const authUser = JSON.parse(localStorage.getItem("authUser") || "{}")
+  const authUser = JSON.parse(sessionStorage.getItem("authUser") || "{}")
   const [rooms, setRooms] = useState([])
   const [form, setForm] = useState(emptyForm)
   const [editingRoomNumber, setEditingRoomNumber] = useState("")

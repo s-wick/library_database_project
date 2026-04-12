@@ -64,11 +64,35 @@ export function ItemCard({ item }) {
     (i) => i.item_id === item.item_id && i.standard_type === item.standard_type
   )
   const genres = Array.isArray(item.genres) ? item.genres : []
+  const durationSeconds = Number(
+    item.audio_length_seconds || item.video_length_seconds || 0
+  )
+  const durationMinutes = Number(item.duration || 0)
+
+  const formatSeconds = (totalSeconds) => {
+    if (!Number.isFinite(totalSeconds) || totalSeconds <= 0) return null
+    const totalMinutes = Math.max(1, Math.round(totalSeconds / 60))
+    const hours = Math.floor(totalMinutes / 60)
+    const minutes = totalMinutes % 60
+    if (hours <= 0) return `${totalMinutes} min`
+    if (minutes === 0) return `${hours} hr`
+    return `${hours} hr ${minutes} min`
+  }
+
+  const durationLabel =
+    item.standard_type === "Audiobook" || item.standard_type === "Video"
+      ? durationSeconds
+        ? `Length: ${formatSeconds(durationSeconds)}`
+        : durationMinutes > 0
+          ? `Length: ${durationMinutes} min`
+          : null
+      : null
 
   const metadata = [
     genres.length ? `Genre: ${genres.slice(0, 2).join(", ")}` : null,
     item.author ? `Author: ${item.author}` : null,
     item.edition ? `Edition: ${item.edition}` : null,
+    durationLabel,
     item.publication_date
       ? `Published: ${String(item.publication_date).slice(0, 10)}`
       : null,

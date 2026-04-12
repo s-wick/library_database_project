@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
-import { Moon, Sun, ArrowLeft, ShoppingCart, Bell } from "lucide-react"
+import { Moon, Sun, ArrowLeft, ShoppingCart, Bell, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -27,6 +27,19 @@ function formatShortDate(value) {
   })
 }
 
+async function acknowledgeNotification({ notificationId, userId }) {
+  const response = await fetch(`${API_BASE_URL}/api/notifications/ack`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ notificationId, userId }),
+  })
+
+  const data = await response.json().catch(() => ({}))
+  if (!response.ok || !data?.ok) {
+    throw new Error(data?.message || "Failed to acknowledge notification")
+  }
+}
+
 export function Navbar({ showBack = false }) {
   const navigate = useNavigate()
   const { theme, setTheme } = useTheme()
@@ -40,6 +53,7 @@ export function Navbar({ showBack = false }) {
   const [userProfile, setUserProfile] = useState(null)
   const [notifications, setNotifications] = useState([])
   const [notificationsStatus, setNotificationsStatus] = useState("idle")
+  const [acknowledging, setAcknowledging] = useState(() => new Set())
 
   let avatarInitials = "U"
   const isStaff =
@@ -102,6 +116,29 @@ export function Navbar({ showBack = false }) {
     loadNotifications()
     return () => controller.abort()
   }, [isLoggedIn, isStaff, userProfile?.id])
+
+  const handleAcknowledge = async (notificationId) => {
+    if (!userProfile?.id) return
+    setAcknowledging((prev) => new Set(prev).add(notificationId))
+
+    try {
+      await acknowledgeNotification({
+        notificationId,
+        userId: userProfile.id,
+      })
+      setNotifications((prev) =>
+        prev.filter((item) => item.notificationId !== notificationId)
+      )
+    } catch (error) {
+      setNotificationsStatus("error")
+    } finally {
+      setAcknowledging((prev) => {
+        const next = new Set(prev)
+        next.delete(notificationId)
+        return next
+      })
+    }
+  }
 
   const handleSignOut = () => {
     localStorage.setItem("isLoggedIn", "false")
@@ -201,14 +238,27 @@ export function Navbar({ showBack = false }) {
                   className="flex flex-col items-start gap-1 px-3 py-2"
                   onSelect={(event) => event.preventDefault()}
                 >
-                  <div className="text-sm font-medium text-foreground">
-                    {notification.message}
+                  <div className="flex w-full items-start justify-between gap-3">
+                    <div className="text-sm font-medium text-foreground">
+                      {notification.message}
+                    </div>
+                    <button
+                      type="button"
+                      className="rounded p-1 text-muted-foreground transition hover:text-foreground"
+                      onClick={(event) => {
+                        event.preventDefault()
+                        event.stopPropagation()
+                        handleAcknowledge(notification.notificationId)
+                      }}
+                      aria-label="Acknowledge notification"
+                      disabled={acknowledging.has(notification.notificationId)}
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
                   </div>
                   <div className="flex w-full items-center justify-between text-xs text-muted-foreground">
-                    <span>{notification.type?.replaceAll("_", " ")}</span>
-                    {notification.notifyOn && (
-                      <span>Due {formatShortDate(notification.notifyOn)}</span>
-                    )}
+                    <span>{notification.type}</span>
+                    <span>{formatShortDate(notification.createdAt)}</span>
                   </div>
                 </DropdownMenuItem>
               ))}

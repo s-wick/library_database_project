@@ -2,7 +2,10 @@ const { sendJson } = require("./utils")
 const { handleHealth } = require("./services/health.service")
 const { handleSignup, handleSignin } = require("./services/auth.service")
 const { handleGetDashboard } = require("./services/dashboard.service")
-const { handleGetNotifications } = require("./services/notifications.service")
+const {
+  handleGetNotifications,
+  handleAcknowledgeNotification,
+} = require("./services/notifications.service")
 const { handleGetReports } = require("./services/reports.service")
 const {
   handleGetItemsAll,
@@ -62,6 +65,11 @@ async function handleApiRoute(req, res, url) {
 
   if (req.method === "GET" && pathname === "/api/notifications") {
     await handleGetNotifications(req, res, url)
+    return
+  }
+
+  if (req.method === "POST" && pathname === "/api/notifications/ack") {
+    await handleAcknowledgeNotification(req, res)
     return
   }
 

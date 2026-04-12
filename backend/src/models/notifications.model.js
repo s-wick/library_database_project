@@ -12,12 +12,27 @@ async function getNotificationsByUserId(userId) {
      INNER JOIN user_notification_type nt
        ON nt.notification_type_id = user_notification.notification_type
      WHERE user_id = ?
+       AND acknowledged_at IS NULL
      ORDER BY created_at DESC, notification_id DESC
      LIMIT 100`,
     [userId]
   )
 }
 
+async function acknowledgeNotification(userId, notificationId) {
+  const result = await query(
+    `UPDATE user_notification
+     SET acknowledged_at = NOW()
+     WHERE notification_id = ?
+       AND user_id = ?
+       AND acknowledged_at IS NULL`,
+    [notificationId, userId]
+  )
+
+  return Number(result.affectedRows || 0) > 0
+}
+
 module.exports = {
   getNotificationsByUserId,
+  acknowledgeNotification,
 }

@@ -442,9 +442,7 @@ export default function ReportsPage() {
     filters.reportType === "userDemographics"
       ? new Set(
           rows
-            .filter(
-              (row) => Number(row.isOverdue) === 1 && !row.returnDate
-            )
+            .filter((row) => Number(row.isOverdue) === 1 && !row.returnDate)
             .map((row) => row.userId || row.userEmail || row.userName)
             .filter(Boolean)
         ).size

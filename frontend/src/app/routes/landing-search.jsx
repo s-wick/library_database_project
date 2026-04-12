@@ -124,17 +124,23 @@ export default function LandingSearchPage() {
       <Navbar showBack={false} />
 
       {/* ── Hero Section ── */}
-      <div
-        className="relative flex h-[400px] items-center justify-center p-6"
-        style={{
-          backgroundImage: `url(${bgImage})`,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-        }}
-      >
-        <div className="absolute inset-0 z-0 bg-black/60" />
+      <div className="relative flex h-[400px] items-center justify-center overflow-hidden p-6">
+        {/* Blurred background image */}
+        <div
+          className="absolute inset-0 z-0"
+          style={{
+            backgroundImage: `url(${bgImage})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            filter: "blur(3px)",
+            transform: "scale(1.05)", // Prevents edge transparency from blur
+          }}
+        />
+        {/* Overlay for darkening */}
+        <div className="absolute inset-0 z-10 bg-black/60" />
 
-        <div className="relative z-10 w-full max-w-2xl px-4 text-center">
+        {/* Content stays sharp */}
+        <div className="relative z-20 w-full max-w-2xl px-4 text-center">
           <h1 className="mb-6 text-4xl font-bold tracking-tight text-white md:text-5xl">
             Browse the Catalog
           </h1>

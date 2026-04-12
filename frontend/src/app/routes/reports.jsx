@@ -345,9 +345,7 @@ export default function ReportsPage() {
     genre.toLowerCase().includes(genreQuery.trim().toLowerCase())
   )
   const checkoutPieData =
-    filters.reportType === "userDemographics"
-      ? buildCheckoutBuckets(rows)
-      : []
+    filters.reportType === "userDemographics" ? buildCheckoutBuckets(rows) : []
   const durationPieData = Array.isArray(summary?.durationBuckets)
     ? summary.durationBuckets.map((item) => ({
         label: item.bucket,

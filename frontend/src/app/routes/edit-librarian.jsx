@@ -61,7 +61,7 @@ function hasRetirementReached(value) {
 }
 
 export default function EditLibrarianPage() {
-  const authUser = JSON.parse(localStorage.getItem("authUser") || "{}")
+  const authUser = JSON.parse(sessionStorage.getItem("authUser") || "{}")
   const todayDate = getTodayDateValue()
   const [librarians, setLibrarians] = useState([])
   const [selectedId, setSelectedId] = useState("")

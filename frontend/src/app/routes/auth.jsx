@@ -146,10 +146,10 @@ export default function AuthPage() {
       if (isSignUp) {
         setSuccess("Account created successfully.")
       } else {
-        localStorage.setItem("isLoggedIn", "true")
-        localStorage.setItem("authToken", data?.token || "")
-        localStorage.setItem("authUser", JSON.stringify(data?.user || {}))
-        localStorage.setItem("user", JSON.stringify(data?.user || {}))
+        sessionStorage.setItem("isLoggedIn", "true")
+        sessionStorage.setItem("authToken", data?.token || "")
+        sessionStorage.setItem("authUser", JSON.stringify(data?.user || {}))
+        sessionStorage.setItem("user", JSON.stringify(data?.user || {}))
 
         await syncCartWithServer()
 

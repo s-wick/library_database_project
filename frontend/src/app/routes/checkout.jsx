@@ -141,8 +141,8 @@ export default function CheckoutPage() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    const isLoggedIn = localStorage.getItem("isLoggedIn") === "true"
-    const userStr = localStorage.getItem("user")
+    const isLoggedIn = sessionStorage.getItem("isLoggedIn") === "true"
+    const userStr = sessionStorage.getItem("user")
     const user = userStr ? JSON.parse(userStr) : null
     const isStaff =
       user?.accountType === "staff" || user?.roleGroup === "adminStaff"
@@ -166,7 +166,7 @@ export default function CheckoutPage() {
   const [borrowStatus, setBorrowStatus] = useState(null)
 
   useEffect(() => {
-    const userStr = localStorage.getItem("user")
+    const userStr = sessionStorage.getItem("user")
     if (!userStr) return
     const user = JSON.parse(userStr)
     if (!user?.id) return
@@ -218,7 +218,7 @@ export default function CheckoutPage() {
     try {
       setIsCheckingOut(true)
 
-      const userStr = localStorage.getItem("user")
+      const userStr = sessionStorage.getItem("user")
       if (!userStr) {
         setCheckoutError("You must be logged in to checkout.")
         setIsCheckingOut(false)

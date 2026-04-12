@@ -6,7 +6,7 @@ const CartContext = createContext()
 export function CartProvider({ children }) {
   const [cartItems, setCartItems] = useState(() => {
     try {
-      const stored = localStorage.getItem("cart")
+      const stored = sessionStorage.getItem("cart")
       return stored ? JSON.parse(stored) : []
     } catch {
       return []
@@ -14,14 +14,14 @@ export function CartProvider({ children }) {
   })
 
   useEffect(() => {
-    localStorage.setItem("cart", JSON.stringify(cartItems))
+    sessionStorage.setItem("cart", JSON.stringify(cartItems))
   }, [cartItems])
 
   const apiBaseUrl = API_BASE_URL
 
   const getUser = () => {
     try {
-      const userStr = localStorage.getItem("user")
+      const userStr = sessionStorage.getItem("user")
       if (userStr) return JSON.parse(userStr)
     } catch {}
     return null

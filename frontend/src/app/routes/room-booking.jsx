@@ -57,7 +57,7 @@ export default function RoomBookingPage() {
 
   const user = useMemo(() => {
     try {
-      const raw = localStorage.getItem("user")
+      const raw = sessionStorage.getItem("user")
       return raw ? JSON.parse(raw) : null
     } catch {
       return null

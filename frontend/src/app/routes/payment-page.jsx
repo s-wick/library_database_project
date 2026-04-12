@@ -45,7 +45,7 @@ export default function PaymentPage() {
   useEffect(() => {
     const checkAuth = () => {
       try {
-        const storedUser = localStorage.getItem("user")
+        const storedUser = sessionStorage.getItem("user")
         if (!storedUser) {
           navigate("/")
         }
@@ -139,7 +139,7 @@ export default function PaymentPage() {
 
   // needed to confirm the purchase and update the users account balance
   const confirmPurchase = async () => {
-    const storedUser = localStorage.getItem("user")
+    const storedUser = sessionStorage.getItem("user")
     const parsedUser = storedUser ? JSON.parse(storedUser) : null
     const userId = parsedUser?.id || ""
 
@@ -174,7 +174,7 @@ export default function PaymentPage() {
   }
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("user")
+    const storedUser = sessionStorage.getItem("user")
     const parsedUser = storedUser ? JSON.parse(storedUser) : null
     const userId = parsedUser?.id || ""
 

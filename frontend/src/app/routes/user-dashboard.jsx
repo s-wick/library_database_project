@@ -508,7 +508,7 @@ export default function UserDashboard() {
   useEffect(() => {
     // Attempt to load user from local storage
     try {
-      const storedUser = localStorage.getItem("user")
+      const storedUser = sessionStorage.getItem("user")
       if (storedUser) {
         const parsed = JSON.parse(storedUser)
         let name = "User"
@@ -534,7 +534,7 @@ export default function UserDashboard() {
   useEffect(() => {
     const checkAuth = () => {
       try {
-        const storedUser = localStorage.getItem("user")
+        const storedUser = sessionStorage.getItem("user")
         if (!storedUser) {
           navigate("/")
         }
@@ -557,7 +557,7 @@ export default function UserDashboard() {
 
   const handleCancelHold = async (hold) => {
     try {
-      const userStr = localStorage.getItem("user")
+      const userStr = sessionStorage.getItem("user")
       const user = userStr ? JSON.parse(userStr) : null
       if (!user?.id || !hold?.itemId) return
 

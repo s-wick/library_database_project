@@ -28,11 +28,6 @@ SELECT item_id, @student1_id, '2026-04-08 10:00:00', '2026-04-15 10:00:00', NULL
 FROM item
 WHERE title = 'To Kill a Mockingbird';
 
-INSERT INTO borrow (item_id, user_id, checkout_date, due_date, return_date)
-SELECT item_id, @student1_id, '2026-04-09 14:30:00', '2026-04-16 14:30:00', NULL
-FROM item
-WHERE title = 'The Great Gatsby';
-
 -- Student user has a book due tomorrow
 INSERT INTO borrow (item_id, user_id, checkout_date, due_date, return_date)
 SELECT item_id, @student1_id, '2026-04-10 12:00:00', '2026-04-12 12:00:00', NULL

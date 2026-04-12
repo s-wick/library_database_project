@@ -4,7 +4,12 @@ const path = require("node:path")
 const { spawnSync } = require("node:child_process")
 
 // Edit this list to control the order of data imports.
-const dataFiles = ["users.sql", "items.sql", "transactions.sql"]
+const dataFiles = [
+  "users.sql",
+  "items.sql",
+  "transactions.sql",
+  "holds-fines.sql",
+]
 const thumbnailMapFile = path.join(
   __dirname,
   "..",

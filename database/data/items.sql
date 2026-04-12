@@ -50,7 +50,7 @@ VALUES
 	(@book_code, '1984', NULL, 16.50, 5, @librarian_id),
 	(@book_code, 'The Great Gatsby', NULL, 14.25, 3, @librarian_id),
 	(@book_code, 'Pride and Prejudice', NULL, 12.75, 4, @librarian_id),
-	(@book_code, 'The Hobbit', NULL, 17.40, 2, @librarian_id);
+	(@book_code, 'The Hobbit', NULL, 17.40, 1, @librarian_id);
 
 INSERT INTO book (item_id, author, edition, publication, publication_date)
 SELECT item_id, 'Harper Lee', '50th Anniversary', 'J.B. Lippincott & Co.', '1960-07-11'

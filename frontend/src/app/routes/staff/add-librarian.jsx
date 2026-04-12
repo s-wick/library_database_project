@@ -21,7 +21,7 @@ function formatUsPhone(value = "") {
 
 export default function AddLibrarianPage() {
   const apiBaseUrl = API_BASE_URL
-  const authUser = JSON.parse(localStorage.getItem("authUser") || "{}")
+  const authUser = JSON.parse(sessionStorage.getItem("authUser") || "{}")
   const [form, setForm] = useState({
     firstName: "",
     middleName: "",

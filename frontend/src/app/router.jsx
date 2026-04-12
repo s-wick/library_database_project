@@ -20,7 +20,7 @@ import RootLayout from "./routes/shared/root-layout"
 
 function getStoredUser() {
   try {
-    const raw = localStorage.getItem("user")
+    const raw = sessionStorage.getItem("user")
     return raw ? JSON.parse(raw) : null
   } catch {
     return null
@@ -32,7 +32,7 @@ function isStaffUser(user) {
 }
 
 function isLoggedIn() {
-  return localStorage.getItem("isLoggedIn") === "true"
+  return sessionStorage.getItem("isLoggedIn") === "true"
 }
 
 function RequireManagementAccess({ children }) {

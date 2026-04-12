@@ -46,7 +46,7 @@ export function Navbar({ showBack = false }) {
   const { cartItems, clearFrontendCart } = useCart()
 
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
-    const stored = localStorage.getItem("isLoggedIn")
+    const stored = sessionStorage.getItem("isLoggedIn")
     return stored === "true"
   })
 
@@ -74,7 +74,7 @@ export function Navbar({ showBack = false }) {
     }
 
     try {
-      const storedUser = localStorage.getItem("user")
+      const storedUser = sessionStorage.getItem("user")
       setUserProfile(storedUser ? JSON.parse(storedUser) : null)
     } catch (err) {
       setUserProfile(null)
@@ -141,8 +141,8 @@ export function Navbar({ showBack = false }) {
   }
 
   const handleSignOut = () => {
-    localStorage.setItem("isLoggedIn", "false")
-    localStorage.removeItem("user")
+    sessionStorage.setItem("isLoggedIn", "false")
+    sessionStorage.removeItem("user")
     setIsLoggedIn(false)
     clearFrontendCart()
     if (window.location.pathname === "/checkout") {

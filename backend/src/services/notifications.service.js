@@ -6,11 +6,6 @@ function toIsoString(value) {
   return new Date(value).toISOString()
 }
 
-function toDateString(value) {
-  if (!value) return null
-  return new Date(value).toISOString().split("T")[0]
-}
-
 async function handleGetNotifications(_req, res, url) {
   try {
     const userId = url.searchParams.get("userId")
@@ -29,9 +24,8 @@ async function handleGetNotifications(_req, res, url) {
         type: notification.notification_type,
         message: notification.message,
         itemId: Number(notification.item_id),
-        checkoutDate: toIsoString(notification.checkout_date),
-        notifyOn: toDateString(notification.notify_on),
         createdAt: toIsoString(notification.created_at),
+        acknowledgedAt: toIsoString(notification.acknowledged_at),
       })),
     })
   } catch (error) {

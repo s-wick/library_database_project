@@ -7,6 +7,7 @@ const { spawnSync } = require("node:child_process")
 const dataFiles = [
   "users.sql",
   "items.sql",
+  "notification-types.sql",
   "transactions.sql",
   "holds-fines.sql",
 ]

@@ -219,22 +219,23 @@ DELIMITER ;;
     INSERT INTO user_notification (
       user_id,
       item_id,
-      checkout_date,
       notification_type,
-      message,
-      notify_on
+      message
     )
     SELECT
       h.user_id,
       h.item_id,
-      NULL,
-      'HOLD_REMOVED_FINE',
+      (
+        SELECT notification_type_id
+        FROM user_notification_type
+        WHERE notification_type_text = 'Removed hold'
+        LIMIT 1
+      ),
       CONCAT(
         'Your hold for "',
         i.title,
         '" was removed because your account has unpaid fines.'
-      ),
-      CURRENT_DATE
+      )
     FROM hold_item h
     INNER JOIN item i
       ON i.item_id = h.item_id
@@ -289,22 +290,23 @@ DELIMITER ;;
     INSERT INTO user_notification (
       user_id,
       item_id,
-      checkout_date,
       notification_type,
-      message,
-      notify_on
+      message
     )
     SELECT
       h.user_id,
       h.item_id,
-      NULL,
-      'HOLD_REMOVED_FINE',
+      (
+        SELECT notification_type_id
+        FROM user_notification_type
+        WHERE notification_type_text = 'Removed hold'
+        LIMIT 1
+      ),
       CONCAT(
         'Your hold for "',
         i.title,
         '" was removed because your account has unpaid fines.'
-      ),
-      CURRENT_DATE
+      )
     FROM hold_item h
     INNER JOIN item i
       ON i.item_id = h.item_id
@@ -377,7 +379,7 @@ CREATE TABLE `item` (
   KEY `fk_item_created_by` (`created_by`),
   CONSTRAINT `fk_item_created_by` FOREIGN KEY (`created_by`) REFERENCES `staff_account` (`staff_id`),
   CONSTRAINT `fk_item_type` FOREIGN KEY (`item_type_code`) REFERENCES `item_type` (`item_code`)
-) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
 /*!50003 SET @saved_cs_results     = @@character_set_results */ ;
@@ -435,22 +437,23 @@ DELIMITER ;;
         INSERT INTO user_notification (
           user_id,
           item_id,
-          checkout_date,
           notification_type,
-          message,
-          notify_on
+          message
         )
         VALUES (
           v_hold_user_id,
           NEW.item_id,
-          NULL,
-          'HOLD_REMOVED_FINE',
+          (
+            SELECT notification_type_id
+            FROM user_notification_type
+            WHERE notification_type_text = 'Removed hold'
+            LIMIT 1
+          ),
           CONCAT(
             'Your hold for "',
             NEW.title,
             '" was removed because your account has unpaid fines.'
-          ),
-          CURRENT_DATE
+          )
         );
 
         DELETE FROM hold_item
@@ -497,16 +500,18 @@ DELIMITER ;;
       INSERT INTO user_notification (
         user_id,
         item_id,
-        checkout_date,
         notification_type,
-        message,
-        notify_on
+        message
       )
       VALUES (
         v_hold_user_id,
         NEW.item_id,
-        v_checkout_ts,
-        'HOLD_ASSIGNED',
+        (
+          SELECT notification_type_id
+          FROM user_notification_type
+          WHERE notification_type_text = 'Checked out item'
+          LIMIT 1
+        ),
         CONCAT(
           'Your hold for "',
           NEW.title,
@@ -516,8 +521,7 @@ DELIMITER ;;
             '%Y-%m-%d'
           ),
           '.'
-        ),
-        CURRENT_DATE
+        )
       );
 
       DELETE FROM hold_item
@@ -549,7 +553,7 @@ CREATE TABLE `item_type` (
   `item_code` tinyint unsigned NOT NULL AUTO_INCREMENT,
   `item_type` varchar(20) NOT NULL,
   PRIMARY KEY (`item_code`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -601,7 +605,7 @@ CREATE TABLE `staff_account` (
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `is_retired` datetime DEFAULT NULL,
   PRIMARY KEY (`staff_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -622,7 +626,7 @@ CREATE TABLE `user_account` (
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `last_login` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`user_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -633,22 +637,35 @@ DROP TABLE IF EXISTS `user_notification`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `user_notification` (
-  `notification_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `notification_id` int unsigned NOT NULL AUTO_INCREMENT,
   `user_id` int unsigned NOT NULL,
   `item_id` int unsigned NOT NULL,
-  `checkout_date` datetime DEFAULT NULL,
-  `notification_type` varchar(30) NOT NULL,
+  `notification_type` int unsigned NOT NULL,
   `message` varchar(255) NOT NULL,
-  `notify_on` date NOT NULL,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `acknowledged_at` datetime DEFAULT NULL,
   PRIMARY KEY (`notification_id`),
-  UNIQUE KEY `uq_user_notification_due_soon` (`user_id`,`item_id`,`checkout_date`,`notification_type`,`notify_on`),
-  KEY `idx_user_notification_user_id` (`user_id`),
-  KEY `idx_user_notification_item_id` (`item_id`),
-  KEY `idx_user_notification_notify_on` (`notify_on`),
+  KEY `fk_user_notification_item` (`item_id`),
+  KEY `fk_user_notification_user` (`user_id`),
+  KEY `fk_notification_type` (`notification_type`),
+  CONSTRAINT `fk_notification_type` FOREIGN KEY (`notification_type`) REFERENCES `user_notification_type` (`notification_type_id`) ON DELETE CASCADE,
   CONSTRAINT `fk_user_notification_item` FOREIGN KEY (`item_id`) REFERENCES `item` (`item_id`) ON DELETE CASCADE,
   CONSTRAINT `fk_user_notification_user` FOREIGN KEY (`user_id`) REFERENCES `user_account` (`user_id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `user_notification_type`
+--
+
+DROP TABLE IF EXISTS `user_notification_type`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `user_notification_type` (
+  `notification_type_id` int unsigned NOT NULL AUTO_INCREMENT,
+  `notification_type_text` varchar(30) NOT NULL,
+  PRIMARY KEY (`notification_type_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -676,4 +693,4 @@ CREATE TABLE `video` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-04-11 23:13:49
+-- Dump completed on 2026-04-11 23:42:11

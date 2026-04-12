@@ -4,6 +4,11 @@ class OutOfStockError extends Error {}
 class ItemNotFoundError extends Error {}
 class ActiveBorrowNotFoundError extends Error {}
 
+const NOTIFICATION_TYPES = {
+  holdRemoved: "Removed hold",
+  holdAssigned: "Checked out item",
+}
+
 function normalizeCheckoutDateKey(checkoutDate) {
   const normalized = String(checkoutDate || "").trim()
 
@@ -300,6 +305,22 @@ function formatDateOnly(value) {
   return `${year}-${month}-${day}`
 }
 
+async function getNotificationTypeId(typeText) {
+  const rows = await query(
+    `SELECT notification_type_id
+     FROM user_notification_type
+     WHERE notification_type_text = ?
+     LIMIT 1`,
+    [typeText]
+  )
+
+  if (!rows.length) {
+    throw new Error(`Missing notification type: ${typeText}`)
+  }
+
+  return rows[0].notification_type_id
+}
+
 async function processUserHoldsOnLogin(userId) {
   const user = await getUserAccountById(userId)
   if (!user) return
@@ -315,6 +336,9 @@ async function processUserHoldsOnLogin(userId) {
   const hasUnpaidFine = Number(fineRows[0]?.cnt || 0) > 0
 
   if (hasUnpaidFine) {
+    const holdRemovedTypeId = await getNotificationTypeId(
+      NOTIFICATION_TYPES.holdRemoved
+    )
     const holds = await query(
       `SELECT h.item_id, h.request_date, i.title
        FROM hold_item h
@@ -329,15 +353,14 @@ async function processUserHoldsOnLogin(userId) {
           `INSERT INTO user_notification (
              user_id,
              item_id,
-             checkout_date,
              notification_type,
-             message,
-             notify_on
+             message
            )
-           VALUES (?, ?, NULL, 'HOLD_REMOVED_FINE', ?, CURRENT_DATE)`,
+           VALUES (?, ?, ?, ?)`,
           [
             userId,
             hold.item_id,
+            holdRemovedTypeId,
             `Your hold for "${hold.title}" was removed because your account has unpaid fines.`,
           ]
         )
@@ -360,6 +383,9 @@ async function processUserHoldsOnLogin(userId) {
 
   if (!holds.length) return
 
+  const holdAssignedTypeId = await getNotificationTypeId(
+    NOTIFICATION_TYPES.holdAssigned
+  )
   const borrowLimit = user.is_faculty ? 6 : 3
   const borrowDays = user.is_faculty ? 14 : 7
   let activeCount = await getActiveBorrowCount(userId)
@@ -409,16 +435,14 @@ async function processUserHoldsOnLogin(userId) {
       `INSERT INTO user_notification (
          user_id,
          item_id,
-         checkout_date,
          notification_type,
-         message,
-         notify_on
+         message
        )
-       VALUES (?, ?, ?, 'HOLD_ASSIGNED', ?, CURRENT_DATE)`,
+       VALUES (?, ?, ?, ?)`,
       [
         userId,
         hold.item_id,
-        borrowRow?.checkout_date || null,
+        holdAssignedTypeId,
         `Your hold for "${hold.title}" has been checked out to your account. It is due on ${dueDateText}.`,
       ]
     )

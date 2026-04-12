@@ -307,8 +307,10 @@ export default function SearchPage() {
                         if (nextType === "Book") {
                           if (bookGenre) params.set("bookGenre", bookGenre)
                           if (bookAuthor) params.set("bookAuthor", bookAuthor)
-                          if (bookPubDate) params.set("bookPubDate", bookPubDate)
-                          if (bookEdition) params.set("bookEdition", bookEdition)
+                          if (bookPubDate)
+                            params.set("bookPubDate", bookPubDate)
+                          if (bookEdition)
+                            params.set("bookEdition", bookEdition)
                         }
 
                         if (nextType === "Audiobook") {
@@ -335,7 +337,7 @@ export default function SearchPage() {
                       <option value="Equipment">Equipment</option>
                     </select>
                   </div>
-                  <label className="flex items-center gap-3 pb-2 pr-4 text-base text-muted-foreground">
+                  <label className="flex items-center gap-3 pr-4 pb-2 text-base text-muted-foreground">
                     <Checkbox
                       className="size-5"
                       checked={inStockOnly}
@@ -379,7 +381,7 @@ export default function SearchPage() {
                       else params.delete("audioMax")
                       setSearchParams(params, { replace: true })
                     }}
-                    className="py-4 [&_[data-slot=slider-track]]:h-2 [&_[data-slot=slider-thumb]]:size-5"
+                    className="py-4 [&_[data-slot=slider-thumb]]:size-5 [&_[data-slot=slider-track]]:h-2"
                   />
                 </div>
               )}
@@ -411,7 +413,7 @@ export default function SearchPage() {
                       else params.delete("videoMax")
                       setSearchParams(params, { replace: true })
                     }}
-                    className="py-4 [&_[data-slot=slider-track]]:h-2 [&_[data-slot=slider-thumb]]:size-5"
+                    className="py-4 [&_[data-slot=slider-thumb]]:size-5 [&_[data-slot=slider-track]]:h-2"
                   />
                 </div>
               )}

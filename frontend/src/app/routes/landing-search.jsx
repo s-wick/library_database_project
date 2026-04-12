@@ -216,7 +216,7 @@ export default function LandingSearchPage() {
                         <option value="Equipment">Equipment</option>
                       </select>
                     </div>
-                    <label className="flex items-center gap-3 pb-2 pr-4 text-base text-muted-foreground">
+                    <label className="flex items-center gap-3 pr-4 pb-2 text-base text-muted-foreground">
                       <Checkbox
                         className="size-5"
                         checked={inStockOnly}
@@ -245,7 +245,7 @@ export default function LandingSearchPage() {
                       step={60}
                       minStepsBetweenThumbs={1}
                       onValueChange={setAudioRange}
-                      className="py-4 [&_[data-slot=slider-track]]:h-2 [&_[data-slot=slider-thumb]]:size-5"
+                      className="py-4 [&_[data-slot=slider-thumb]]:size-5 [&_[data-slot=slider-track]]:h-2"
                     />
                   </div>
                 )}
@@ -267,7 +267,7 @@ export default function LandingSearchPage() {
                       step={60}
                       minStepsBetweenThumbs={1}
                       onValueChange={setVideoRange}
-                      className="py-4 [&_[data-slot=slider-track]]:h-2 [&_[data-slot=slider-thumb]]:size-5"
+                      className="py-4 [&_[data-slot=slider-thumb]]:size-5 [&_[data-slot=slider-track]]:h-2"
                     />
                   </div>
                 )}

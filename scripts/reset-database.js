@@ -5,37 +5,14 @@ const { spawnSync } = require("node:child_process")
 
 // Edit this list to control the order of data imports.
 const dataFiles = ["users.sql", "items.sql", "transactions.sql"]
-const thumbnailFiles = [
-  {
-    title: "To Kill a Mockingbird",
-    relativePath: path.join("books", "to-kill-a-mockingbird.jpg"),
-  },
-  { title: "1984", relativePath: path.join("books", "1984.jpg") },
-  {
-    title: "The Great Gatsby",
-    relativePath: path.join("books", "the-great-gatsby.jpg"),
-  },
-  {
-    title: "Pride and Prejudice",
-    relativePath: path.join("books", "pride-and-predjudice.jpg"),
-  },
-  {
-    title: "The Hobbit",
-    relativePath: path.join("books", "the-hobbit.jpg"),
-  },
-  {
-    title: "Canon EOS Rebel T7 Camera Kit",
-    relativePath: path.join("equipment", "canon-eos-rebel-t7-camera-kit.jpg"),
-  },
-  {
-    title: "Dell Latitude 5440 Laptop",
-    relativePath: path.join("equipment", "dell-latitude-5440-laptop.png"),
-  },
-  {
-    title: "Shure SM58 Microphone",
-    relativePath: path.join("equipment", "shure-sm58-microphone.jpg"),
-  },
-]
+const thumbnailMapFile = path.join(
+  __dirname,
+  "..",
+  "database",
+  "data",
+  "images",
+  "thumbnails.json"
+)
 
 function parseEnvFile(filePath) {
   const content = fs.readFileSync(filePath, "utf8")
@@ -124,7 +101,46 @@ function runMysqlQuery({ mysqlBin, args, query, label }) {
   return (result.stdout || "").trim()
 }
 
-function updateThumbnails({ mysqlBin, baseArgs, database, rootDir }) {
+function loadThumbnailMap() {
+  if (!fs.existsSync(thumbnailMapFile)) {
+    throw new Error(`Thumbnail map not found: ${thumbnailMapFile}`)
+  }
+
+  let raw
+  try {
+    raw = fs.readFileSync(thumbnailMapFile, "utf8")
+  } catch (error) {
+    throw new Error(`Failed to read thumbnail map: ${thumbnailMapFile}`)
+  }
+
+  let parsed
+  try {
+    parsed = JSON.parse(raw)
+  } catch (error) {
+    throw new Error(`Invalid JSON in thumbnail map: ${thumbnailMapFile}`)
+  }
+
+  if (!Array.isArray(parsed)) {
+    throw new Error(`Thumbnail map must be a JSON array: ${thumbnailMapFile}`)
+  }
+
+  for (const entry of parsed) {
+    if (!entry || typeof entry !== "object") {
+      throw new Error(
+        `Thumbnail map entries must be objects: ${thumbnailMapFile}`
+      )
+    }
+    if (!entry.title || !entry.relativePath) {
+      throw new Error(
+        `Thumbnail map entries require title and relativePath: ${thumbnailMapFile}`
+      )
+    }
+  }
+
+  return parsed
+}
+
+function updateThumbnails({ mysqlBin, baseArgs, database, rootDir, map }) {
   const imagesDir = path.join(rootDir, "database", "data", "images")
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "db-reset-"))
   const tempSqlPath = path.join(tempDir, "thumbnail-updates.sql")
@@ -132,7 +148,7 @@ function updateThumbnails({ mysqlBin, baseArgs, database, rootDir }) {
   try {
     const statements = []
 
-    for (const entry of thumbnailFiles) {
+    for (const entry of map) {
       const filePath = path.join(imagesDir, entry.relativePath)
 
       if (!fs.existsSync(filePath)) {
@@ -251,9 +267,16 @@ function main() {
     })
 
     if (fileName === "items.sql") {
-      updateThumbnails({ mysqlBin, baseArgs, database, rootDir })
+      const thumbnailMap = loadThumbnailMap()
+      updateThumbnails({
+        mysqlBin,
+        baseArgs,
+        database,
+        rootDir,
+        map: thumbnailMap,
+      })
 
-      const quotedTitles = thumbnailFiles
+      const quotedTitles = thumbnailMap
         .map((entry) => `'${escapeSqlString(entry.title)}'`)
         .join(", ")
       const nullCount = runMysqlQuery({

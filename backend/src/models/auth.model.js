@@ -79,6 +79,15 @@ async function createStaffAccount(user) {
   )
 }
 
+async function updateUserLastLogin(userId) {
+  await query(
+    `UPDATE user_account
+     SET last_login = NOW()
+     WHERE user_id = ?`,
+    [userId]
+  )
+}
+
 module.exports = {
   findUserAccountByEmail,
   findStaffAccountByEmail,
@@ -86,4 +95,5 @@ module.exports = {
   findStaffAccountByCredentials,
   createUserAccount,
   createStaffAccount,
+  updateUserLastLogin,
 }

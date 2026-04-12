@@ -6,7 +6,9 @@ const {
   findStaffAccountByCredentials,
   createUserAccount,
   createStaffAccount,
+  updateUserLastLogin,
 } = require("../models/auth.model")
+const { processUserHoldsOnLogin } = require("../models/transactions.model")
 
 function normalizeAccountType(accountType = "") {
   const normalized = String(accountType || "")
@@ -207,6 +209,13 @@ async function handleSignin(req, res) {
         },
       })
       return
+    }
+
+    try {
+      await updateUserLastLogin(account.user_id)
+      await processUserHoldsOnLogin(account.user_id)
+    } catch (error) {
+      console.error("Post-login hold processing failed:", error.message)
     }
 
     sendJson(res, 200, {

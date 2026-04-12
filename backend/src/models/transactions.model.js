@@ -291,6 +291,148 @@ async function getActiveBorrowCount(userId) {
   return Number(rows[0]?.cnt || 0)
 }
 
+function formatDateOnly(value) {
+  const date = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(date.getTime())) return null
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
+}
+
+async function processUserHoldsOnLogin(userId) {
+  const user = await getUserAccountById(userId)
+  if (!user) return
+
+  const fineRows = await query(
+    `SELECT COUNT(*) AS cnt
+     FROM fined_for
+     WHERE user_id = ?
+       AND COALESCE(amount, 0) > COALESCE(amount_paid, 0)`,
+    [userId]
+  )
+
+  const hasUnpaidFine = Number(fineRows[0]?.cnt || 0) > 0
+
+  if (hasUnpaidFine) {
+    const holds = await query(
+      `SELECT h.item_id, h.request_date, i.title
+       FROM hold_item h
+       INNER JOIN item i ON i.item_id = h.item_id
+       WHERE h.user_id = ?`,
+      [userId]
+    )
+
+    if (holds.length) {
+      for (const hold of holds) {
+        await query(
+          `INSERT INTO user_notification (
+             user_id,
+             item_id,
+             checkout_date,
+             notification_type,
+             message,
+             notify_on
+           )
+           VALUES (?, ?, NULL, 'HOLD_REMOVED_FINE', ?, CURRENT_DATE)`,
+          [
+            userId,
+            hold.item_id,
+            `Your hold for "${hold.title}" was removed because your account has unpaid fines.`,
+          ]
+        )
+      }
+
+      await query(`DELETE FROM hold_item WHERE user_id = ?`, [userId])
+    }
+
+    return
+  }
+
+  const holds = await query(
+    `SELECT h.item_id, h.request_date, i.title
+     FROM hold_item h
+     INNER JOIN item i ON i.item_id = h.item_id
+     WHERE h.user_id = ?
+     ORDER BY h.request_date ASC`,
+    [userId]
+  )
+
+  if (!holds.length) return
+
+  const borrowLimit = user.is_faculty ? 6 : 3
+  const borrowDays = user.is_faculty ? 14 : 7
+  let activeCount = await getActiveBorrowCount(userId)
+
+  for (const hold of holds) {
+    if (activeCount >= borrowLimit) break
+
+    try {
+      await createBorrowTransaction(userId, hold.item_id, borrowDays)
+    } catch (error) {
+      if (error instanceof OutOfStockError) {
+        continue
+      }
+
+      if (error instanceof ItemNotFoundError) {
+        await query(
+          `DELETE FROM hold_item
+           WHERE item_id = ? AND user_id = ? AND request_date = ?`,
+          [hold.item_id, userId, hold.request_date]
+        )
+        continue
+      }
+
+      if (error.sqlState === "45000") {
+        break
+      }
+
+      throw error
+    }
+
+    const borrowRows = await query(
+      `SELECT checkout_date, due_date
+       FROM borrow
+       WHERE item_id = ?
+         AND user_id = ?
+         AND return_date IS NULL
+       ORDER BY checkout_date DESC
+       LIMIT 1`,
+      [hold.item_id, userId]
+    )
+
+    const borrowRow = borrowRows[0]
+    const dueDate = borrowRow ? formatDateOnly(borrowRow.due_date) : null
+    const dueDateText = dueDate || "N/A"
+
+    await query(
+      `INSERT INTO user_notification (
+         user_id,
+         item_id,
+         checkout_date,
+         notification_type,
+         message,
+         notify_on
+       )
+       VALUES (?, ?, ?, 'HOLD_ASSIGNED', ?, CURRENT_DATE)`,
+      [
+        userId,
+        hold.item_id,
+        borrowRow?.checkout_date || null,
+        `Your hold for "${hold.title}" has been checked out to your account. It is due on ${dueDateText}.`,
+      ]
+    )
+
+    await query(
+      `DELETE FROM hold_item
+       WHERE item_id = ? AND user_id = ? AND request_date = ?`,
+      [hold.item_id, userId, hold.request_date]
+    )
+
+    activeCount += 1
+  }
+}
+
 async function getActiveBorrowCatalog(searchTerm = "") {
   const normalizedSearch = String(searchTerm || "")
     .trim()
@@ -350,6 +492,7 @@ module.exports = {
   getActiveBorrowCatalog,
   getUserAccountById,
   getActiveBorrowCount,
+  processUserHoldsOnLogin,
   OutOfStockError,
   ItemNotFoundError,
   ActiveBorrowNotFoundError,

@@ -8,11 +8,22 @@ const {
   deleteMeetingRoom,
   getUserActiveBooking,
   hasRoomOverlap,
+  getRoomBookingsInWindow,
   createRoomBooking,
+  deleteRoomBooking,
 } = require("../models/rooms.model")
 
 const MAX_BOOKING_MINUTES = 180
 const MAX_ADVANCE_HOURS = 24
+const SLOT_INTERVAL_MINUTES = 30
+
+function isHalfHourBoundary(date) {
+  return (
+    date.getSeconds() === 0 &&
+    date.getMilliseconds() === 0 &&
+    date.getMinutes() % SLOT_INTERVAL_MINUTES === 0
+  )
+}
 
 function formatBooking(row) {
   if (!row) return null
@@ -72,6 +83,97 @@ async function handleGetMyRoomBooking(_req, res, url) {
     sendJson(res, 500, {
       ok: false,
       message: "Failed to fetch user booking",
+      error: error.message,
+    })
+  }
+}
+
+async function handleGetRoomAvailability(_req, res, url) {
+  try {
+    const roomNumber = String(url.searchParams.get("roomNumber") || "").trim()
+    const startTime = new Date(url.searchParams.get("startTime"))
+    const endTime = new Date(url.searchParams.get("endTime"))
+
+    if (!roomNumber) {
+      sendJson(res, 400, { ok: false, message: "roomNumber is required" })
+      return
+    }
+
+    if (Number.isNaN(startTime.getTime()) || Number.isNaN(endTime.getTime())) {
+      sendJson(res, 400, { ok: false, message: "Invalid startTime or endTime" })
+      return
+    }
+
+    if (endTime <= startTime) {
+      sendJson(res, 400, {
+        ok: false,
+        message: "endTime must be after startTime",
+      })
+      return
+    }
+
+    const windowMinutes = (endTime.getTime() - startTime.getTime()) / 60000
+    if (windowMinutes > MAX_ADVANCE_HOURS * 60) {
+      sendJson(res, 400, {
+        ok: false,
+        message: "Availability window cannot exceed 1 day.",
+      })
+      return
+    }
+
+    const room = await getMeetingRoomByNumber(roomNumber)
+    if (!room) {
+      sendJson(res, 404, {
+        ok: false,
+        message: "Selected room does not exist.",
+      })
+      return
+    }
+
+    const bookings = await getRoomBookingsInWindow(roomNumber, startTime, endTime)
+    sendJson(res, 200, {
+      ok: true,
+      bookings: bookings.map(formatBooking),
+    })
+  } catch (error) {
+    sendJson(res, 500, {
+      ok: false,
+      message: "Failed to fetch room availability",
+      error: error.message,
+    })
+  }
+}
+
+async function handleCancelMyRoomBooking(_req, res, url) {
+  try {
+    const userId = Number(url.searchParams.get("userId"))
+    if (!Number.isFinite(userId) || userId <= 0) {
+      sendJson(res, 400, { ok: false, message: "userId is required" })
+      return
+    }
+
+    const booking = await getUserActiveBooking(userId)
+    if (!booking) {
+      sendJson(res, 404, { ok: false, message: "No active room booking found." })
+      return
+    }
+
+    await deleteRoomBooking(
+      userId,
+      booking.room_number,
+      booking.start_time,
+      booking.end_time
+    )
+
+    sendJson(res, 200, {
+      ok: true,
+      message: "Room booking removed successfully.",
+      booking: formatBooking(booking),
+    })
+  } catch (error) {
+    sendJson(res, 500, {
+      ok: false,
+      message: "Failed to remove room booking",
       error: error.message,
     })
   }
@@ -296,6 +398,22 @@ async function handleBookRoom(req, res) {
       return
     }
 
+    if (minutes % SLOT_INTERVAL_MINUTES !== 0) {
+      sendJson(res, 400, {
+        ok: false,
+        message: "Room booking duration must use 30-minute increments.",
+      })
+      return
+    }
+
+    if (!isHalfHourBoundary(startTime) || !isHalfHourBoundary(endTime)) {
+      sendJson(res, 400, {
+        ok: false,
+        message: "Room booking times must align to 30-minute slots.",
+      })
+      return
+    }
+
     const existingBooking = await getUserActiveBooking(userId)
     if (existingBooking) {
       sendJson(res, 409, {
@@ -346,6 +464,8 @@ async function handleBookRoom(req, res) {
 module.exports = {
   handleGetRooms,
   handleGetMyRoomBooking,
+  handleGetRoomAvailability,
+  handleCancelMyRoomBooking,
   handleCreateRoom,
   handleUpdateRoom,
   handleDeleteRoom,

@@ -135,11 +135,34 @@ async function hasRoomOverlap(roomNumber, startTime, endTime) {
   return rows.length > 0
 }
 
+async function getRoomBookingsInWindow(roomNumber, startTime, endTime) {
+  return query(
+    `SELECT room_number, start_time, end_time
+     FROM book_room
+     WHERE room_number = ?
+       AND start_time < ?
+       AND end_time > ?
+     ORDER BY start_time ASC`,
+    [roomNumber, endTime, startTime]
+  )
+}
+
 async function createRoomBooking(userId, roomNumber, startTime, endTime) {
   await query(
     `INSERT INTO book_room (room_number, user_id, start_time, end_time)
      VALUES (?, ?, ?, ?)`,
     [roomNumber, userId, startTime, endTime]
+  )
+}
+
+async function deleteRoomBooking(userId, roomNumber, startTime, endTime) {
+  await query(
+    `DELETE FROM book_room
+     WHERE user_id = ?
+       AND room_number = ?
+       AND start_time = ?
+       AND end_time = ?`,
+    [userId, roomNumber, startTime, endTime]
   )
 }
 
@@ -152,5 +175,7 @@ module.exports = {
   deleteMeetingRoom,
   getUserActiveBooking,
   hasRoomOverlap,
+  getRoomBookingsInWindow,
   createRoomBooking,
+  deleteRoomBooking,
 }

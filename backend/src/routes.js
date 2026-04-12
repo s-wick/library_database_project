@@ -29,6 +29,8 @@ const {
 const {
   handleGetRooms,
   handleGetMyRoomBooking,
+  handleGetRoomAvailability,
+  handleCancelMyRoomBooking,
   handleCreateRoom,
   handleUpdateRoom,
   handleDeleteRoom,
@@ -179,6 +181,26 @@ async function handleApiRoute(req, res, url) {
     return
   }
 
+  if (req.method === "GET" && pathname === "/api/rooms/my-booking") {
+    await handleGetMyRoomBooking(req, res, url)
+    return
+  }
+
+  if (req.method === "GET" && pathname === "/api/rooms/availability") {
+    await handleGetRoomAvailability(req, res, url)
+    return
+  }
+
+  if (req.method === "DELETE" && pathname === "/api/rooms/my-booking") {
+    await handleCancelMyRoomBooking(req, res, url)
+    return
+  }
+
+  if (req.method === "POST" && pathname === "/api/rooms/book") {
+    await handleBookRoom(req, res)
+    return
+  }
+
   if (
     (req.method === "PUT" || req.method === "DELETE") &&
     pathname.startsWith("/api/rooms/")
@@ -194,16 +216,6 @@ async function handleApiRoute(req, res, url) {
       await handleDeleteRoom(req, res, roomNumber)
       return
     }
-  }
-
-  if (req.method === "GET" && pathname === "/api/rooms/my-booking") {
-    await handleGetMyRoomBooking(req, res, url)
-    return
-  }
-
-  if (req.method === "POST" && pathname === "/api/rooms/book") {
-    await handleBookRoom(req, res)
-    return
   }
 
   if (req.method === "GET" && pathname === "/api/fines") {

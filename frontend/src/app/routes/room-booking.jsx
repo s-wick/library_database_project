@@ -6,9 +6,51 @@ import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { API_BASE_URL } from "@/lib/api-config"
 
-function formatDateTimeLocal(date) {
+const BOOKING_WINDOW_HOURS = 24
+const SLOT_INTERVAL_MINUTES = 30
+const SLOT_INTERVAL_MS = SLOT_INTERVAL_MINUTES * 60 * 1000
+
+function formatDateLabel(date) {
+  return new Intl.DateTimeFormat(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(date)
+}
+
+function formatTimeLabel(date) {
+  return new Intl.DateTimeFormat(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date)
+}
+
+function toDateValue(date) {
   const pad = (n) => String(n).padStart(2, "0")
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}
+
+function roundUpToNextSlot(date) {
+  const rounded = new Date(date)
+  rounded.setSeconds(0, 0)
+
+  const remainder = rounded.getMinutes() % SLOT_INTERVAL_MINUTES
+  if (remainder !== 0) {
+    rounded.setMinutes(rounded.getMinutes() + SLOT_INTERVAL_MINUTES - remainder)
+  }
+
+  if (rounded.getTime() <= date.getTime()) {
+    rounded.setMinutes(rounded.getMinutes() + SLOT_INTERVAL_MINUTES)
+  }
+
+  return rounded
+}
+
+function overlaps(startTime, endTime, booking) {
+  const bookingStart = new Date(booking.startTime).getTime()
+  const bookingEnd = new Date(booking.endTime).getTime()
+  return startTime < bookingEnd && endTime > bookingStart
 }
 
 function FeatureRow({ label, enabled }) {
@@ -28,15 +70,16 @@ export default function RoomBookingPage() {
   const apiBaseUrl = API_BASE_URL
 
   const [rooms, setRooms] = useState([])
+  const [roomBookings, setRoomBookings] = useState([])
   const [activeBooking, setActiveBooking] = useState(null)
   const [selectedRoom, setSelectedRoom] = useState("")
   const [durationMinutes, setDurationMinutes] = useState(60)
-  const [startAt, setStartAt] = useState(() => {
-    const initial = new Date(Date.now() + 60 * 60 * 1000)
-    return formatDateTimeLocal(initial)
-  })
+  const [selectedDate, setSelectedDate] = useState("")
+  const [selectedStartAt, setSelectedStartAt] = useState("")
   const [loading, setLoading] = useState(true)
+  const [availabilityLoading, setAvailabilityLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [cancelling, setCancelling] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
 
@@ -45,14 +88,11 @@ export default function RoomBookingPage() {
     [rooms, selectedRoom]
   )
 
-  const now = useMemo(() => new Date(), [])
-  const minStart = useMemo(
-    () => formatDateTimeLocal(new Date(now.getTime() + 5 * 60 * 1000)),
-    [now]
-  )
-  const maxStart = useMemo(
-    () => formatDateTimeLocal(new Date(now.getTime() + 24 * 60 * 60 * 1000)),
-    [now]
+  const openedAt = useMemo(() => new Date(), [])
+  const bookingWindowStart = useMemo(() => roundUpToNextSlot(openedAt), [openedAt])
+  const bookingWindowEnd = useMemo(
+    () => new Date(openedAt.getTime() + BOOKING_WINDOW_HOURS * 60 * 60 * 1000),
+    [openedAt]
   )
 
   const user = useMemo(() => {
@@ -104,6 +144,123 @@ export default function RoomBookingPage() {
     fetchData()
   }, [])
 
+  useEffect(() => {
+    if (!selectedRoom) {
+      setRoomBookings([])
+      return
+    }
+
+    let ignore = false
+
+    const fetchAvailability = async () => {
+      setAvailabilityLoading(true)
+
+      try {
+        const params = new URLSearchParams({
+          roomNumber: selectedRoom,
+          startTime: bookingWindowStart.toISOString(),
+          endTime: bookingWindowEnd.toISOString(),
+        })
+        const res = await fetch(`${apiBaseUrl}/api/rooms/availability?${params}`)
+        const data = await res.json().catch(() => ({}))
+
+        if (!res.ok) {
+          throw new Error(data.message || "Failed to load room availability")
+        }
+
+        if (!ignore) {
+          setRoomBookings(data.bookings || [])
+        }
+      } catch (err) {
+        if (!ignore) {
+          setRoomBookings([])
+          setError(err.message || "Failed to load room availability")
+        }
+      } finally {
+        if (!ignore) {
+          setAvailabilityLoading(false)
+        }
+      }
+    }
+
+    fetchAvailability()
+
+    return () => {
+      ignore = true
+    }
+  }, [apiBaseUrl, bookingWindowEnd, bookingWindowStart, selectedRoom])
+
+  const availableSlots = useMemo(() => {
+    const slots = []
+    const durationMs = durationMinutes * 60 * 1000
+
+    for (
+      let slotTime = bookingWindowStart.getTime();
+      slotTime + durationMs <= bookingWindowEnd.getTime();
+      slotTime += SLOT_INTERVAL_MS
+    ) {
+      const slotEnd = slotTime + durationMs
+      const isBlocked = roomBookings.some((booking) =>
+        overlaps(slotTime, slotEnd, booking)
+      )
+
+      if (!isBlocked) {
+        const slotDate = new Date(slotTime)
+        slots.push({
+          value: slotDate.toISOString(),
+          dateValue: toDateValue(slotDate),
+          dateLabel: formatDateLabel(slotDate),
+          timeLabel: formatTimeLabel(slotDate),
+        })
+      }
+    }
+
+    return slots
+  }, [bookingWindowEnd, bookingWindowStart, durationMinutes, roomBookings])
+
+  const availableDates = useMemo(() => {
+    const seen = new Set()
+    return availableSlots.filter((slot) => {
+      if (seen.has(slot.dateValue)) {
+        return false
+      }
+
+      seen.add(slot.dateValue)
+      return true
+    })
+  }, [availableSlots])
+
+  const timeOptions = useMemo(
+    () => availableSlots.filter((slot) => slot.dateValue === selectedDate),
+    [availableSlots, selectedDate]
+  )
+
+  useEffect(() => {
+    if (availableDates.length === 0) {
+      if (selectedDate !== "") {
+        setSelectedDate("")
+      }
+      return
+    }
+
+    if (!availableDates.some((slot) => slot.dateValue === selectedDate)) {
+      setSelectedDate(availableDates[0].dateValue)
+    }
+  }, [availableDates, selectedDate])
+
+  useEffect(() => {
+    if (timeOptions.length === 0) {
+      if (selectedStartAt !== "") {
+        setSelectedStartAt("")
+      }
+      return
+    }
+
+    if (!timeOptions.some((slot) => slot.value === selectedStartAt)) {
+      setSelectedStartAt(timeOptions[0].value)
+    }
+  }, [selectedStartAt, timeOptions])
+
   const handleBookRoom = async () => {
     setError("")
     setSuccess("")
@@ -118,7 +275,12 @@ export default function RoomBookingPage() {
       return
     }
 
-    const start = new Date(startAt)
+    if (!selectedStartAt) {
+      setError("No available time slot for the selected room and duration.")
+      return
+    }
+
+    const start = new Date(selectedStartAt)
     if (Number.isNaN(start.getTime())) {
       setError("Please choose a valid start date/time.")
       return
@@ -151,6 +313,43 @@ export default function RoomBookingPage() {
     }
   }
 
+  const handleRemoveBooking = async () => {
+    setError("")
+    setSuccess("")
+
+    if (!user?.id) {
+      setError("Please sign in to manage your room booking.")
+      return
+    }
+
+    if (!activeBooking) {
+      setError("No active room booking found.")
+      return
+    }
+
+    setCancelling(true)
+    try {
+      const res = await fetch(
+        `${apiBaseUrl}/api/rooms/my-booking?userId=${user.id}`,
+        {
+          method: "DELETE",
+        }
+      )
+
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to remove room booking")
+      }
+
+      setSuccess("Room booking removed successfully.")
+      await fetchData()
+    } catch (err) {
+      setError(err.message || "Failed to remove room booking")
+    } finally {
+      setCancelling(false)
+    }
+  }
+
   return (
     <div>
       <Navbar showBack={true} />
@@ -168,10 +367,19 @@ export default function RoomBookingPage() {
             <CardHeader>
               <CardTitle className="text-lg">Your Active Booking</CardTitle>
             </CardHeader>
-            <CardContent className="text-sm text-muted-foreground">
-              Room {activeBooking.roomNumber} from{" "}
-              {new Date(activeBooking.startTime).toLocaleString()} to{" "}
-              {new Date(activeBooking.endTime).toLocaleString()}
+            <CardContent className="space-y-3 text-sm text-muted-foreground">
+              <p>
+                Room {activeBooking.roomNumber} from{" "}
+                {new Date(activeBooking.startTime).toLocaleString()} to{" "}
+                {new Date(activeBooking.endTime).toLocaleString()}
+              </p>
+              <Button
+                variant="outline"
+                onClick={handleRemoveBooking}
+                disabled={cancelling}
+              >
+                {cancelling ? "Removing booking..." : "Remove booking"}
+              </Button>
             </CardContent>
           </Card>
         )}
@@ -196,18 +404,44 @@ export default function RoomBookingPage() {
               </select>
             </label>
 
-            <label className="text-sm md:col-span-2">
-              <span className="mb-1 block text-muted-foreground">
-                Start time
-              </span>
-              <input
-                type="datetime-local"
+            <label className="text-sm">
+              <span className="mb-1 block text-muted-foreground">Date</span>
+              <select
                 className="h-10 w-full rounded-md border px-3"
-                value={startAt}
-                min={minStart}
-                max={maxStart}
-                onChange={(e) => setStartAt(e.target.value)}
-              />
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                disabled={availabilityLoading || availableDates.length === 0}
+              >
+                {availableDates.length === 0 ? (
+                  <option value="">No dates available</option>
+                ) : (
+                  availableDates.map((slot) => (
+                    <option key={slot.dateValue} value={slot.dateValue}>
+                      {slot.dateLabel}
+                    </option>
+                  ))
+                )}
+              </select>
+            </label>
+
+            <label className="text-sm">
+              <span className="mb-1 block text-muted-foreground">Start time</span>
+              <select
+                className="h-10 w-full rounded-md border px-3"
+                value={selectedStartAt}
+                onChange={(e) => setSelectedStartAt(e.target.value)}
+                disabled={availabilityLoading || timeOptions.length === 0}
+              >
+                {timeOptions.length === 0 ? (
+                  <option value="">No times available</option>
+                ) : (
+                  timeOptions.map((slot) => (
+                    <option key={slot.value} value={slot.value}>
+                      {slot.timeLabel}
+                    </option>
+                  ))
+                )}
+              </select>
             </label>
 
             <label className="text-sm">
@@ -235,10 +469,24 @@ export default function RoomBookingPage() {
               {selectedRoomDetails.features.hasWhiteboard ? "Yes" : "No"}.
             </CardContent>
           )}
+          <CardContent className="pt-0 text-sm text-muted-foreground">
+            {availabilityLoading
+              ? "Checking available 30-minute slots..."
+              : availableSlots.length > 0
+                ? `Showing available slots from ${formatDateLabel(bookingWindowStart)} through ${formatDateLabel(bookingWindowEnd)}.`
+                : "No bookable 30-minute slots remain in the next 24 hours for this room and duration."}
+          </CardContent>
           <CardContent className="pt-0">
             <Button
               onClick={handleBookRoom}
-              disabled={submitting || !selectedRoom || !!activeBooking}
+              disabled={
+                submitting ||
+                cancelling ||
+                !selectedRoom ||
+                !!activeBooking ||
+                availabilityLoading ||
+                !selectedStartAt
+              }
             >
               {submitting ? "Booking..." : "Book Room"}
             </Button>

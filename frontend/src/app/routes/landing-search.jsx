@@ -12,7 +12,9 @@ import {
   CardContent,
   CardFooter,
 } from "@/components/ui/card"
+import { Slider } from "@/components/ui/slider"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Navbar } from "@/components/navbar"
 import { ItemCard } from "@/components/item-card"
 import { Filter } from "lucide-react"
@@ -29,9 +31,9 @@ export default function LandingSearchPage() {
   const [bookAuthor, setBookAuthor] = useState("")
   const [bookPubDate, setBookPubDate] = useState("")
   const [bookEdition, setBookEdition] = useState("")
-  const [audioLength, setAudioLength] = useState("")
-  const [videoLength, setVideoLength] = useState("")
-  const [minStock, setMinStock] = useState("")
+  const [audioRange, setAudioRange] = useState([0, 1500])
+  const [videoRange, setVideoRange] = useState([0, 360])
+  const [inStockOnly, setInStockOnly] = useState(false)
 
   const [books, setBooks] = useState([])
   const [audios, setAudios] = useState([])
@@ -43,6 +45,21 @@ export default function LandingSearchPage() {
   const navigate = useNavigate()
 
   const apiBaseUrl = API_BASE_URL
+
+  const formatMinutes = (minutes) => {
+    if (!Number.isFinite(minutes) || minutes <= 0) return "0 min"
+    const hours = Math.floor(minutes / 60)
+    const remaining = minutes % 60
+    if (hours <= 0) return `${minutes} min`
+    if (remaining === 0) return `${hours} hr`
+    return `${hours} hr ${remaining} min`
+  }
+
+  const formatRange = (range, maxValue) => {
+    const [min, max] = range
+    if (min <= 0 && max >= maxValue) return "Any length"
+    return `${formatMinutes(min)} to ${formatMinutes(max)}`
+  }
 
   // Fetch all items by type to populate the landing page categories
   useEffect(() => {
@@ -93,7 +110,7 @@ export default function LandingSearchPage() {
     if (searchQuery) params.set("q", searchQuery)
     if (selectedType && selectedType !== "All") params.set("type", selectedType)
 
-    if (minStock) params.set("minStock", minStock)
+    if (inStockOnly) params.set("minStock", "1")
 
     if (selectedType === "Book") {
       if (bookGenre) params.set("bookGenre", bookGenre)
@@ -102,12 +119,14 @@ export default function LandingSearchPage() {
       if (bookEdition) params.set("bookEdition", bookEdition)
     }
 
-    if (selectedType === "Audiobook" && audioLength) {
-      params.set("audioLength", audioLength)
+    if (selectedType === "Audiobook") {
+      if (audioRange[0] > 0) params.set("audioMin", String(audioRange[0]))
+      if (audioRange[1] < 1500) params.set("audioMax", String(audioRange[1]))
     }
 
-    if (selectedType === "Video" && videoLength) {
-      params.set("videoLength", videoLength)
+    if (selectedType === "Video") {
+      if (videoRange[0] > 0) params.set("videoMin", String(videoRange[0]))
+      if (videoRange[1] < 360) params.set("videoMax", String(videoRange[1]))
     }
 
     navigate(`/search?${params.toString()}`)
@@ -124,18 +143,20 @@ export default function LandingSearchPage() {
       <Navbar showBack={false} />
 
       {/* ── Hero Section ── */}
-      <div className="relative flex h-[400px] items-center justify-center overflow-hidden p-6">
+      <div className="relative flex h-[400px] items-center justify-center overflow-visible p-6">
         {/* Blurred background image */}
-        <div
-          className="absolute inset-0 z-0"
-          style={{
-            backgroundImage: `url(${bgImage})`,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-            filter: "blur(3px)",
-            transform: "scale(1.05)", // Prevents edge transparency from blur
-          }}
-        />
+        <div className="absolute inset-0 z-0 overflow-hidden">
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `url(${bgImage})`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              filter: "blur(3px)",
+              transform: "scale(1.05)", // Prevents edge transparency from blur
+            }}
+          />
+        </div>
         {/* Overlay for darkening */}
         <div className="absolute inset-0 z-10 bg-black/60" />
 
@@ -175,37 +196,81 @@ export default function LandingSearchPage() {
 
             {/* Expando Filters */}
             {showFilters && (
-              <div className="absolute top-full left-0 z-30 mt-2 grid w-full grid-cols-1 gap-4 rounded-md border bg-background p-4 shadow-xl sm:grid-cols-2 md:grid-cols-3">
+              <div className="absolute top-full left-0 z-40 mt-2 grid w-full grid-cols-1 gap-4 rounded-md border bg-background p-4 shadow-xl sm:grid-cols-2 md:grid-cols-3">
                 {/* Global Filters */}
-                <div className="flex flex-col gap-1 text-left">
-                  <label className="text-xs font-semibold text-muted-foreground uppercase">
-                    Item Type
-                  </label>
-                  <select
-                    className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                    value={selectedType}
-                    onChange={(e) => setSelectedType(e.target.value)}
-                  >
-                    <option value="All">All Types</option>
-                    <option value="Book">Books</option>
-                    <option value="Audiobook">Audiobooks</option>
-                    <option value="Video">Videos</option>
-                    <option value="Equipment">Equipment</option>
-                  </select>
+                <div className="flex flex-col gap-2 text-left sm:col-span-2 md:col-span-3">
+                  <div className="flex flex-wrap items-end gap-4">
+                    <div className="flex min-w-[180px] flex-1 flex-col gap-1">
+                      <label className="text-xs font-semibold text-muted-foreground uppercase">
+                        Item Type
+                      </label>
+                      <select
+                        className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                        value={selectedType}
+                        onChange={(e) => setSelectedType(e.target.value)}
+                      >
+                        <option value="All">All Types</option>
+                        <option value="Book">Books</option>
+                        <option value="Audiobook">Audiobooks</option>
+                        <option value="Video">Videos</option>
+                        <option value="Equipment">Equipment</option>
+                      </select>
+                    </div>
+                    <label className="flex items-center gap-3 pb-2 pr-4 text-base text-muted-foreground">
+                      <Checkbox
+                        className="size-5"
+                        checked={inStockOnly}
+                        onCheckedChange={(checked) =>
+                          setInStockOnly(Boolean(checked))
+                        }
+                      />
+                      In stock only
+                    </label>
+                  </div>
                 </div>
-                <div className="flex flex-col gap-1 text-left">
-                  <label className="text-xs font-semibold text-muted-foreground uppercase">
-                    Min Stock
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    placeholder="e.g. 1"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                    value={minStock}
-                    onChange={(e) => setMinStock(e.target.value)}
-                  />
-                </div>
+                {selectedType === "Audiobook" && (
+                  <div className="flex flex-col gap-3 text-left sm:col-span-2 md:col-span-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-semibold text-muted-foreground uppercase">
+                        Length
+                      </label>
+                      <span className="text-xs text-muted-foreground">
+                        {formatRange(audioRange, 1500)}
+                      </span>
+                    </div>
+                    <Slider
+                      value={audioRange}
+                      min={0}
+                      max={1500}
+                      step={60}
+                      minStepsBetweenThumbs={1}
+                      onValueChange={setAudioRange}
+                      className="py-4 [&_[data-slot=slider-track]]:h-2 [&_[data-slot=slider-thumb]]:size-5"
+                    />
+                  </div>
+                )}
+
+                {selectedType === "Video" && (
+                  <div className="flex flex-col gap-3 text-left sm:col-span-2 md:col-span-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-semibold text-muted-foreground uppercase">
+                        Length
+                      </label>
+                      <span className="text-xs text-muted-foreground">
+                        {formatRange(videoRange, 360)}
+                      </span>
+                    </div>
+                    <Slider
+                      value={videoRange}
+                      min={0}
+                      max={360}
+                      step={60}
+                      minStepsBetweenThumbs={1}
+                      onValueChange={setVideoRange}
+                      className="py-4 [&_[data-slot=slider-track]]:h-2 [&_[data-slot=slider-thumb]]:size-5"
+                    />
+                  </div>
+                )}
 
                 {/* Book Filters */}
                 {selectedType === "Book" && (
@@ -262,37 +327,6 @@ export default function LandingSearchPage() {
                 )}
 
                 {/* Audiobook Filters */}
-                {selectedType === "Audiobook" && (
-                  <div className="flex flex-col gap-1 text-left">
-                    <label className="text-xs font-semibold text-muted-foreground uppercase">
-                      Length
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 10h"
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
-                      value={audioLength}
-                      onChange={(e) => setAudioLength(e.target.value)}
-                    />
-                  </div>
-                )}
-
-                {/* Video Filters */}
-                {selectedType === "Video" && (
-                  <div className="flex flex-col gap-1 text-left">
-                    <label className="text-xs font-semibold text-muted-foreground uppercase">
-                      Length (minutes)
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      placeholder="e.g. 120"
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
-                      value={videoLength}
-                      onChange={(e) => setVideoLength(e.target.value)}
-                    />
-                  </div>
-                )}
               </div>
             )}
           </div>

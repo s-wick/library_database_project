@@ -14,6 +14,8 @@ import {
   CardFooter,
 } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Slider } from "@/components/ui/slider"
+import { Checkbox } from "@/components/ui/checkbox"
 
 import { Navbar } from "@/components/navbar"
 import { ItemCard } from "@/components/item-card"
@@ -22,6 +24,32 @@ import { API_BASE_URL } from "@/lib/api-config"
 export default function SearchPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
+
+  const AUDIO_RANGE_MAX = 1500
+  const VIDEO_RANGE_MAX = 360
+
+  const clampRange = (minValue, maxValue, maxLimit) => {
+    const min = Number.isFinite(Number(minValue)) ? Number(minValue) : 0
+    const max = Number.isFinite(Number(maxValue)) ? Number(maxValue) : maxLimit
+    const safeMin = Math.min(Math.max(min, 0), maxLimit)
+    const safeMax = Math.min(Math.max(max, safeMin), maxLimit)
+    return [safeMin, safeMax]
+  }
+
+  const formatMinutes = (minutes) => {
+    if (!Number.isFinite(minutes) || minutes <= 0) return "0 min"
+    const hours = Math.floor(minutes / 60)
+    const remaining = minutes % 60
+    if (hours <= 0) return `${minutes} min`
+    if (remaining === 0) return `${hours} hr`
+    return `${hours} hr ${remaining} min`
+  }
+
+  const formatRange = (range, maxValue) => {
+    const [min, max] = range
+    if (min <= 0 && max >= maxValue) return "Any length"
+    return `${formatMinutes(min)} to ${formatMinutes(max)}`
+  }
 
   const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "")
   const [selectedType, setSelectedType] = useState(
@@ -42,13 +70,23 @@ export default function SearchPage() {
   const [bookEdition, setBookEdition] = useState(
     searchParams.get("bookEdition") || ""
   )
-  const [audioLength, setAudioLength] = useState(
-    searchParams.get("audioLength") || ""
+  const [audioRange, setAudioRange] = useState(() =>
+    clampRange(
+      searchParams.get("audioMin"),
+      searchParams.get("audioMax"),
+      AUDIO_RANGE_MAX
+    )
   )
-  const [videoLength, setVideoLength] = useState(
-    searchParams.get("videoLength") || ""
+  const [videoRange, setVideoRange] = useState(() =>
+    clampRange(
+      searchParams.get("videoMin"),
+      searchParams.get("videoMax"),
+      VIDEO_RANGE_MAX
+    )
   )
-  const [minStock, setMinStock] = useState(searchParams.get("minStock") || "")
+  const [inStockOnly, setInStockOnly] = useState(
+    searchParams.get("minStock") === "1"
+  )
 
   const itemTypes = [
     { value: "All", label: "All Types" },
@@ -95,9 +133,21 @@ export default function SearchPage() {
     setBookAuthor(searchParams.get("bookAuthor") || "")
     setBookPubDate(searchParams.get("bookPubDate") || "")
     setBookEdition(searchParams.get("bookEdition") || "")
-    setAudioLength(searchParams.get("audioLength") || "")
-    setVideoLength(searchParams.get("videoLength") || "")
-    setMinStock(searchParams.get("minStock") || "")
+    setAudioRange(
+      clampRange(
+        searchParams.get("audioMin"),
+        searchParams.get("audioMax"),
+        AUDIO_RANGE_MAX
+      )
+    )
+    setVideoRange(
+      clampRange(
+        searchParams.get("videoMin"),
+        searchParams.get("videoMax"),
+        VIDEO_RANGE_MAX
+      )
+    )
+    setInStockOnly(searchParams.get("minStock") === "1")
   }, [searchParams])
 
   // Update URL params when filters change
@@ -106,7 +156,7 @@ export default function SearchPage() {
     if (searchQuery) params.set("q", searchQuery)
     if (selectedType && selectedType !== "All") params.set("type", selectedType)
 
-    if (minStock) params.set("minStock", minStock)
+    if (inStockOnly) params.set("minStock", "1")
 
     if (selectedType === "Book") {
       if (bookGenre) params.set("bookGenre", bookGenre)
@@ -115,12 +165,16 @@ export default function SearchPage() {
       if (bookEdition) params.set("bookEdition", bookEdition)
     }
 
-    if (selectedType === "Audiobook" && audioLength) {
-      params.set("audioLength", audioLength)
+    if (selectedType === "Audiobook") {
+      if (audioRange[0] > 0) params.set("audioMin", String(audioRange[0]))
+      if (audioRange[1] < AUDIO_RANGE_MAX)
+        params.set("audioMax", String(audioRange[1]))
     }
 
-    if (selectedType === "Video" && videoLength) {
-      params.set("videoLength", videoLength)
+    if (selectedType === "Video") {
+      if (videoRange[0] > 0) params.set("videoMin", String(videoRange[0]))
+      if (videoRange[1] < VIDEO_RANGE_MAX)
+        params.set("videoMax", String(videoRange[1]))
     }
 
     setSearchParams(params, { replace: true })
@@ -132,36 +186,17 @@ export default function SearchPage() {
     }
   }
 
-  const parseDurationToSeconds = (value) => {
-    const raw = String(value || "")
-      .trim()
-      .toLowerCase()
-    if (!raw) return null
-
-    const match = raw.match(
-      /^(\d+(?:\.\d+)?)(h|hr|hrs|hour|hours|m|min|mins|minute|minutes|s|sec|secs|second|seconds)?$/
+  const resolveDurationMinutes = (item, type) => {
+    const seconds = Number(
+      type === "Audiobook"
+        ? item.audio_length_seconds
+        : item.video_length_seconds
     )
-    if (!match) {
-      const fallback = Number(raw)
-      return Number.isFinite(fallback) ? fallback : null
+    if (Number.isFinite(seconds) && seconds > 0) {
+      return Math.round(seconds / 60)
     }
-
-    const amount = Number(match[1])
-    const unit = match[2] || "s"
-
-    if (["h", "hr", "hrs", "hour", "hours"].includes(unit)) {
-      return Math.round(amount * 3600)
-    }
-    if (["m", "min", "mins", "minute", "minutes"].includes(unit)) {
-      return Math.round(amount * 60)
-    }
-    return Math.round(amount)
-  }
-
-  const parseMinutesToSeconds = (value) => {
-    const minutes = Number(String(value || "").trim())
-    if (!Number.isFinite(minutes) || minutes < 0) return null
-    return Math.round(minutes * 60)
+    const minutes = Number(item.duration)
+    return Number.isFinite(minutes) ? minutes : 0
   }
 
   const containsCI = (value, needle) =>
@@ -187,9 +222,8 @@ export default function SearchPage() {
   }
 
   const filteredItems = (allLibraryItems || []).filter((item) => {
-    if (minStock) {
-      const min = Number(minStock)
-      if (Number.isFinite(min) && Number(item.stock || 0) < min) return false
+    if (inStockOnly) {
+      if (Number(item.stock || 0) < 1) return false
     }
 
     if (selectedType === "Book") {
@@ -200,16 +234,16 @@ export default function SearchPage() {
       if (bookGenre && !arrayContainsCI(item.genres, bookGenre)) return false
     }
 
-    if (selectedType === "Audiobook" && audioLength) {
-      const wanted = parseDurationToSeconds(audioLength)
-      const actual = Number(item.audio_length_seconds || item.duration || 0)
-      if (Number.isFinite(wanted) && wanted > 0 && actual < wanted) return false
+    if (selectedType === "Audiobook") {
+      const [minMinutes, maxMinutes] = audioRange
+      const actualMinutes = resolveDurationMinutes(item, "Audiobook")
+      if (actualMinutes < minMinutes || actualMinutes > maxMinutes) return false
     }
 
-    if (selectedType === "Video" && videoLength) {
-      const wanted = parseMinutesToSeconds(videoLength)
-      const actual = Number(item.video_length_seconds || item.duration || 0)
-      if (Number.isFinite(wanted) && wanted > 0 && actual < wanted) return false
+    if (selectedType === "Video") {
+      const [minMinutes, maxMinutes] = videoRange
+      const actualMinutes = resolveDurationMinutes(item, "Video")
+      if (actualMinutes < minMinutes || actualMinutes > maxMinutes) return false
     }
 
     return true
@@ -249,70 +283,138 @@ export default function SearchPage() {
           {showFilters && (
             <div className="z-30 grid w-full grid-cols-1 gap-4 rounded-md border bg-background p-4 shadow-sm sm:grid-cols-2 md:grid-cols-3">
               {/* Global Filters */}
-              <div className="flex flex-col gap-1 text-left">
-                <label className="text-xs font-semibold text-muted-foreground uppercase">
-                  Item Type
-                </label>
-                <select
-                  className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                  value={selectedType}
-                  onChange={(e) => {
-                    const nextType = e.target.value
-                    setSelectedType(nextType)
-                    const params = new URLSearchParams()
-                    if (searchQuery) params.set("q", searchQuery)
+              <div className="flex flex-col gap-2 text-left sm:col-span-2 md:col-span-3">
+                <div className="flex flex-wrap items-end gap-4">
+                  <div className="flex min-w-[180px] flex-1 flex-col gap-1">
+                    <label className="text-xs font-semibold text-muted-foreground uppercase">
+                      Item Type
+                    </label>
+                    <select
+                      className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                      value={selectedType}
+                      onChange={(e) => {
+                        const nextType = e.target.value
+                        setSelectedType(nextType)
+                        const params = new URLSearchParams()
+                        if (searchQuery) params.set("q", searchQuery)
 
-                    if (nextType && nextType !== "All") {
-                      params.set("type", nextType)
-                    }
+                        if (nextType && nextType !== "All") {
+                          params.set("type", nextType)
+                        }
 
-                    if (minStock) params.set("minStock", minStock)
+                        if (inStockOnly) params.set("minStock", "1")
 
-                    if (nextType === "Book") {
-                      if (bookGenre) params.set("bookGenre", bookGenre)
-                      if (bookAuthor) params.set("bookAuthor", bookAuthor)
-                      if (bookPubDate) params.set("bookPubDate", bookPubDate)
-                      if (bookEdition) params.set("bookEdition", bookEdition)
-                    }
+                        if (nextType === "Book") {
+                          if (bookGenre) params.set("bookGenre", bookGenre)
+                          if (bookAuthor) params.set("bookAuthor", bookAuthor)
+                          if (bookPubDate) params.set("bookPubDate", bookPubDate)
+                          if (bookEdition) params.set("bookEdition", bookEdition)
+                        }
 
-                    if (nextType === "Audiobook" && audioLength) {
-                      params.set("audioLength", audioLength)
-                    }
+                        if (nextType === "Audiobook") {
+                          if (audioRange[0] > 0)
+                            params.set("audioMin", String(audioRange[0]))
+                          if (audioRange[1] < AUDIO_RANGE_MAX)
+                            params.set("audioMax", String(audioRange[1]))
+                        }
 
-                    if (nextType === "Video" && videoLength) {
-                      params.set("videoLength", videoLength)
-                    }
+                        if (nextType === "Video") {
+                          if (videoRange[0] > 0)
+                            params.set("videoMin", String(videoRange[0]))
+                          if (videoRange[1] < VIDEO_RANGE_MAX)
+                            params.set("videoMax", String(videoRange[1]))
+                        }
 
-                    setSearchParams(params, { replace: true })
-                  }}
-                >
-                  <option value="All">All Types</option>
-                  <option value="Book">Books</option>
-                  <option value="Audiobook">Audiobooks</option>
-                  <option value="Video">Videos</option>
-                  <option value="Equipment">Equipment</option>
-                </select>
+                        setSearchParams(params, { replace: true })
+                      }}
+                    >
+                      <option value="All">All Types</option>
+                      <option value="Book">Books</option>
+                      <option value="Audiobook">Audiobooks</option>
+                      <option value="Video">Videos</option>
+                      <option value="Equipment">Equipment</option>
+                    </select>
+                  </div>
+                  <label className="flex items-center gap-3 pb-2 pr-4 text-base text-muted-foreground">
+                    <Checkbox
+                      className="size-5"
+                      checked={inStockOnly}
+                      onCheckedChange={(checked) => {
+                        const nextValue = Boolean(checked)
+                        setInStockOnly(nextValue)
+                        const params = new URLSearchParams(searchParams)
+                        if (nextValue) params.set("minStock", "1")
+                        else params.delete("minStock")
+                        setSearchParams(params, { replace: true })
+                      }}
+                    />
+                    In stock only
+                  </label>
+                </div>
               </div>
-              <div className="flex flex-col gap-1 text-left">
-                <label className="text-xs font-semibold text-muted-foreground uppercase">
-                  Min Stock
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  placeholder="e.g. 1"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                  value={minStock}
-                  onChange={(e) => {
-                    const value = e.target.value
-                    setMinStock(value)
-                    const params = new URLSearchParams(searchParams)
-                    if (value) params.set("minStock", value)
-                    else params.delete("minStock")
-                    setSearchParams(params, { replace: true })
-                  }}
-                />
-              </div>
+              {selectedType === "Audiobook" && (
+                <div className="flex flex-col gap-3 text-left sm:col-span-2 md:col-span-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-muted-foreground uppercase">
+                      Length
+                    </label>
+                    <span className="text-xs text-muted-foreground">
+                      {formatRange(audioRange, AUDIO_RANGE_MAX)}
+                    </span>
+                  </div>
+                  <Slider
+                    value={audioRange}
+                    min={0}
+                    max={AUDIO_RANGE_MAX}
+                    step={60}
+                    minStepsBetweenThumbs={1}
+                    onValueChange={(value) => {
+                      setAudioRange(value)
+                      const params = new URLSearchParams(searchParams)
+                      params.delete("audioLength")
+                      if (value[0] > 0) params.set("audioMin", String(value[0]))
+                      else params.delete("audioMin")
+                      if (value[1] < AUDIO_RANGE_MAX)
+                        params.set("audioMax", String(value[1]))
+                      else params.delete("audioMax")
+                      setSearchParams(params, { replace: true })
+                    }}
+                    className="py-4 [&_[data-slot=slider-track]]:h-2 [&_[data-slot=slider-thumb]]:size-5"
+                  />
+                </div>
+              )}
+
+              {selectedType === "Video" && (
+                <div className="flex flex-col gap-3 text-left sm:col-span-2 md:col-span-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-muted-foreground uppercase">
+                      Length
+                    </label>
+                    <span className="text-xs text-muted-foreground">
+                      {formatRange(videoRange, VIDEO_RANGE_MAX)}
+                    </span>
+                  </div>
+                  <Slider
+                    value={videoRange}
+                    min={0}
+                    max={VIDEO_RANGE_MAX}
+                    step={60}
+                    minStepsBetweenThumbs={1}
+                    onValueChange={(value) => {
+                      setVideoRange(value)
+                      const params = new URLSearchParams(searchParams)
+                      params.delete("videoLength")
+                      if (value[0] > 0) params.set("videoMin", String(value[0]))
+                      else params.delete("videoMin")
+                      if (value[1] < VIDEO_RANGE_MAX)
+                        params.set("videoMax", String(value[1]))
+                      else params.delete("videoMax")
+                      setSearchParams(params, { replace: true })
+                    }}
+                    className="py-4 [&_[data-slot=slider-track]]:h-2 [&_[data-slot=slider-thumb]]:size-5"
+                  />
+                </div>
+              )}
 
               {/* Book Filters */}
               {selectedType === "Book" && (
@@ -397,51 +499,6 @@ export default function SearchPage() {
               )}
 
               {/* Audiobook Filters */}
-              {selectedType === "Audiobook" && (
-                <div className="flex flex-col gap-1 text-left">
-                  <label className="text-xs font-semibold text-muted-foreground uppercase">
-                    Length
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 10h"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
-                    value={audioLength}
-                    onChange={(e) => {
-                      const value = e.target.value
-                      setAudioLength(value)
-                      const params = new URLSearchParams(searchParams)
-                      if (value) params.set("audioLength", value)
-                      else params.delete("audioLength")
-                      setSearchParams(params, { replace: true })
-                    }}
-                  />
-                </div>
-              )}
-
-              {/* Video Filters */}
-              {selectedType === "Video" && (
-                <div className="flex flex-col gap-1 text-left">
-                  <label className="text-xs font-semibold text-muted-foreground uppercase">
-                    Length (minutes)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    placeholder="e.g. 120"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
-                    value={videoLength}
-                    onChange={(e) => {
-                      const value = e.target.value
-                      setVideoLength(value)
-                      const params = new URLSearchParams(searchParams)
-                      if (value) params.set("videoLength", value)
-                      else params.delete("videoLength")
-                      setSearchParams(params, { replace: true })
-                    }}
-                  />
-                </div>
-              )}
             </div>
           )}
         </div>

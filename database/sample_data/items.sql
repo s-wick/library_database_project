@@ -8,10 +8,10 @@ VALUES
 	('Video');
 
 SET @librarian_id = (
-	SELECT staff_id
-	FROM staff_account
-	WHERE email = 'lauren.mitchell@lib.com'
-	LIMIT 1
+ SELECT staff_id
+ FROM staff_account
+ WHERE email = 'librarian.staff@lib.com'
+ LIMIT 1
 );
 
 SET @book_code = (

@@ -1,24 +1,24 @@
 -- Borrow transactions
 
 SET @student1_id = (
-	SELECT user_id
-	FROM user_account
-	WHERE email = 'jamie.carter@lib.com'
-	LIMIT 1
+ SELECT user_id
+ FROM user_account
+ WHERE email = 'student1.user@lib.com'
+ LIMIT 1
 );
 
 SET @student2_id = (
-	SELECT user_id
-	FROM user_account
-	WHERE email = 'priya.nair@lib.com'
-	LIMIT 1
+ SELECT user_id
+ FROM user_account
+ WHERE email = 'student2.user@lib.com'
+ LIMIT 1
 );
 
 SET @faculty_id = (
-	SELECT user_id
-	FROM user_account
-	WHERE email = 'michael.chen@lib.com'
-	LIMIT 1
+ SELECT user_id
+ FROM user_account
+ WHERE email = 'faculty.user@lib.com'
+ LIMIT 1
 );
 
 -- Student user has borrowed some items (not overdue)

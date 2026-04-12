@@ -266,7 +266,9 @@ export default function RoomBookingPage() {
       nextBooking ? nextBooking.start.getTime() : Number.POSITIVE_INFINITY
     )
 
-    const maxMinutes = Math.floor((maxEndTime - start.getTime()) / SLOT_INTERVAL_MS) * SLOT_INTERVAL_MINUTES
+    const maxMinutes =
+      Math.floor((maxEndTime - start.getTime()) / SLOT_INTERVAL_MS) *
+      SLOT_INTERVAL_MINUTES
     const options = []
 
     for (
@@ -274,11 +276,12 @@ export default function RoomBookingPage() {
       minutes <= maxMinutes;
       minutes += SLOT_INTERVAL_MINUTES
     ) {
-      const label = minutes < 60
-        ? `${minutes} min`
-        : minutes % 60 === 0
-          ? `${minutes / 60} hour${minutes === 60 ? "" : "s"}`
-          : `${Math.floor(minutes / 60)}.5 hours`
+      const label =
+        minutes < 60
+          ? `${minutes} min`
+          : minutes % 60 === 0
+            ? `${minutes / 60} hour${minutes === 60 ? "" : "s"}`
+            : `${Math.floor(minutes / 60)}.5 hours`
 
       options.push({ value: minutes, label })
     }
@@ -417,10 +420,14 @@ export default function RoomBookingPage() {
                 className="h-10 w-full rounded-md border px-3"
                 value={startAt}
                 onChange={(e) => setStartAt(e.target.value)}
-                disabled={availabilityLoading || availableStartSlots.length === 0}
+                disabled={
+                  availabilityLoading || availableStartSlots.length === 0
+                }
               >
                 {availableStartSlots.length === 0 ? (
-                  <option value="">No times available in the next 24 hours</option>
+                  <option value="">
+                    No times available in the next 24 hours
+                  </option>
                 ) : (
                   availableStartSlots.map((slot) => (
                     <option key={slot.value} value={slot.value}>

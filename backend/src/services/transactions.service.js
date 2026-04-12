@@ -52,6 +52,14 @@ async function handleBorrow(req, res) {
       message: `Item borrowed successfully for ${borrowDays} days.`,
     })
   } catch (error) {
+    if (error instanceof ItemNotFoundError) {
+      sendJson(res, 404, {
+        ok: false,
+        message: "Item not found",
+      })
+      return
+    }
+
     if (error instanceof OutOfStockError) {
       sendJson(res, 409, {
         ok: false,

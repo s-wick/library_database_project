@@ -40,9 +40,7 @@ export function ItemCard({ item }) {
     item.publication_date
       ? `Published: ${String(item.publication_date).slice(0, 10)}`
       : null,
-    Number.isFinite(Number(item.in_stock))
-      ? `In stock: ${item.in_stock}`
-      : null,
+    Number.isFinite(Number(item.stock)) ? `Stock: ${item.stock}` : null,
   ]
     .filter(Boolean)
     .slice(0, 3)
@@ -149,7 +147,8 @@ export function ItemCard({ item }) {
                 {item.publication_date && (
                   <p>Published: {String(item.publication_date).slice(0, 10)}</p>
                 )}
-                <p>In Stock: {item.in_stock}</p>
+                <p>Stock: {item.stock}</p>
+                <p>Inventory: {item.inventory}</p>
               </div>
             </div>
             {item.description && (

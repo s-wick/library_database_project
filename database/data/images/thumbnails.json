@@ -1,0 +1,47 @@
+[
+  {
+    "title": "To Kill a Mockingbird",
+    "relativePath": "books/to-kill-a-mockingbird.jpg"
+  },
+  {
+    "title": "1984",
+    "relativePath": "books/1984.jpg"
+  },
+  {
+    "title": "The Great Gatsby",
+    "relativePath": "books/the-great-gatsby.jpg"
+  },
+  {
+    "title": "Pride and Prejudice",
+    "relativePath": "books/pride-and-predjudice.jpg"
+  },
+  {
+    "title": "The Hobbit",
+    "relativePath": "books/the-hobbit.jpg"
+  },
+  {
+    "title": "Canon EOS Rebel T7 Camera Kit",
+    "relativePath": "equipment/canon-eos-rebel-t7-camera-kit.jpg"
+  },
+  {
+    "title": "Dell Latitude 5440 Laptop",
+    "relativePath": "equipment/dell-latitude-5440-laptop.png"
+  },
+  {
+    "title": "Shure SM58 Microphone",
+    "relativePath": "equipment/shure-sm58-microphone.jpg"
+  },
+  { "title": "Atomic Habits", "relativePath": "audio/atomic-habits.png" },
+  { "title": "Becoming", "relativePath": "audio/becoming.jpg" },
+  { "title": "Educated", "relativePath": "audio/educated.jpg" },
+  { "title": "The Martian", "relativePath": "audio/the-martian.jpg" },
+  { "title": "Sapiens", "relativePath": "audio/sapiens.jpg" },
+  { "title": "Apollo 13", "relativePath": "video/apollo-13.jpg" },
+  { "title": "Inception", "relativePath": "video/inception.jpg" },
+  { "title": "Hidden Figures", "relativePath": "video/hidden-figures.jpg" },
+  { "title": "Interstellar", "relativePath": "video/interstellar.jpg" },
+  {
+    "title": "The Social Network",
+    "relativePath": "video/the-social-network.jpg"
+  }
+]

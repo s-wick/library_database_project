@@ -4,8 +4,8 @@ import { CheckCircle2, XCircle, DoorOpen } from "lucide-react"
 import { Navbar } from "@/components/navbar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Calendar } from "@/components/ui/calendar"
 import { Slider } from "@/components/ui/slider"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Card,
   CardHeader,
@@ -92,8 +92,8 @@ function FeatureRow({ label, enabled }) {
 }
 
 function CalendarWithTimeSlider({
-  selectedDate,
-  onDateChange,
+  dayOption,
+  onDayOptionChange,
   startAtLabel,
   timeSlots,
   selectedStartAt,
@@ -106,13 +106,13 @@ function CalendarWithTimeSlider({
 }) {
   return (
     <Card className="h-full">
-      <CardContent className="grid gap-4 md:grid-cols-[auto_1fr]">
-        <Calendar
-          mode="single"
-          selected={selectedDate}
-          onSelect={(date) => onDateChange(date || new Date())}
-          className="rounded-md border p-3"
-        />
+      <CardContent className="grid gap-4">
+        <Tabs value={dayOption} onValueChange={onDayOptionChange}>
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="today">Today</TabsTrigger>
+            <TabsTrigger value="tomorrow">Tomorrow</TabsTrigger>
+          </TabsList>
+        </Tabs>
         <div className="flex flex-col justify-between gap-4">
           <div>
             <p className="text-sm text-muted-foreground">Start time</p>
@@ -199,7 +199,19 @@ export default function RoomBookingPage() {
   const [selectedRoom, setSelectedRoom] = useState("")
   const [durationHours, setDurationHours] = useState(1)
   const [startAt, setStartAt] = useState("")
-  const [selectedDate, setSelectedDate] = useState(new Date())
+  const [dayOption, setDayOption] = useState("today")
+  const baseToday = useMemo(() => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    return today
+  }, [])
+  const selectedDate = useMemo(() => {
+    const next = new Date(baseToday)
+    if (dayOption === "tomorrow") {
+      next.setDate(next.getDate() + 1)
+    }
+    return next
+  }, [baseToday, dayOption])
   const [availability, setAvailability] = useState({
     bookings: [],
     windowStart: "",
@@ -648,8 +660,8 @@ export default function RoomBookingPage() {
             </label>
             <div className="md:col-span-2">
               <CalendarWithTimeSlider
-                selectedDate={selectedDate}
-                onDateChange={setSelectedDate}
+                dayOption={dayOption}
+                onDayOptionChange={setDayOption}
                 startAtLabel={startAt ? formatSlotLabel(startAt) : ""}
                 timeSlots={timeSlotsForSelectedDate}
                 selectedStartAt={startAt}

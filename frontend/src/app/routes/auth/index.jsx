@@ -119,11 +119,13 @@ export default function AuthPage() {
       const data = await response.json().catch(() => ({}))
 
       if (!response.ok) {
-        if (
-          !isSignUp &&
-          response.status === 403 &&
-          data.message === "This librarian account is retired."
-        ) {
+        if (data.message) {
+          setErrors({
+            general: data.message,
+          })
+          return
+        }
+        if (!isSignUp && response.status === 403) {
           setErrors({
             general: "Account no longer exists.",
           })
@@ -136,9 +138,9 @@ export default function AuthPage() {
           return
         }
         setErrors({
-          general:
-            data.message ||
-            (isSignUp ? "Failed to create account." : "Failed to sign in."),
+          general: isSignUp
+            ? "Failed to create account."
+            : "Failed to sign in.",
         })
         return
       }

@@ -565,6 +565,7 @@ export default function UserDashboard() {
         body: JSON.stringify({
           userId: user.id,
           itemId: hold.itemId,
+          requestDate: hold.requestDate,
         }),
       })
 

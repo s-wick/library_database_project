@@ -153,7 +153,15 @@ export default function AuthPage() {
         sessionStorage.setItem("user", JSON.stringify(data?.user || {}))
 
         await syncCartWithServer()
-        navigate("/")
+
+        if (
+          data?.user?.accountType === "staff" ||
+          data?.user?.roleGroup === "adminStaff"
+        ) {
+          navigate("/management-dashboard")
+        } else {
+          navigate("/")
+        }
       }
     } catch {
       setErrors({

@@ -12,6 +12,14 @@ const dataFiles = [
   "holds-fines.sql",
   "room-bookings.sql",
 ]
+const triggerFiles = [
+  "borrow-limit.sql",
+  "hold-limit.sql",
+  "duplicate-borrows-holds.sql",
+  "auto-checkout-hold.sql",
+  "fine-remove-holds.sql",
+  "fine-accrual-cap.sql",
+]
 const thumbnailMapFile = path.join(
   __dirname,
   "..",
@@ -202,6 +210,7 @@ function main() {
   const envPath = path.join(rootDir, "database", ".env")
   const schemaPath = path.join(rootDir, "database", "library_schema.sql")
   const dataDir = path.join(rootDir, "database", "data")
+  const triggersDir = path.join(rootDir, "database", "triggers")
 
   if (!fs.existsSync(envPath)) {
     throw new Error(
@@ -215,6 +224,10 @@ function main() {
 
   if (!fs.existsSync(dataDir)) {
     throw new Error(`Data directory not found at: ${dataDir}`)
+  }
+
+  if (!fs.existsSync(triggersDir)) {
+    throw new Error(`Triggers directory not found at: ${triggersDir}`)
   }
 
   const env = parseEnvFile(envPath)
@@ -256,6 +269,21 @@ function main() {
     inputPath: schemaPath,
     label: "Import schema",
   })
+
+  for (const fileName of triggerFiles) {
+    const filePath = path.join(triggersDir, fileName)
+
+    if (!fs.existsSync(filePath)) {
+      throw new Error(`Trigger file not found: ${filePath}`)
+    }
+
+    runMysql({
+      mysqlBin,
+      args: [...baseArgs, database],
+      inputPath: filePath,
+      label: `Import trigger ${fileName}`,
+    })
+  }
 
   for (const fileName of dataFiles) {
     const filePath = path.join(dataDir, fileName)

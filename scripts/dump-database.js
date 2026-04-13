@@ -114,7 +114,7 @@ function main() {
     connection,
     database,
     outputPath: schemaPath,
-    extraArgs: ["--no-data"],
+    extraArgs: ["--no-data", "--skip-triggers"],
   })
   console.log(`Created schema-only dump: ${schemaPath}`)
 

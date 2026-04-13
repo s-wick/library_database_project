@@ -271,16 +271,6 @@ export default function ManageItemsPage() {
                 {loading ? "Loading..." : "Search"}
               </Button>
             </div>
-            {error && (
-              <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                {error}
-              </p>
-            )}
-            {success && (
-              <p className="rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-primary">
-                {success}
-              </p>
-            )}
             {mode === "remove" ? (
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2 rounded-md border p-3">
@@ -837,6 +827,16 @@ export default function ManageItemsPage() {
                   )}
                 </div>
               </div>
+            )}
+            {error && (
+              <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {error}
+              </p>
+            )}
+            {success && (
+              <p className="rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-primary">
+                {success}
+              </p>
             )}
           </CardContent>
         </Card>

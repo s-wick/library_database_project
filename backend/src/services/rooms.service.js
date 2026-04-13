@@ -14,6 +14,19 @@ const {
 
 const MAX_BOOKING_HOURS = 3
 const MAX_ADVANCE_HOURS = 24
+const WEEKDAY_OPEN_HOUR = 9
+const WEEKDAY_CLOSE_HOUR = 19
+const WEEKEND_OPEN_HOUR = 9
+const WEEKEND_CLOSE_HOUR = 17
+
+function getDaySchedule(date) {
+  const day = date.getDay()
+  const isWeekend = day === 0 || day === 6
+  return {
+    openHour: isWeekend ? WEEKEND_OPEN_HOUR : WEEKDAY_OPEN_HOUR,
+    closeHour: isWeekend ? WEEKEND_CLOSE_HOUR : WEEKDAY_CLOSE_HOUR,
+  }
+}
 
 function formatBooking(row) {
   if (!row) return null
@@ -360,9 +373,31 @@ async function handleBookRoom(req, res) {
       return
     }
 
+    const { openHour, closeHour } = getDaySchedule(startTime)
+    const startHour = startTime.getHours()
+
+    if (startHour < openHour || startHour >= closeHour) {
+      sendJson(res, 400, {
+        ok: false,
+        message: "Room booking must start during open hours.",
+      })
+      return
+    }
+
     const endTime = new Date(
       startTime.getTime() + durationHours * 60 * 60 * 1000
     )
+
+    if (
+      endTime.getHours() > closeHour ||
+      endTime.getDate() !== startTime.getDate()
+    ) {
+      sendJson(res, 400, {
+        ok: false,
+        message: "Room booking must end by closing time.",
+      })
+      return
+    }
 
     const existingBooking = await getUserActiveBooking(userId)
     if (existingBooking) {

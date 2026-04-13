@@ -19,6 +19,10 @@ const SLOT_INTERVAL_MINUTES = 60
 const SLOT_INTERVAL_MS = SLOT_INTERVAL_MINUTES * 60 * 1000
 const MAX_BOOKING_HOURS = 3
 const ADVANCE_WINDOW_MS = 24 * 60 * 60 * 1000
+const WEEKDAY_OPEN_HOUR = 9
+const WEEKDAY_CLOSE_HOUR = 19
+const WEEKEND_OPEN_HOUR = 9
+const WEEKEND_CLOSE_HOUR = 17
 
 function roundUpToNextSlot(date) {
   const next = new Date(date)
@@ -63,6 +67,15 @@ function getBookingEndTime(booking) {
   const start = new Date(booking.startTime)
   const durationHours = Number(booking.durationHours || 0)
   return new Date(start.getTime() + durationHours * 60 * 60 * 1000)
+}
+
+function getDaySchedule(date) {
+  const day = date.getDay()
+  const isWeekend = day === 0 || day === 6
+  return {
+    openHour: isWeekend ? WEEKEND_OPEN_HOUR : WEEKDAY_OPEN_HOUR,
+    closeHour: isWeekend ? WEEKEND_CLOSE_HOUR : WEEKDAY_CLOSE_HOUR,
+  }
 }
 
 function FeatureRow({ label, enabled }) {
@@ -115,11 +128,12 @@ function CalendarWithTimeSlider({
               </p>
             )}
             {timeSlots.length > 0 && (
-              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+              <div className="mt-3 columns-2 sm:columns-3">
                 {timeSlots.map((slot) => (
                   <Button
                     key={slot.value}
                     type="button"
+                    className="mb-2 w-full break-inside-avoid"
                     variant={
                       slot.value === selectedStartAt
                         ? "default"
@@ -338,26 +352,48 @@ export default function RoomBookingPage() {
     const earliestCandidate = new Date(
       Math.max(windowStart.getTime(), Date.now() + 60 * 1000)
     )
-    const firstSlot = roundUpToNextSlot(earliestCandidate)
     const slots = []
+    const cursorDay = new Date(earliestCandidate)
+    cursorDay.setHours(0, 0, 0, 0)
 
-    for (
-      let cursor = firstSlot.getTime();
-      cursor + SLOT_INTERVAL_MS <= windowEnd.getTime();
-      cursor += SLOT_INTERVAL_MS
-    ) {
-      const slotStart = new Date(cursor)
-      const slotEnd = new Date(cursor + SLOT_INTERVAL_MS)
-      const overlaps = bookings.some(
-        (booking) => booking.start < slotEnd && booking.end > slotStart
+    while (cursorDay.getTime() < windowEnd.getTime()) {
+      const { openHour, closeHour } = getDaySchedule(cursorDay)
+      const dayOpen = new Date(cursorDay)
+      dayOpen.setHours(openHour, 0, 0, 0)
+      const dayClose = new Date(cursorDay)
+      dayClose.setHours(closeHour, 0, 0, 0)
+
+      const dayStart = roundUpToNextSlot(
+        new Date(
+          Math.max(
+            dayOpen.getTime(),
+            earliestCandidate.getTime(),
+            windowStart.getTime()
+          )
+        )
       )
+      const dayEnd = Math.min(dayClose.getTime(), windowEnd.getTime())
 
-      if (!overlaps) {
-        slots.push({
-          value: slotStart.toISOString(),
-          label: formatSlotLabel(slotStart),
-        })
+      for (
+        let cursor = dayStart.getTime();
+        cursor + SLOT_INTERVAL_MS <= dayEnd;
+        cursor += SLOT_INTERVAL_MS
+      ) {
+        const slotStart = new Date(cursor)
+        const slotEnd = new Date(cursor + SLOT_INTERVAL_MS)
+        const overlaps = bookings.some(
+          (booking) => booking.start < slotEnd && booking.end > slotStart
+        )
+
+        if (!overlaps) {
+          slots.push({
+            value: slotStart.toISOString(),
+            label: formatSlotLabel(slotStart),
+          })
+        }
       }
+
+      cursorDay.setDate(cursorDay.getDate() + 1)
     }
 
     return slots
@@ -400,13 +436,16 @@ export default function RoomBookingPage() {
 
     const dayStart = new Date(selectedDate)
     dayStart.setHours(0, 0, 0, 0)
-    const dayEnd = new Date(dayStart)
-    dayEnd.setDate(dayEnd.getDate() + 1)
+    const { openHour, closeHour } = getDaySchedule(dayStart)
+    const dayOpen = new Date(dayStart)
+    dayOpen.setHours(openHour, 0, 0, 0)
+    const dayClose = new Date(dayStart)
+    dayClose.setHours(closeHour, 0, 0, 0)
 
     const slotStart = roundUpToNextSlot(
-      new Date(Math.max(dayStart.getTime(), windowStart.getTime()))
+      new Date(Math.max(dayOpen.getTime(), windowStart.getTime()))
     )
-    const limit = Math.min(dayEnd.getTime(), windowEnd.getTime())
+    const limit = Math.min(dayClose.getTime(), windowEnd.getTime())
     const slots = []
 
     for (
@@ -490,18 +529,20 @@ export default function RoomBookingPage() {
   }, [availability.bookings, availability.windowEnd, startAt])
 
   useEffect(() => {
+    const selectedSlot = timeSlotsForSelectedDate.find(
+      (slot) => slot.value === startAt
+    )
+
+    if (selectedSlot?.isAvailable) {
+      return
+    }
+
     if (preferredSlotForSelectedDate) {
       setStartAt(preferredSlotForSelectedDate.value)
       return
     }
 
-    const hasSelectedSlot = timeSlotsForSelectedDate.some(
-      (slot) => slot.value === startAt
-    )
-
-    if (!hasSelectedSlot) {
-      setStartAt("")
-    }
+    setStartAt("")
   }, [preferredSlotForSelectedDate, startAt, timeSlotsForSelectedDate])
 
   useEffect(() => {

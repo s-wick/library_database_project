@@ -16,7 +16,6 @@ function mapRoomRow(row) {
       hasWhiteboard,
       hasWifi: true,
       hasPowerOutlets: true,
-      quietZone: Number(row.capacity || 0) <= 6,
     },
   }
 }

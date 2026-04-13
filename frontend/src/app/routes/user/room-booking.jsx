@@ -796,10 +796,6 @@ export default function RoomBookingPage() {
                         label="Power outlets"
                         enabled={room.features.hasPowerOutlets}
                       />
-                      <FeatureRow
-                        label="Quiet-zone friendly"
-                        enabled={room.features.quietZone}
-                      />
                     </ul>
                   </CardContent>
                 </Card>

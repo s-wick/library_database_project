@@ -591,6 +591,12 @@ export default function RoomBookingPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Book a Room</CardTitle>
+            <p>
+              Weekdays: {WEEKDAY_OPEN_HOUR}:00 - {WEEKDAY_CLOSE_HOUR}:00
+            </p>
+            <p>
+              Weekends: {WEEKEND_OPEN_HOUR}:00 - {WEEKEND_CLOSE_HOUR}:00
+            </p>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-[minmax(0,220px)_1fr]">
             <div className="flex h-full flex-col">

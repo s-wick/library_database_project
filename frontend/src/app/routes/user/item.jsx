@@ -22,6 +22,8 @@ export default function ItemPage() {
   const [activeHoldsCount, setActiveHoldsCount] = useState(0)
   const [actionError, setActionError] = useState("")
   const [isSubmittingAction, setIsSubmittingAction] = useState(false)
+  const [hasOutstandingFines, setHasOutstandingFines] = useState(false)
+  const [finesMessage, setFinesMessage] = useState("")
 
   const isFaculty = false // Change according to user type logic if needed
   const borrowDuration = isFaculty ? 14 : 7 // days
@@ -54,6 +56,36 @@ export default function ItemPage() {
     fetchItem()
   }, [id])
 
+  useEffect(() => {
+    const userStr = sessionStorage.getItem("user")
+    const user = userStr ? JSON.parse(userStr) : null
+
+    if (!user?.id) {
+      setHasOutstandingFines(false)
+      setFinesMessage("")
+      return
+    }
+
+    fetch(`${apiBaseUrl}/api/borrow-status?userId=${user.id}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data?.ok) return
+
+        const blocked = Boolean(data.hasOutstandingFines)
+        setHasOutstandingFines(blocked)
+        setFinesMessage(
+          blocked
+            ? data.finesMessage ||
+                "Borrowing is blocked until all outstanding fines are paid."
+            : ""
+        )
+      })
+      .catch(() => {
+        setHasOutstandingFines(false)
+        setFinesMessage("")
+      })
+  }, [apiBaseUrl])
+
   // Formatting helpers based on missing standard field keys
   const getCreator = () =>
     book?.author || book?.director || book?.brand || "Unknown"
@@ -79,6 +111,14 @@ export default function ItemPage() {
       }
 
       if (availability === "Available") {
+        if (hasOutstandingFines) {
+          setActionError(
+            finesMessage ||
+              "Borrowing is blocked until all outstanding fines are paid."
+          )
+          return
+        }
+
         const res = await fetch(`${apiBaseUrl}/api/borrow`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -308,6 +348,12 @@ export default function ItemPage() {
                     Current waitlist: {activeHoldsCount} people
                   </p>
                 )}
+                {availability === "Available" && hasOutstandingFines ? (
+                  <p className="text-sm font-medium text-red-600 dark:text-red-400">
+                    {finesMessage ||
+                      "Borrowing is blocked until all outstanding fines are paid."}
+                  </p>
+                ) : null}
                 {actionError ? (
                   <p className="text-sm font-medium text-red-600 dark:text-red-400">
                     {actionError}
@@ -318,7 +364,10 @@ export default function ItemPage() {
                 size="lg"
                 className="w-full sm:w-auto"
                 onClick={handleAction}
-                disabled={isSubmittingAction}
+                disabled={
+                  isSubmittingAction ||
+                  (availability === "Available" && hasOutstandingFines)
+                }
               >
                 {isSubmittingAction
                   ? availability === "Available"

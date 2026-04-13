@@ -30,7 +30,10 @@ async function handlePayFines(req, res) {
     const updated = await payAllFines(userId)
     sendJson(res, 200, {
       ok: true,
-      message: `${updated} fine(s) paid.`,
+      message:
+        updated > 0
+          ? `${updated} checked-in fine(s) paid.`
+          : "No checked-in fines available to pay.",
       count: updated,
     })
   } catch (error) {

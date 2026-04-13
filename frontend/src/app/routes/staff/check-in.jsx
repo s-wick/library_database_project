@@ -45,9 +45,9 @@ export default function CheckInPage() {
   const [fieldErrors, setFieldErrors] = useState({})
   const [serverError, setServerError] = useState("")
   const [successMessage, setSuccessMessage] = useState("")
-  const [lastCheckIn, setLastCheckIn] = useState(null)
+  // Store all check-ins in this session
+  const [sessionCheckIns, setSessionCheckIns] = useState([])
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [refreshKey, setRefreshKey] = useState(0)
 
   const selectedBorrows = useMemo(
     () =>
@@ -85,58 +85,51 @@ export default function CheckInPage() {
     return ""
   }
 
-  useEffect(() => {
-    const controller = new AbortController()
+  // Move fetchActiveBorrows to component scope for manual and effect use
+  async function fetchActiveBorrows(signal) {
+    setIsLoadingCatalog(true)
+    setCatalogError("")
 
-    async function fetchActiveBorrows() {
-      setIsLoadingCatalog(true)
-      setCatalogError("")
+    try {
+      const params = new URLSearchParams()
+      if (deferredSearchText.trim()) {
+        params.set("q", deferredSearchText.trim())
+      }
 
-      try {
-        const params = new URLSearchParams()
-        if (deferredSearchText.trim()) {
-          params.set("q", deferredSearchText.trim())
-        }
+      const response = await fetch(
+        `${apiBaseUrl}/api/check-in/catalog?${params.toString()}`,
+        { signal }
+      )
+      const data = await response.json().catch(() => ({}))
 
-        const response = await fetch(
-          `${apiBaseUrl}/api/check-in/catalog?${params.toString()}`,
-          { signal: controller.signal }
+      if (!response.ok) {
+        throw new Error(data.message || "Unable to load active borrows.")
+      }
+
+      const nextRows = Array.isArray(data.rows) ? data.rows : []
+      setActiveBorrows(nextRows)
+      setSelectedBorrowIds((current) =>
+        current.filter((selectedId) =>
+          nextRows.some((row) => row.borrowTransactionId === selectedId)
         )
-        const data = await response.json().catch(() => ({}))
-
-        if (!response.ok) {
-          throw new Error(data.message || "Unable to load active borrows.")
-        }
-
-        const nextRows = Array.isArray(data.rows) ? data.rows : []
-        setActiveBorrows(nextRows)
-        setSelectedBorrowIds((current) =>
-          current.filter((selectedId) =>
-            nextRows.some((row) => row.borrowTransactionId === selectedId)
-          )
-        )
-      } catch (error) {
-        if (error.name === "AbortError") return
-        setCatalogError(error.message || "Unable to load active borrows.")
-      } finally {
-        if (!controller.signal.aborted) {
-          setIsLoadingCatalog(false)
-        }
+      )
+    } catch (error) {
+      if (error.name === "AbortError") return
+      setCatalogError(error.message || "Unable to load active borrows.")
+    } finally {
+      if (!signal?.aborted) {
+        setIsLoadingCatalog(false)
       }
     }
-
-    fetchActiveBorrows()
-
-    return () => controller.abort()
-  }, [apiBaseUrl, deferredSearchText, refreshKey])
+  }
 
   useEffect(() => {
-    const intervalId = window.setInterval(() => {
-      setRefreshKey((current) => current + 1)
-    }, 15000)
+    const controller = new AbortController()
+    fetchActiveBorrows(controller.signal)
+    return () => controller.abort()
+  }, [apiBaseUrl, deferredSearchText])
 
-    return () => window.clearInterval(intervalId)
-  }, [])
+  // Removed auto-refresh effect
 
   function handleChange(event) {
     const { name, value } = event.target
@@ -193,17 +186,20 @@ export default function CheckInPage() {
         return
       }
 
-      setLastCheckIn({
-        rows: selectedBorrows,
-        returnDate: form.returnDate,
-      })
+      setSessionCheckIns((prev) => [
+        {
+          rows: selectedBorrows,
+          returnDate: form.returnDate,
+        },
+        ...prev,
+      ])
       setSuccessMessage(
         data.message || "Item checked in successfully and stock updated."
       )
       setForm({ returnDate: getDefaultReturnDateTime() })
       setSelectedBorrowIds([])
       setFieldErrors({})
-      setRefreshKey((current) => current + 1)
+      await fetchActiveBorrows()
     } catch {
       setServerError("Unable to connect to server.")
     } finally {
@@ -234,16 +230,6 @@ export default function CheckInPage() {
     setServerError("")
   }
 
-  function selectAllVisible() {
-    setSelectedBorrowIds(
-      activeBorrows.map((borrow) => borrow.borrowTransactionId)
-    )
-    setFieldErrors((prev) => ({
-      ...prev,
-      selectedBorrowIds: "",
-    }))
-  }
-
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="mx-auto max-w-7xl space-y-6">
@@ -254,8 +240,8 @@ export default function CheckInPage() {
           </Link>
         </Button>
 
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,2.2fr)_minmax(320px,0.9fr)]">
-          <Card>
+        <div className="grid items-stretch gap-6 xl:grid-cols-[minmax(0,2.2fr)_minmax(320px,0.9fr)]">
+          <Card className="h-full">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <PackageCheck className="h-5 w-5 text-primary" />
@@ -283,33 +269,22 @@ export default function CheckInPage() {
                         placeholder="Search by item title, item type, borrower name, email, or ID"
                       />
                     </div>
-                    <FieldDescription>
-                      This list only shows items that are currently checked out
-                      and refreshes automatically every 15 seconds.
-                    </FieldDescription>
                   </Field>
 
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => setRefreshKey((current) => current + 1)}
                     disabled={isLoadingCatalog}
+                    onClick={() => {
+                      const controller = new AbortController()
+                      fetchActiveBorrows(controller.signal)
+                    }}
                     className="md:w-auto"
                   >
                     <RefreshCw
                       className={`mr-2 h-4 w-4 ${isLoadingCatalog ? "animate-spin" : ""}`}
                     />
                     Refresh
-                  </Button>
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={selectAllVisible}
-                    disabled={!activeBorrows.length}
-                    className="md:w-auto"
-                  >
-                    Select all visible
                   </Button>
 
                   <Button
@@ -333,12 +308,11 @@ export default function CheckInPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-[56px]">Select</TableHead>
+                        <TableHead className="w-[56px]"></TableHead>
                         <TableHead>Item</TableHead>
                         <TableHead>Borrower</TableHead>
                         <TableHead>Checked out</TableHead>
                         <TableHead>Due</TableHead>
-                        <TableHead className="w-[120px]">Action</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -353,18 +327,20 @@ export default function CheckInPage() {
                               key={borrow.borrowTransactionId}
                               data-state={isSelected ? "selected" : undefined}
                             >
-                              <TableCell>
-                                <input
-                                  type="checkbox"
-                                  checked={isSelected}
-                                  onChange={() =>
-                                    toggleBorrowSelection(
-                                      borrow.borrowTransactionId
-                                    )
-                                  }
-                                  aria-label={`Select ${borrow.itemName}`}
-                                  className="h-4 w-4 rounded border-input"
-                                />
+                              <TableCell className="align-middle">
+                                <div className="flex justify-center">
+                                  <input
+                                    type="checkbox"
+                                    checked={isSelected}
+                                    onChange={() =>
+                                      toggleBorrowSelection(
+                                        borrow.borrowTransactionId
+                                      )
+                                    }
+                                    aria-label={`Select ${borrow.itemName}`}
+                                    className="h-4 w-4 rounded border-input"
+                                  />
+                                </div>
                               </TableCell>
                               <TableCell className="align-top whitespace-normal">
                                 <div className="font-medium">
@@ -388,19 +364,6 @@ export default function CheckInPage() {
                               </TableCell>
                               <TableCell>
                                 {formatDateTime(borrow.dueDate)}
-                              </TableCell>
-                              <TableCell>
-                                <Button
-                                  type="button"
-                                  variant={isSelected ? "default" : "outline"}
-                                  onClick={() =>
-                                    toggleBorrowSelection(
-                                      borrow.borrowTransactionId
-                                    )
-                                  }
-                                >
-                                  {isSelected ? "Selected" : "Select"}
-                                </Button>
                               </TableCell>
                             </TableRow>
                           )
@@ -471,10 +434,6 @@ export default function CheckInPage() {
                     aria-invalid={!!fieldErrors.returnDate}
                     required
                   />
-                  <FieldDescription>
-                    The selected timestamp will be saved to the borrow record
-                    and the item stock will increase by 1.
-                  </FieldDescription>
                   <FieldError>{fieldErrors.returnDate}</FieldError>
                 </Field>
 
@@ -505,14 +464,14 @@ export default function CheckInPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="h-full">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <CalendarClock className="h-4 w-4 text-primary" />
                 Return summary
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4 text-sm">
+            <CardContent className="flex h-full min-h-0 flex-col gap-4 text-sm">
               <div className="rounded-lg border bg-muted/20 p-3">
                 <p className="font-medium">Scheduled return timestamp</p>
                 <p className="mt-1 text-muted-foreground">
@@ -520,28 +479,35 @@ export default function CheckInPage() {
                 </p>
               </div>
 
-              <div className="rounded-lg border bg-muted/20 p-3">
-                <p className="font-medium">What this updates</p>
-                <p className="mt-1 text-muted-foreground">
-                  Each selected active borrow record gets its return time, the
-                  related item inventory in the database is incremented, and the
-                  catalog refreshes to reflect the latest borrowed items.
-                </p>
-              </div>
-
-              <div className="rounded-lg border bg-muted/20 p-3">
-                <p className="font-medium">Last successful check-in</p>
-                {lastCheckIn?.rows?.length ? (
-                  <div className="mt-1 space-y-1 text-muted-foreground">
-                    <p>{lastCheckIn.rows.length} item(s) checked in.</p>
-                    {lastCheckIn.rows.slice(0, 3).map((borrow) => (
-                      <p key={borrow.borrowTransactionId}>
-                        {borrow.itemName || `Item #${borrow.itemId}`} -{" "}
-                        {borrow.borrowerName ||
-                          `User #${borrow.userId || borrow.borrowerId}`}
-                      </p>
+              <div className="flex min-h-0 flex-1 flex-col rounded-lg border bg-muted/20 p-3">
+                <p className="font-medium">Session check-in history</p>
+                {sessionCheckIns.length ? (
+                  <div className="mt-4 max-h-95 space-y-4 overflow-y-auto text-muted-foreground">
+                    {sessionCheckIns.map((checkIn, idx) => (
+                      <div
+                        key={idx}
+                        className="border-b pb-2 last:border-b-0 last:pb-0"
+                      >
+                        <p className="font-semibold text-foreground">
+                          {checkIn.rows.length} item(s) checked in
+                          <span className="ml-2 text-xs font-normal text-muted-foreground">
+                            at {formatDateTime(checkIn.returnDate)}
+                          </span>
+                        </p>
+                        <div className="mt-1 space-y-1">
+                          {checkIn.rows.slice(0, 3).map((borrow) => (
+                            <p key={borrow.borrowTransactionId}>
+                              {borrow.itemName || `Item #${borrow.itemId}`} -{" "}
+                              {borrow.borrowerName ||
+                                `User #${borrow.userId || borrow.borrowerId}`}
+                            </p>
+                          ))}
+                          {checkIn.rows.length > 3 && (
+                            <p>And {checkIn.rows.length - 3} more item(s).</p>
+                          )}
+                        </div>
+                      </div>
                     ))}
-                    <p>Returned at: {formatDateTime(lastCheckIn.returnDate)}</p>
                   </div>
                 ) : (
                   <p className="mt-1 text-muted-foreground">

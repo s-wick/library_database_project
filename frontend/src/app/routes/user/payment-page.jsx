@@ -81,9 +81,13 @@ export default function PaymentPage() {
     return sum + Number(fine.amount || 0)
   }, 0)
 
-  const fallbackAmount = Number(location.state?.amount || 0)
-  const amount = totalUnpaidFines > 0 ? totalUnpaidFines : fallbackAmount
-  const unpaidFines = fines.filter((fine) => !fine.is_paid)
+  const payableFines = fines.filter(
+    (fine) => !fine.is_paid && Number(fine.can_pay) === 1
+  )
+  const amount = payableFines.reduce(
+    (sum, fine) => sum + Number(fine.amount || 0),
+    0
+  )
 
   const clearFieldError = (fieldName) => {
     if (!errors[fieldName]) {
@@ -160,7 +164,9 @@ export default function PaymentPage() {
 
       setPaidAmount(amount)
       setFines((currentFines) =>
-        currentFines.map((fine) => ({ ...fine, is_paid: 1 }))
+        currentFines.map((fine) =>
+          Number(fine.can_pay) === 1 ? { ...fine, is_paid: 1 } : fine
+        )
       )
       setFinesError("")
       setShowConfirmation(false)
@@ -406,13 +412,15 @@ export default function PaymentPage() {
 
             {finesError && <p className="text-red-600">{finesError}</p>}
 
-            {!finesError && unpaidFines.length === 0 && (
-              <p className="text-muted-foreground">No unpaid fines found.</p>
+            {!finesError && payableFines.length === 0 && (
+              <p className="text-muted-foreground">
+                No chargeable fines found.
+              </p>
             )}
 
-            {!finesError && unpaidFines.length > 0 && (
+            {!finesError && payableFines.length > 0 && (
               <div className="space-y-3">
-                {unpaidFines.map((fine) => (
+                {payableFines.map((fine) => (
                   <div
                     key={fine.fine_id}
                     className="flex justify-between gap-4"

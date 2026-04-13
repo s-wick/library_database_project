@@ -293,16 +293,20 @@ function HoldQueue({ holdQueue = [], onCancelHold, cancelingHoldId = null }) {
 function FinesPanel({ fines = [] }) {
   const navigate = useNavigate()
   const unpaid = fines.filter((f) => f.status === "unpaid")
-  const total = unpaid.reduce((s, f) => s + f.amount, 0)
+  const payableUnpaid = unpaid.filter((f) => f.canPay)
+  const blockedUnpaid = unpaid.filter((f) => !f.canPay)
+  const payableTotal = payableUnpaid.reduce((s, f) => s + f.amount, 0)
 
   return (
-    <Card className={total > 0 ? "border-red-200 dark:border-red-900" : ""}>
+    <Card
+      className={unpaid.length > 0 ? "border-red-200 dark:border-red-900" : ""}
+    >
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg">Fines</CardTitle>
-          {total > 0 && (
+          {payableTotal > 0 && (
             <span className="rounded-full bg-red-100 px-3 py-0.5 text-sm font-bold text-red-700 dark:bg-red-900/40 dark:text-red-300">
-              ${total.toFixed(2)} due
+              ${payableTotal.toFixed(2)} payable now
             </span>
           )}
         </div>
@@ -342,12 +346,15 @@ function FinesPanel({ fines = [] }) {
                 </span>
                 <div className="mt-1">
                   {fine.status === "unpaid" ? (
-                    <Badge
-                      variant="destructive"
-                      className="h-4 px-1.5 py-0 text-[10px] tracking-wider uppercase"
-                    >
-                      Unpaid
-                    </Badge>
+                    fine.canPay ? (
+                      <Badge className="h-4 bg-emerald-600 px-1.5 py-0 text-[10px] tracking-wider text-white uppercase hover:bg-emerald-600">
+                        Payable now
+                      </Badge>
+                    ) : (
+                      <Badge className="h-4 bg-amber-500 px-1.5 py-0 text-[10px] tracking-wider text-white uppercase hover:bg-amber-500">
+                        Check-in required
+                      </Badge>
+                    )
                   ) : (
                     <Badge
                       variant="secondary"
@@ -367,13 +374,17 @@ function FinesPanel({ fines = [] }) {
           </p>
         )}
       </CardContent>
-      {total > 0 && (
+      {unpaid.length > 0 && (
         <CardFooter className="pt-0">
           <Button
-            className="w-full bg-red-600 text-white hover:bg-red-700"
+            className="w-full bg-red-600 text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={payableTotal <= 0}
             onClick={() => navigate("/payment")}
           >
-            <CreditCard className="mr-2 h-4 w-4" /> Pay ${total.toFixed(2)}
+            <CreditCard className="mr-2 h-4 w-4" />
+            {payableTotal > 0
+              ? `Pay $${payableTotal.toFixed(2)}`
+              : "No payable fines yet"}
           </Button>
         </CardFooter>
       )}

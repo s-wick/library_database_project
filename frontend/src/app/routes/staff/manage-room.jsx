@@ -32,6 +32,7 @@ const emptyForm = {
   capacity: "",
   hasProjector: false,
   hasWhiteboard: false,
+  hasTv: false,
 }
 
 export default function RoomManagePage() {
@@ -305,7 +306,7 @@ export default function RoomManagePage() {
                     checked={form.hasProjector}
                     onChange={handleChange}
                   />
-                  <span>Has projector</span>
+                  <span>Projector</span>
                 </label>
 
                 <label className="flex items-center gap-3 rounded-lg border p-3 text-sm">
@@ -315,7 +316,17 @@ export default function RoomManagePage() {
                     checked={form.hasWhiteboard}
                     onChange={handleChange}
                   />
-                  <span>Has whiteboard</span>
+                  <span>Whiteboard</span>
+                </label>
+
+                <label className="flex items-center gap-3 rounded-lg border p-3 text-sm">
+                  <input
+                    name="hasTv"
+                    type="checkbox"
+                    checked={form.hasTv}
+                    onChange={handleChange}
+                  />
+                  <span>TV</span>
                 </label>
 
                 <Button type="submit" disabled={submitting}>

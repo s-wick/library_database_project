@@ -298,7 +298,9 @@ function FinesPanel({ fines = [] }) {
   const payableTotal = payableUnpaid.reduce((s, f) => s + f.amount, 0)
 
   return (
-    <Card className={unpaid.length > 0 ? "border-red-200 dark:border-red-900" : ""}>
+    <Card
+      className={unpaid.length > 0 ? "border-red-200 dark:border-red-900" : ""}
+    >
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg">Fines</CardTitle>
@@ -345,11 +347,11 @@ function FinesPanel({ fines = [] }) {
                 <div className="mt-1">
                   {fine.status === "unpaid" ? (
                     fine.canPay ? (
-                      <Badge className="h-4 bg-emerald-600 px-1.5 py-0 text-[10px] tracking-wider uppercase text-white hover:bg-emerald-600">
+                      <Badge className="h-4 bg-emerald-600 px-1.5 py-0 text-[10px] tracking-wider text-white uppercase hover:bg-emerald-600">
                         Payable now
                       </Badge>
                     ) : (
-                      <Badge className="h-4 bg-amber-500 px-1.5 py-0 text-[10px] tracking-wider uppercase text-white hover:bg-amber-500">
+                      <Badge className="h-4 bg-amber-500 px-1.5 py-0 text-[10px] tracking-wider text-white uppercase hover:bg-amber-500">
                         Check-in required
                       </Badge>
                     )

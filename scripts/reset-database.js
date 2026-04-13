@@ -71,6 +71,42 @@ function escapeSqlString(value) {
   return value.replace(/\\/g, "\\\\").replace(/'/g, "\\'")
 }
 
+function sqlLiteral(value) {
+  return `'${escapeSqlString(value)}'`
+}
+
+function buildUsersSeedTemplateMap(env) {
+  const requiredKeys = ["SEED_STAFF_PASSWORD", "SEED_USER_PASSWORD"]
+
+  const replacements = {}
+  for (const key of requiredKeys) {
+    replacements[key] = sqlLiteral(requiredEnv(env, key))
+  }
+
+  return replacements
+}
+
+function renderSqlTemplate({ templatePath, replacements, label }) {
+  const template = fs.readFileSync(templatePath, "utf8")
+  let rendered = template
+
+  for (const [key, value] of Object.entries(replacements)) {
+    const token = `{{${key}}}`
+    rendered = rendered.split(token).join(value)
+  }
+
+  const unresolved = rendered.match(/\{\{[A-Z0-9_]+\}\}/g)
+  if (unresolved) {
+    throw new Error(
+      `${label} has unresolved template placeholders: ${[
+        ...new Set(unresolved),
+      ].join(", ")}`
+    )
+  }
+
+  return rendered
+}
+
 function runMysql({ mysqlBin, args, inputPath, label }) {
   const stdio = ["ignore", "pipe", "pipe"]
   let inFd = null
@@ -215,7 +251,7 @@ function main() {
 
   if (!fs.existsSync(envPath)) {
     throw new Error(
-      `database/.env not found at: ${envPath}. Create it with DB_HOST, DB_USER, DB_NAME, and optional IMAGE_ROOT.`
+      `database/.env not found at: ${envPath}. Create it with DB_HOST, DB_USER, DB_NAME, and the SEED_* credential values from database/.env.example.`
     )
   }
 
@@ -294,13 +330,44 @@ function main() {
     }
 
     const args = [...baseArgs, database]
+    let importPath = filePath
+    let tempDir = null
 
-    runMysql({
-      mysqlBin,
-      args,
-      inputPath: filePath,
-      label: `Import data ${fileName}`,
-    })
+    if (fileName === "users.sql") {
+      const replacements = buildUsersSeedTemplateMap(env)
+      const renderedUsersSql = renderSqlTemplate({
+        templatePath: filePath,
+        replacements,
+        label: fileName,
+      })
+
+      tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "db-reset-users-"))
+      importPath = path.join(tempDir, fileName)
+      fs.writeFileSync(importPath, renderedUsersSql, "utf8")
+    }
+
+    try {
+      runMysql({
+        mysqlBin,
+        args,
+        inputPath: importPath,
+        label: `Import data ${fileName}`,
+      })
+    } finally {
+      if (tempDir) {
+        try {
+          fs.unlinkSync(importPath)
+        } catch (error) {
+          // Best-effort cleanup.
+        }
+
+        try {
+          fs.rmdirSync(tempDir)
+        } catch (error) {
+          // Best-effort cleanup.
+        }
+      }
+    }
 
     if (fileName === "items.sql") {
       const thumbnailMap = loadThumbnailMap()

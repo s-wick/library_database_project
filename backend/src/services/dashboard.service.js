@@ -1,15 +1,10 @@
 const { sendJson } = require("../utils")
 const {
-  syncOverdueFines,
   getBorrowedBooks,
   getActiveHolds,
   getUnpaidFines,
   getBorrowHistory,
 } = require("../models/dashboard.model")
-const {
-  calculateOutstandingFine,
-  hasReachedItemValueCap,
-} = require("../utils/fine-calculation")
 
 function toDateString(value) {
   if (!value) return null
@@ -33,8 +28,6 @@ async function handleGetDashboard(_req, res, url) {
       sendJson(res, 400, { ok: false, message: "userId is required" })
       return
     }
-
-    await syncOverdueFines(userId)
 
     const [borrowedBooks, holds, finesData, borrowHistory] = await Promise.all([
       getBorrowedBooks(userId),
@@ -62,16 +55,22 @@ async function handleGetDashboard(_req, res, url) {
       estimatedWait: `${Math.max((Number(hold.queue_position) || 1) - 1, 0) * 3 + 1} days`,
     }))
 
-    const formattedFines = finesData.map((fine) => ({
-      id: `${fine.item_id}-${new Date(fine.checkout_date).toISOString()}`,
-      amount: calculateOutstandingFine(fine.amount, fine.amount_paid),
-      status: "unpaid",
-      book: fine.title || "Unknown Item",
-      daysOverdue: Math.max(Number(fine.days_overdue || 0), 0),
-      canPay: fine.return_date != null,
-      isAtMaxValue: hasReachedItemValueCap(fine.amount, fine.item_value),
-      itemValue: Number(fine.item_value || 0),
-    }))
+    const formattedFines = finesData.map((fine) => {
+      const amount = Number(fine.amount || 0)
+      const amountPaid = Number(fine.amount_paid || 0)
+      const itemValue = Number(fine.item_value || 0)
+      const outstanding = Math.max(amount - amountPaid, 0)
+
+      return {
+        id: `${fine.item_id}-${new Date(fine.checkout_date).toISOString()}`,
+        amount: outstanding,
+        status: "unpaid",
+        book: fine.title || "Unknown Item",
+        daysOverdue: Math.max(Number(fine.days_overdue || 0), 0),
+        isAtMaxValue: itemValue > 0 && amount >= itemValue,
+        itemValue,
+      }
+    })
 
     const formattedHistory = borrowHistory.map((book) => ({
       id: `${book.item_id}-${new Date(book.checkout_date).toISOString()}`,

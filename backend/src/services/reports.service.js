@@ -509,6 +509,21 @@ async function handleGetReports(_req, res, url) {
       url.searchParams.get("reportType") || "itemsCheckedOut"
     )
 
+    const staffIdValue = Number(url.searchParams.get("staffId"))
+    const staffId =
+      Number.isFinite(staffIdValue) && staffIdValue > 0 ? staffIdValue : null
+
+    if (staffId) {
+      await query(
+        `INSERT INTO report_generated (staff_id, report_type)
+         SELECT ?, rt.report_type_id
+         FROM report_types rt
+         WHERE rt.report_type = ?
+         LIMIT 1`,
+        [staffId, reportType]
+      )
+    }
+
     if (reportType === "itemsCheckedOut") {
       const availability = await getItemAvailabilityStats(url)
       const { rows, page, pageSize, hasMore } = await getCheckedOutRows(url)

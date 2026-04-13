@@ -1,29 +1,4 @@
 const { query } = require("../database")
-const { DAILY_FINE_RATE } = require("../utils/fine-calculation")
-
-async function syncOverdueFines(userId) {
-  await query(
-    `
-    INSERT INTO fined_for (item_id, user_id, checkout_date, amount, amount_paid)
-    SELECT b.item_id,
-           b.user_id,
-           b.checkout_date,
-           LEAST(
-             ROUND(GREATEST(TIMESTAMPDIFF(DAY, b.due_date, COALESCE(b.return_date, NOW())), 0) * ?, 2),
-             i.monetary_value
-           ) AS amount,
-           0
-    FROM borrow b
-    INNER JOIN item i ON i.item_id = b.item_id
-    WHERE b.user_id = ?
-      AND TIMESTAMPDIFF(DAY, b.due_date, COALESCE(b.return_date, NOW())) > 0
-    ON DUPLICATE KEY UPDATE
-      amount = VALUES(amount),
-      amount_paid = LEAST(COALESCE(amount_paid, 0), VALUES(amount))
-  `,
-    [DAILY_FINE_RATE, userId]
-  )
-}
 
 async function getBorrowedBooks(userId) {
   return query(
@@ -172,7 +147,6 @@ async function payAllFines(userId) {
 }
 
 module.exports = {
-  syncOverdueFines,
   getBorrowedBooks,
   getActiveHolds,
   cancelHold,

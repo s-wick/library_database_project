@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Popover,
   PopoverContent,
@@ -128,6 +129,7 @@ export default function ManageItemsPage() {
   const [genres, setGenres] = useState([])
 
   const pageSize = 8
+  const skeletonRows = Array.from({ length: pageSize }, (_, index) => index)
 
   async function loadItems(search = "") {
     setLoading(true)
@@ -289,23 +291,33 @@ export default function ManageItemsPage() {
             {mode === "remove" ? (
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2 rounded-md border p-3">
-                  {pagedItems.map((item) => (
-                    <button
-                      key={item.item_id}
-                      type="button"
-                      onClick={() => setSelected(item)}
-                      className={`w-full rounded-md border px-3 py-2 text-left transition hover:bg-muted/30 ${
-                        selected?.item_id === item.item_id
-                          ? "border-primary"
-                          : ""
-                      }`}
-                    >
-                      <p className="font-medium">{item.title}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {item.standard_type} • Stock: {item.stock}
-                      </p>
-                    </button>
-                  ))}
+                  {loading
+                    ? skeletonRows.map((row) => (
+                        <div
+                          key={`skeleton-${row}`}
+                          className="space-y-2 rounded-md border px-3 py-2"
+                        >
+                          <Skeleton className="h-4 w-4/5" />
+                          <Skeleton className="h-3 w-2/3" />
+                        </div>
+                      ))
+                    : pagedItems.map((item) => (
+                        <button
+                          key={item.item_id}
+                          type="button"
+                          onClick={() => setSelected(item)}
+                          className={`w-full rounded-md border px-3 py-2 text-left transition hover:bg-muted/30 ${
+                            selected?.item_id === item.item_id
+                              ? "border-primary"
+                              : ""
+                          }`}
+                        >
+                          <p className="font-medium">{item.title}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {item.standard_type} • Stock: {item.stock}
+                          </p>
+                        </button>
+                      ))}
                   {!pagedItems.length && (
                     <p className="text-sm text-muted-foreground">
                       No items found.
@@ -455,23 +467,33 @@ export default function ManageItemsPage() {
             ) : (
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2 rounded-md border p-3">
-                  {pagedItems.map((item) => (
-                    <button
-                      key={item.item_id}
-                      type="button"
-                      onClick={() => handleSelectEditItem(item)}
-                      className={`w-full rounded-md border px-3 py-2 text-left transition hover:bg-muted/30 ${
-                        selected?.item_id === item.item_id
-                          ? "border-primary"
-                          : ""
-                      }`}
-                    >
-                      <p className="font-medium">{item.title}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {item.standard_type} • Stock: {item.stock}
-                      </p>
-                    </button>
-                  ))}
+                  {loading
+                    ? skeletonRows.map((row) => (
+                        <div
+                          key={`skeleton-${row}`}
+                          className="space-y-2 rounded-md border px-3 py-2"
+                        >
+                          <Skeleton className="h-4 w-4/5" />
+                          <Skeleton className="h-3 w-2/3" />
+                        </div>
+                      ))
+                    : pagedItems.map((item) => (
+                        <button
+                          key={item.item_id}
+                          type="button"
+                          onClick={() => handleSelectEditItem(item)}
+                          className={`w-full rounded-md border px-3 py-2 text-left transition hover:bg-muted/30 ${
+                            selected?.item_id === item.item_id
+                              ? "border-primary"
+                              : ""
+                          }`}
+                        >
+                          <p className="font-medium">{item.title}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {item.standard_type} • Stock: {item.stock}
+                          </p>
+                        </button>
+                      ))}
                   {!pagedItems.length && (
                     <p className="text-sm text-muted-foreground">
                       No items found.

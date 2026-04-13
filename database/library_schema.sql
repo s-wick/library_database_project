@@ -144,6 +144,186 @@ DELIMITER ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
 /*!50003 SET character_set_results = @saved_cs_results */ ;
 /*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_unicode_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'IGNORE_SPACE,ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `auto_checkout_holds` AFTER UPDATE ON `borrow` FOR EACH ROW BEGIN
+	DECLARE v_done TINYINT(1) DEFAULT 0;
+	DECLARE v_hold_user_id INT UNSIGNED DEFAULT NULL;
+	DECLARE v_hold_request_datetime DATETIME DEFAULT NULL;
+	DECLARE v_is_faculty TINYINT(1) DEFAULT 0;
+	DECLARE v_borrow_limit INT DEFAULT 3;
+	DECLARE v_active_count INT DEFAULT 0;
+	DECLARE v_has_unpaid_fine INT DEFAULT 0;
+	DECLARE v_checkout_ts DATETIME DEFAULT NULL;
+	DECLARE v_removed_hold_type_id INT UNSIGNED DEFAULT NULL;
+	DECLARE v_checked_out_type_id INT UNSIGNED DEFAULT NULL;
+	DECLARE v_close_reason_fine_id INT UNSIGNED DEFAULT NULL;
+	DECLARE v_close_reason_fulfilled_id INT UNSIGNED DEFAULT NULL;
+	DECLARE v_item_title VARCHAR(100) DEFAULT NULL;
+
+	DECLARE hold_cursor CURSOR FOR
+		SELECT h.user_id, h.request_datetime
+		FROM hold_item h
+		WHERE h.item_id = NEW.item_id
+			AND h.close_datetime IS NULL
+		ORDER BY h.request_datetime ASC;
+
+	DECLARE CONTINUE HANDLER FOR NOT FOUND SET v_done = 1;
+
+	IF NEW.return_date IS NOT NULL AND OLD.return_date IS NULL THEN
+		SELECT title
+			INTO v_item_title
+			FROM item
+		 WHERE item_id = NEW.item_id
+		 LIMIT 1;
+
+		SELECT notification_type_id
+			INTO v_removed_hold_type_id
+			FROM user_notification_type
+		 WHERE notification_type_text = 'Removed hold'
+		 LIMIT 1;
+
+		SELECT notification_type_id
+			INTO v_checked_out_type_id
+			FROM user_notification_type
+		 WHERE notification_type_text = 'Checked out item'
+		 LIMIT 1;
+
+		SELECT reason_id
+			INTO v_close_reason_fine_id
+			FROM hold_item_closing_reasons
+		 WHERE reason_text = 'Canceled by fine'
+		 LIMIT 1;
+
+		SELECT reason_id
+			INTO v_close_reason_fulfilled_id
+			FROM hold_item_closing_reasons
+		 WHERE reason_text = 'Fulfilled'
+		 LIMIT 1;
+
+		OPEN hold_cursor;
+
+		hold_loop: LOOP
+			FETCH hold_cursor INTO v_hold_user_id, v_hold_request_datetime;
+
+			IF v_done = 1 THEN
+				LEAVE hold_loop;
+			END IF;
+
+			SELECT COUNT(*)
+				INTO v_has_unpaid_fine
+				FROM fined_for f
+			 WHERE f.user_id = v_hold_user_id
+				 AND COALESCE(f.amount, 0) > COALESCE(f.amount_paid, 0);
+
+			IF v_has_unpaid_fine > 0 THEN
+				IF v_removed_hold_type_id IS NOT NULL THEN
+					INSERT INTO user_notification (
+						user_id,
+						item_id,
+						notification_type,
+						message
+					)
+					VALUES (
+						v_hold_user_id,
+						NEW.item_id,
+						v_removed_hold_type_id,
+						CONCAT(
+							'Your hold for "',
+							COALESCE(v_item_title, NEW.item_id),
+							'" was removed because your account has unpaid fines.'
+						)
+					);
+				END IF;
+
+				UPDATE hold_item
+					 SET close_datetime = NOW(),
+							 close_reason_id = v_close_reason_fine_id
+				 WHERE item_id = NEW.item_id
+					 AND user_id = v_hold_user_id
+					 AND request_datetime = v_hold_request_datetime
+					 AND close_datetime IS NULL;
+
+				ITERATE hold_loop;
+			END IF;
+
+			SELECT COALESCE(ua.is_faculty, 0)
+				INTO v_is_faculty
+				FROM user_account ua
+			 WHERE ua.user_id = v_hold_user_id
+			 LIMIT 1;
+
+			SET v_borrow_limit = IF(v_is_faculty = 1, 6, 3);
+
+			SELECT COUNT(*)
+				INTO v_active_count
+				FROM borrow b
+			 WHERE b.user_id = v_hold_user_id
+				 AND b.return_date IS NULL;
+
+			IF v_active_count >= v_borrow_limit THEN
+				ITERATE hold_loop;
+			END IF;
+
+			SET v_checkout_ts = NOW();
+			INSERT INTO borrow (item_id, user_id, checkout_date, due_date)
+			VALUES (
+				NEW.item_id,
+				v_hold_user_id,
+				v_checkout_ts,
+				DATE_ADD(v_checkout_ts, INTERVAL IF(v_is_faculty = 1, 14, 7) DAY)
+			);
+
+			IF v_checked_out_type_id IS NOT NULL THEN
+				INSERT INTO user_notification (
+					user_id,
+					item_id,
+					notification_type,
+					message
+				)
+				VALUES (
+					v_hold_user_id,
+					NEW.item_id,
+					v_checked_out_type_id,
+					CONCAT(
+						'Your hold for "',
+						COALESCE(v_item_title, NEW.item_id),
+						'" has been checked out to your account. It is due on ',
+						DATE_FORMAT(
+							DATE_ADD(v_checkout_ts, INTERVAL IF(v_is_faculty = 1, 14, 7) DAY),
+							'%Y-%m-%d'
+						),
+						'.'
+					)
+				);
+			END IF;
+
+			UPDATE hold_item
+				 SET close_datetime = NOW(),
+						 close_reason_id = v_close_reason_fulfilled_id
+			 WHERE item_id = NEW.item_id
+				 AND user_id = v_hold_user_id
+				 AND request_datetime = v_hold_request_datetime
+				 AND close_datetime IS NULL;
+
+			LEAVE hold_loop;
+		END LOOP;
+
+		CLOSE hold_cursor;
+	END IF;
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 
 --
 -- Table structure for table `cart_items`
@@ -381,166 +561,6 @@ CREATE TABLE `item` (
   CONSTRAINT `fk_item_type` FOREIGN KEY (`item_type_code`) REFERENCES `item_type` (`item_code`)
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
-/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
-/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
-/*!50003 SET @saved_col_connection = @@collation_connection */ ;
-/*!50003 SET character_set_client  = utf8mb4 */ ;
-/*!50003 SET character_set_results = utf8mb4 */ ;
-/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
-/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
-/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
-DELIMITER ;;
-/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_item_auto_checkout_holds_before_update` BEFORE UPDATE ON `item` FOR EACH ROW BEGIN
-  DECLARE v_done TINYINT(1) DEFAULT 0;
-  DECLARE v_stock_to_allocate INT DEFAULT 0;
-  DECLARE v_hold_user_id INT UNSIGNED DEFAULT NULL;
-  DECLARE v_hold_request_date DATETIME DEFAULT NULL;
-  DECLARE v_is_faculty TINYINT(1) DEFAULT 0;
-  DECLARE v_borrow_limit INT DEFAULT 3;
-  DECLARE v_active_count INT DEFAULT 0;
-  DECLARE v_has_unpaid_fine INT DEFAULT 0;
-  DECLARE v_checkout_ts DATETIME DEFAULT NULL;
-  DECLARE v_insert_failed TINYINT(1) DEFAULT 0;
-
-  DECLARE hold_cursor CURSOR FOR
-    SELECT h.user_id, h.request_date
-    FROM hold_item h
-    WHERE h.item_id = NEW.item_id
-    ORDER BY h.request_date ASC;
-
-  DECLARE CONTINUE HANDLER FOR NOT FOUND SET v_done = 1;
-  DECLARE CONTINUE HANDLER FOR SQLSTATE '45000' SET v_insert_failed = 1;
-
-  IF NEW.inventory > OLD.inventory THEN
-    SET v_stock_to_allocate = NEW.inventory - OLD.inventory;
-
-    OPEN hold_cursor;
-
-    hold_loop: LOOP
-      IF v_stock_to_allocate <= 0 THEN
-        LEAVE hold_loop;
-      END IF;
-
-      FETCH hold_cursor INTO v_hold_user_id, v_hold_request_date;
-
-      IF v_done = 1 THEN
-        LEAVE hold_loop;
-      END IF;
-
-      SELECT COUNT(*)
-        INTO v_has_unpaid_fine
-        FROM fined_for f
-       WHERE f.user_id = v_hold_user_id
-         AND COALESCE(f.amount, 0) > COALESCE(f.amount_paid, 0);
-
-      IF v_has_unpaid_fine > 0 THEN
-        INSERT INTO user_notification (
-          user_id,
-          item_id,
-          notification_type,
-          message
-        )
-        VALUES (
-          v_hold_user_id,
-          NEW.item_id,
-          (
-            SELECT notification_type_id
-            FROM user_notification_type
-            WHERE notification_type_text = 'Removed hold'
-            LIMIT 1
-          ),
-          CONCAT(
-            'Your hold for "',
-            NEW.title,
-            '" was removed because your account has unpaid fines.'
-          )
-        );
-
-        DELETE FROM hold_item
-         WHERE item_id = NEW.item_id
-           AND user_id = v_hold_user_id
-           AND request_date = v_hold_request_date;
-
-        ITERATE hold_loop;
-      END IF;
-
-      SELECT COALESCE(ua.is_faculty, 0)
-        INTO v_is_faculty
-        FROM user_account ua
-       WHERE ua.user_id = v_hold_user_id
-       LIMIT 1;
-
-      SET v_borrow_limit = IF(v_is_faculty = 1, 6, 3);
-
-      SELECT COUNT(*)
-        INTO v_active_count
-        FROM borrow b
-       WHERE b.user_id = v_hold_user_id
-         AND b.return_date IS NULL;
-
-      IF v_active_count >= v_borrow_limit THEN
-        ITERATE hold_loop;
-      END IF;
-
-      SET v_checkout_ts = NOW();
-      SET v_insert_failed = 0;
-
-      INSERT INTO borrow (item_id, user_id, checkout_date, due_date)
-      VALUES (
-        NEW.item_id,
-        v_hold_user_id,
-        v_checkout_ts,
-        DATE_ADD(v_checkout_ts, INTERVAL IF(v_is_faculty = 1, 14, 7) DAY)
-      );
-
-      IF v_insert_failed = 1 THEN
-        ITERATE hold_loop;
-      END IF;
-
-      INSERT INTO user_notification (
-        user_id,
-        item_id,
-        notification_type,
-        message
-      )
-      VALUES (
-        v_hold_user_id,
-        NEW.item_id,
-        (
-          SELECT notification_type_id
-          FROM user_notification_type
-          WHERE notification_type_text = 'Checked out item'
-          LIMIT 1
-        ),
-        CONCAT(
-          'Your hold for "',
-          NEW.title,
-          '" has been checked out to your account. It is due on ',
-          DATE_FORMAT(
-            DATE_ADD(v_checkout_ts, INTERVAL IF(v_is_faculty = 1, 14, 7) DAY),
-            '%Y-%m-%d'
-          ),
-          '.'
-        )
-      );
-
-      DELETE FROM hold_item
-       WHERE item_id = NEW.item_id
-         AND user_id = v_hold_user_id
-         AND request_date = v_hold_request_date;
-
-      SET NEW.inventory = NEW.inventory - 1;
-      SET v_stock_to_allocate = v_stock_to_allocate - 1;
-    END LOOP;
-
-    CLOSE hold_cursor;
-  END IF;
-END */;;
-DELIMITER ;
-/*!50003 SET sql_mode              = @saved_sql_mode */ ;
-/*!50003 SET character_set_client  = @saved_cs_client */ ;
-/*!50003 SET character_set_results = @saved_cs_results */ ;
-/*!50003 SET collation_connection  = @saved_col_connection */ ;
 
 --
 -- Table structure for table `item_type`
@@ -812,4 +832,4 @@ CREATE TABLE `video` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-04-13  4:04:06
+-- Dump completed on 2026-04-13  4:45:00

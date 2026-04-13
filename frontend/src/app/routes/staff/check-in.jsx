@@ -45,7 +45,8 @@ export default function CheckInPage() {
   const [fieldErrors, setFieldErrors] = useState({})
   const [serverError, setServerError] = useState("")
   const [successMessage, setSuccessMessage] = useState("")
-  const [lastCheckIn, setLastCheckIn] = useState(null)
+  // Store all check-ins in this session
+  const [sessionCheckIns, setSessionCheckIns] = useState([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
 
@@ -193,10 +194,13 @@ export default function CheckInPage() {
         return
       }
 
-      setLastCheckIn({
-        rows: selectedBorrows,
-        returnDate: form.returnDate,
-      })
+      setSessionCheckIns((prev) => [
+        {
+          rows: selectedBorrows,
+          returnDate: form.returnDate,
+        },
+        ...prev,
+      ])
       setSuccessMessage(
         data.message || "Item checked in successfully and stock updated."
       )
@@ -283,10 +287,6 @@ export default function CheckInPage() {
                         placeholder="Search by item title, item type, borrower name, email, or ID"
                       />
                     </div>
-                    <FieldDescription>
-                      This list only shows items that are currently checked out
-                      and refreshes automatically every 15 seconds.
-                    </FieldDescription>
                   </Field>
 
                   <Button
@@ -338,7 +338,6 @@ export default function CheckInPage() {
                         <TableHead>Borrower</TableHead>
                         <TableHead>Checked out</TableHead>
                         <TableHead>Due</TableHead>
-                        <TableHead className="w-[120px]">Action</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -353,18 +352,20 @@ export default function CheckInPage() {
                               key={borrow.borrowTransactionId}
                               data-state={isSelected ? "selected" : undefined}
                             >
-                              <TableCell>
-                                <input
-                                  type="checkbox"
-                                  checked={isSelected}
-                                  onChange={() =>
-                                    toggleBorrowSelection(
-                                      borrow.borrowTransactionId
-                                    )
-                                  }
-                                  aria-label={`Select ${borrow.itemName}`}
-                                  className="h-4 w-4 rounded border-input"
-                                />
+                              <TableCell className="align-middle">
+                                <div className="flex justify-center">
+                                  <input
+                                    type="checkbox"
+                                    checked={isSelected}
+                                    onChange={() =>
+                                      toggleBorrowSelection(
+                                        borrow.borrowTransactionId
+                                      )
+                                    }
+                                    aria-label={`Select ${borrow.itemName}`}
+                                    className="h-4 w-4 rounded border-input"
+                                  />
+                                </div>
                               </TableCell>
                               <TableCell className="align-top whitespace-normal">
                                 <div className="font-medium">
@@ -388,19 +389,6 @@ export default function CheckInPage() {
                               </TableCell>
                               <TableCell>
                                 {formatDateTime(borrow.dueDate)}
-                              </TableCell>
-                              <TableCell>
-                                <Button
-                                  type="button"
-                                  variant={isSelected ? "default" : "outline"}
-                                  onClick={() =>
-                                    toggleBorrowSelection(
-                                      borrow.borrowTransactionId
-                                    )
-                                  }
-                                >
-                                  {isSelected ? "Selected" : "Select"}
-                                </Button>
                               </TableCell>
                             </TableRow>
                           )
@@ -471,10 +459,6 @@ export default function CheckInPage() {
                     aria-invalid={!!fieldErrors.returnDate}
                     required
                   />
-                  <FieldDescription>
-                    The selected timestamp will be saved to the borrow record
-                    and the item stock will increase by 1.
-                  </FieldDescription>
                   <FieldError>{fieldErrors.returnDate}</FieldError>
                 </Field>
 
@@ -521,27 +505,34 @@ export default function CheckInPage() {
               </div>
 
               <div className="rounded-lg border bg-muted/20 p-3">
-                <p className="font-medium">What this updates</p>
-                <p className="mt-1 text-muted-foreground">
-                  Each selected active borrow record gets its return time, the
-                  related item inventory in the database is incremented, and the
-                  catalog refreshes to reflect the latest borrowed items.
-                </p>
-              </div>
-
-              <div className="rounded-lg border bg-muted/20 p-3">
-                <p className="font-medium">Last successful check-in</p>
-                {lastCheckIn?.rows?.length ? (
-                  <div className="mt-1 space-y-1 text-muted-foreground">
-                    <p>{lastCheckIn.rows.length} item(s) checked in.</p>
-                    {lastCheckIn.rows.slice(0, 3).map((borrow) => (
-                      <p key={borrow.borrowTransactionId}>
-                        {borrow.itemName || `Item #${borrow.itemId}`} -{" "}
-                        {borrow.borrowerName ||
-                          `User #${borrow.userId || borrow.borrowerId}`}
-                      </p>
+                <p className="font-medium">Session check-in history</p>
+                {sessionCheckIns.length ? (
+                  <div className="mt-1 space-y-4 text-muted-foreground">
+                    {sessionCheckIns.map((checkIn, idx) => (
+                      <div
+                        key={idx}
+                        className="border-b pb-2 last:border-b-0 last:pb-0"
+                      >
+                        <p className="font-semibold text-foreground">
+                          {checkIn.rows.length} item(s) checked in
+                          <span className="ml-2 text-xs font-normal text-muted-foreground">
+                            at {formatDateTime(checkIn.returnDate)}
+                          </span>
+                        </p>
+                        <div className="mt-1 space-y-1">
+                          {checkIn.rows.slice(0, 3).map((borrow) => (
+                            <p key={borrow.borrowTransactionId}>
+                              {borrow.itemName || `Item #${borrow.itemId}`} -{" "}
+                              {borrow.borrowerName ||
+                                `User #${borrow.userId || borrow.borrowerId}`}
+                            </p>
+                          ))}
+                          {checkIn.rows.length > 3 && (
+                            <p>And {checkIn.rows.length - 3} more item(s).</p>
+                          )}
+                        </div>
+                      </div>
                     ))}
-                    <p>Returned at: {formatDateTime(lastCheckIn.returnDate)}</p>
                   </div>
                 ) : (
                   <p className="mt-1 text-muted-foreground">

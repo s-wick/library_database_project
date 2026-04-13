@@ -2,13 +2,22 @@ import React, { useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
 import { CheckCircle2, XCircle, DoorOpen } from "lucide-react"
 import { Navbar } from "@/components/navbar"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
+import { Calendar } from "@/components/ui/calendar"
+import { Slider } from "@/components/ui/slider"
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card"
 import { API_BASE_URL } from "@/lib/api-config"
 
-const SLOT_INTERVAL_MINUTES = 30
+const SLOT_INTERVAL_MINUTES = 60
 const SLOT_INTERVAL_MS = SLOT_INTERVAL_MINUTES * 60 * 1000
-const MAX_BOOKING_MINUTES = 180
+const MAX_BOOKING_HOURS = 3
 const ADVANCE_WINDOW_MS = 24 * 60 * 60 * 1000
 
 function roundUpToNextSlot(date) {
@@ -33,6 +42,29 @@ function formatSlotLabel(value) {
   })
 }
 
+function formatTimeLabel(value) {
+  return new Date(value).toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
+  })
+}
+
+function getDateKey(value) {
+  return new Date(value).toDateString()
+}
+
+function isWholeHour(value) {
+  const date = new Date(value)
+  return date.getMinutes() === 0 && date.getSeconds() === 0
+}
+
+function getBookingEndTime(booking) {
+  if (booking.endTime) return new Date(booking.endTime)
+  const start = new Date(booking.startTime)
+  const durationHours = Number(booking.durationHours || 0)
+  return new Date(start.getTime() + durationHours * 60 * 60 * 1000)
+}
+
 function FeatureRow({ label, enabled }) {
   return (
     <li className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -46,14 +78,114 @@ function FeatureRow({ label, enabled }) {
   )
 }
 
+function CalendarWithTimeSlider({
+  selectedDate,
+  onDateChange,
+  startAtLabel,
+  timeSlots,
+  selectedStartAt,
+  onStartAtChange,
+  durationHours,
+  onDurationChange,
+  maxDurationHours,
+  availabilityLoading,
+  availabilityError,
+}) {
+  return (
+    <Card className="h-full">
+      <CardContent className="grid gap-4 md:grid-cols-[auto_1fr]">
+        <Calendar
+          mode="single"
+          selected={selectedDate}
+          onSelect={(date) => onDateChange(date || new Date())}
+          className="rounded-md border p-3"
+        />
+        <div className="flex flex-col justify-between gap-4">
+          <div>
+            <p className="text-sm text-muted-foreground">Start time</p>
+            {availabilityLoading ? (
+              <p className="mt-1 text-sm">Loading availability...</p>
+            ) : availabilityError ? (
+              <p className="mt-1 text-sm text-rose-600">{availabilityError}</p>
+            ) : startAtLabel ? (
+              <p className="mt-1 text-base font-medium">{startAtLabel}</p>
+            ) : (
+              <p className="mt-1 text-sm text-muted-foreground">
+                No available times on this date.
+              </p>
+            )}
+            {timeSlots.length > 0 && (
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {timeSlots.map((slot) => (
+                  <Button
+                    key={slot.value}
+                    type="button"
+                    variant={
+                      slot.value === selectedStartAt
+                        ? "default"
+                        : slot.isAvailable
+                          ? "secondary"
+                          : "outline"
+                    }
+                    disabled={!slot.isAvailable}
+                    onClick={() => onStartAtChange(slot.value)}
+                  >
+                    {slot.label}
+                  </Button>
+                ))}
+              </div>
+            )}
+            {timeSlots.length > 0 && (
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                <Badge variant="secondary">Available</Badge>
+                <Badge variant="outline">Unavailable</Badge>
+              </div>
+            )}
+          </div>
+          <div>
+            <p className="text-sm text-muted-foreground">Duration</p>
+            <div className="mt-2 flex items-center gap-3">
+              <Slider
+                min={1}
+                max={3}
+                step={1}
+                value={[durationHours]}
+                onValueChange={(value) =>
+                  onDurationChange(
+                    Math.min(value[0], Math.max(1, maxDurationHours || 1))
+                  )
+                }
+                disabled={maxDurationHours === 0}
+              />
+              <span className="w-20 text-sm font-medium">
+                {durationHours} hour{durationHours === 1 ? "" : "s"}
+              </span>
+            </div>
+            {maxDurationHours > 0 && maxDurationHours < 3 && (
+              <p className="mt-2 text-xs text-muted-foreground">
+                Max {maxDurationHours} hour
+                {maxDurationHours === 1 ? "" : "s"} based on availability.
+              </p>
+            )}
+          </div>
+        </div>
+      </CardContent>
+      <CardFooter className="border-t bg-card text-xs text-muted-foreground">
+        Starts are aligned to the next whole hour when possible.
+      </CardFooter>
+    </Card>
+  )
+}
+
 export default function RoomBookingPage() {
   const apiBaseUrl = API_BASE_URL
 
   const [rooms, setRooms] = useState([])
   const [activeBooking, setActiveBooking] = useState(null)
   const [selectedRoom, setSelectedRoom] = useState("")
-  const [durationMinutes, setDurationMinutes] = useState(60)
+  const [durationHours, setDurationHours] = useState(1)
   const [startAt, setStartAt] = useState("")
+  const [selectedDate, setSelectedDate] = useState(new Date())
   const [availability, setAvailability] = useState({
     bookings: [],
     windowStart: "",
@@ -195,7 +327,7 @@ export default function RoomBookingPage() {
     const bookings = availability.bookings
       .map((booking) => ({
         start: new Date(booking.startTime),
-        end: new Date(booking.endTime),
+        end: getBookingEndTime(booking),
       }))
       .filter(
         (booking) =>
@@ -237,11 +369,95 @@ export default function RoomBookingPage() {
     selectedRoom,
   ])
 
-  const durationOptions = useMemo(() => {
-    if (!startAt) return []
+  const availableSlotsDetailed = useMemo(() => {
+    return availableStartSlots
+      .map((slot) => ({
+        ...slot,
+        date: new Date(slot.value),
+      }))
+      .filter((slot) => !Number.isNaN(slot.date.getTime()))
+  }, [availableStartSlots])
+
+  const allSlotsForSelectedDate = useMemo(() => {
+    if (!selectedDate || availabilityError) return []
+
+    const fallbackStart = new Date(Date.now())
+    const fallbackEnd = new Date(Date.now() + ADVANCE_WINDOW_MS)
+    const windowStart = availability.windowStart
+      ? new Date(availability.windowStart)
+      : fallbackStart
+    const windowEnd = availability.windowEnd
+      ? new Date(availability.windowEnd)
+      : fallbackEnd
+
+    if (
+      Number.isNaN(windowStart.getTime()) ||
+      Number.isNaN(windowEnd.getTime()) ||
+      windowStart >= windowEnd
+    ) {
+      return []
+    }
+
+    const dayStart = new Date(selectedDate)
+    dayStart.setHours(0, 0, 0, 0)
+    const dayEnd = new Date(dayStart)
+    dayEnd.setDate(dayEnd.getDate() + 1)
+
+    const slotStart = roundUpToNextSlot(
+      new Date(Math.max(dayStart.getTime(), windowStart.getTime()))
+    )
+    const limit = Math.min(dayEnd.getTime(), windowEnd.getTime())
+    const slots = []
+
+    for (
+      let cursor = slotStart.getTime();
+      cursor + SLOT_INTERVAL_MS <= limit;
+      cursor += SLOT_INTERVAL_MS
+    ) {
+      slots.push(new Date(cursor))
+    }
+
+    return slots
+  }, [
+    availability.windowEnd,
+    availability.windowStart,
+    availabilityError,
+    selectedDate,
+  ])
+
+  const timeSlotsForSelectedDate = useMemo(() => {
+    const availableSet = new Set(
+      availableSlotsDetailed.map((slot) => slot.date.getTime())
+    )
+
+    return allSlotsForSelectedDate.map((slotDate) => ({
+      value: slotDate.toISOString(),
+      label: formatTimeLabel(slotDate),
+      isAvailable: availableSet.has(slotDate.getTime()),
+    }))
+  }, [allSlotsForSelectedDate, availableSlotsDetailed])
+
+  const slotsForSelectedDate = useMemo(() => {
+    if (!selectedDate) return []
+    const selectedKey = getDateKey(selectedDate)
+    return availableSlotsDetailed.filter(
+      (slot) => getDateKey(slot.date) === selectedKey
+    )
+  }, [availableSlotsDetailed, selectedDate])
+
+  const preferredSlotForSelectedDate = useMemo(() => {
+    if (slotsForSelectedDate.length === 0) return null
+    const wholeHourSlots = slotsForSelectedDate.filter((slot) =>
+      isWholeHour(slot.date)
+    )
+    return wholeHourSlots[0] || slotsForSelectedDate[0]
+  }, [slotsForSelectedDate])
+
+  const maxDurationHours = useMemo(() => {
+    if (!startAt) return 0
 
     const start = new Date(startAt)
-    if (Number.isNaN(start.getTime())) return []
+    if (Number.isNaN(start.getTime())) return 0
 
     const windowEnd = availability.windowEnd
       ? new Date(availability.windowEnd)
@@ -250,7 +466,7 @@ export default function RoomBookingPage() {
     const nextBooking = availability.bookings
       .map((booking) => ({
         start: new Date(booking.startTime),
-        end: new Date(booking.endTime),
+        end: getBookingEndTime(booking),
       }))
       .filter(
         (booking) =>
@@ -261,62 +477,42 @@ export default function RoomBookingPage() {
       .sort((left, right) => left.start - right.start)[0]
 
     const maxEndTime = Math.min(
-      start.getTime() + MAX_BOOKING_MINUTES * 60 * 1000,
+      start.getTime() + MAX_BOOKING_HOURS * 60 * 60 * 1000,
       windowEnd.getTime(),
       nextBooking ? nextBooking.start.getTime() : Number.POSITIVE_INFINITY
     )
 
-    const maxMinutes =
-      Math.floor((maxEndTime - start.getTime()) / SLOT_INTERVAL_MS) *
-      SLOT_INTERVAL_MINUTES
-    const options = []
+    const maxHours = Math.floor(
+      (maxEndTime - start.getTime()) / (60 * 60 * 1000)
+    )
 
-    for (
-      let minutes = SLOT_INTERVAL_MINUTES;
-      minutes <= maxMinutes;
-      minutes += SLOT_INTERVAL_MINUTES
-    ) {
-      const label =
-        minutes < 60
-          ? `${minutes} min`
-          : minutes % 60 === 0
-            ? `${minutes / 60} hour${minutes === 60 ? "" : "s"}`
-            : `${Math.floor(minutes / 60)}.5 hours`
-
-      options.push({ value: minutes, label })
-    }
-
-    return options
+    return Math.max(0, Math.min(3, maxHours))
   }, [availability.bookings, availability.windowEnd, startAt])
 
   useEffect(() => {
-    if (availableStartSlots.length === 0) {
-      setStartAt("")
+    if (preferredSlotForSelectedDate) {
+      setStartAt(preferredSlotForSelectedDate.value)
       return
     }
 
-    const hasCurrentSelection = availableStartSlots.some(
+    const hasSelectedSlot = timeSlotsForSelectedDate.some(
       (slot) => slot.value === startAt
     )
 
-    if (!hasCurrentSelection) {
-      setStartAt(availableStartSlots[0].value)
+    if (!hasSelectedSlot) {
+      setStartAt("")
     }
-  }, [availableStartSlots, startAt])
+  }, [preferredSlotForSelectedDate, startAt, timeSlotsForSelectedDate])
 
   useEffect(() => {
-    if (durationOptions.length === 0) {
+    if (maxDurationHours === 0) {
       return
     }
 
-    const hasCurrentSelection = durationOptions.some(
-      (option) => option.value === durationMinutes
-    )
-
-    if (!hasCurrentSelection) {
-      setDurationMinutes(durationOptions[0].value)
+    if (durationHours > maxDurationHours) {
+      setDurationHours(maxDurationHours)
     }
-  }, [durationMinutes, durationOptions])
+  }, [durationHours, maxDurationHours])
 
   const handleBookRoom = async () => {
     setError("")
@@ -338,8 +534,6 @@ export default function RoomBookingPage() {
       return
     }
 
-    const end = new Date(start.getTime() + Number(durationMinutes) * 60 * 1000)
-
     setSubmitting(true)
     try {
       const res = await fetch(`${apiBaseUrl}/api/rooms/book`, {
@@ -349,7 +543,7 @@ export default function RoomBookingPage() {
           userId: user.id,
           roomNumber: selectedRoom,
           startTime: start.toISOString(),
-          endTime: end.toISOString(),
+          durationHours,
         }),
       })
 
@@ -396,7 +590,7 @@ export default function RoomBookingPage() {
           <CardHeader>
             <CardTitle className="text-lg">Book a Room</CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-4">
+          <CardContent className="grid gap-4 md:grid-cols-3">
             <label className="text-sm">
               <span className="mb-1 block text-muted-foreground">Room</span>
               <select
@@ -411,52 +605,21 @@ export default function RoomBookingPage() {
                 ))}
               </select>
             </label>
-
-            <label className="text-sm md:col-span-2">
-              <span className="mb-1 block text-muted-foreground">
-                Start time
-              </span>
-              <select
-                className="h-10 w-full rounded-md border px-3"
-                value={startAt}
-                onChange={(e) => setStartAt(e.target.value)}
-                disabled={
-                  availabilityLoading || availableStartSlots.length === 0
-                }
-              >
-                {availableStartSlots.length === 0 ? (
-                  <option value="">
-                    No times available in the next 24 hours
-                  </option>
-                ) : (
-                  availableStartSlots.map((slot) => (
-                    <option key={slot.value} value={slot.value}>
-                      {slot.label}
-                    </option>
-                  ))
-                )}
-              </select>
-            </label>
-
-            <label className="text-sm">
-              <span className="mb-1 block text-muted-foreground">Duration</span>
-              <select
-                className="h-10 w-full rounded-md border px-3"
-                value={durationMinutes}
-                onChange={(e) => setDurationMinutes(Number(e.target.value))}
-                disabled={durationOptions.length === 0}
-              >
-                {durationOptions.length === 0 ? (
-                  <option value={durationMinutes}>No valid duration</option>
-                ) : (
-                  durationOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))
-                )}
-              </select>
-            </label>
+            <div className="md:col-span-2">
+              <CalendarWithTimeSlider
+                selectedDate={selectedDate}
+                onDateChange={setSelectedDate}
+                startAtLabel={startAt ? formatSlotLabel(startAt) : ""}
+                timeSlots={timeSlotsForSelectedDate}
+                selectedStartAt={startAt}
+                onStartAtChange={setStartAt}
+                durationHours={durationHours}
+                onDurationChange={setDurationHours}
+                maxDurationHours={maxDurationHours}
+                availabilityLoading={availabilityLoading}
+                availabilityError={availabilityError}
+              />
+            </div>
           </CardContent>
           {selectedRoomDetails && (
             <CardContent className="pt-0 text-sm text-muted-foreground">
@@ -468,12 +631,9 @@ export default function RoomBookingPage() {
             </CardContent>
           )}
           <CardContent className="pt-0">
-            {!!availabilityError && (
-              <p className="mb-2 text-sm text-rose-600">{availabilityError}</p>
-            )}
             {availableStartSlots.length > 0 && !availabilityLoading && (
               <p className="mb-2 text-sm text-muted-foreground">
-                Choose from 30-minute slots available within the next 24 hours.
+                Select a start time to see available and unavailable slots.
               </p>
             )}
             <Button
@@ -482,7 +642,7 @@ export default function RoomBookingPage() {
                 submitting ||
                 !selectedRoom ||
                 !startAt ||
-                durationOptions.length === 0 ||
+                maxDurationHours === 0 ||
                 !!activeBooking
               }
             >

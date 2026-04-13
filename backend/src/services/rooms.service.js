@@ -12,15 +12,19 @@ const {
   createRoomBooking,
 } = require("../models/rooms.model")
 
-const MAX_BOOKING_MINUTES = 180
+const MAX_BOOKING_HOURS = 3
 const MAX_ADVANCE_HOURS = 24
 
 function formatBooking(row) {
   if (!row) return null
+  const durationHours = Number(row.duration_hours || 0)
+  const startTime = new Date(row.start_time)
+  const endTime = new Date(startTime.getTime() + durationHours * 60 * 60 * 1000)
   return {
     roomNumber: row.room_number,
-    startTime: new Date(row.start_time).toISOString(),
-    endTime: new Date(row.end_time).toISOString(),
+    startTime: startTime.toISOString(),
+    endTime: endTime.toISOString(),
+    durationHours,
   }
 }
 
@@ -30,13 +34,14 @@ function formatRoom(row) {
   const floor = String(row.room_number || "").charAt(0) || "1"
   const hasProjector = Number(row.has_projector || 0) === 1
   const hasWhiteboard = Number(row.has_whiteboard || 0) === 1
+  const hasTv = Number(row.has_tv || 0) === 1
 
   return {
     roomNumber: row.room_number,
     floor,
     capacity: Number(row.capacity || 0),
     features: {
-      hasTv: hasProjector,
+      hasTv,
       hasProjector,
       hasWhiteboard,
       hasWifi: true,
@@ -126,6 +131,7 @@ async function handleCreateRoom(req, res) {
     const capacity = Number(body.capacity)
     const hasProjector = Boolean(body.hasProjector)
     const hasWhiteboard = Boolean(body.hasWhiteboard)
+    const hasTv = Boolean(body.hasTv)
 
     if (!roomNumber) {
       sendJson(res, 400, { ok: false, message: "roomNumber is required" })
@@ -153,7 +159,8 @@ async function handleCreateRoom(req, res) {
       roomNumber,
       capacity,
       hasProjector,
-      hasWhiteboard
+      hasWhiteboard,
+      hasTv
     )
 
     sendJson(res, 201, {
@@ -189,6 +196,7 @@ async function handleUpdateRoom(req, res, roomNumberParam) {
     const capacity = Number(body.capacity)
     const hasProjector = Boolean(body.hasProjector)
     const hasWhiteboard = Boolean(body.hasWhiteboard)
+    const hasTv = Boolean(body.hasTv)
 
     if (!nextRoomNumber) {
       sendJson(res, 400, { ok: false, message: "roomNumber is required" })
@@ -229,7 +237,8 @@ async function handleUpdateRoom(req, res, roomNumberParam) {
       nextRoomNumber,
       capacity,
       hasProjector,
-      hasWhiteboard
+      hasWhiteboard,
+      hasTv
     )
 
     sendJson(res, 200, {
@@ -291,7 +300,7 @@ async function handleBookRoom(req, res) {
     const userId = Number(body.userId)
     const roomNumber = String(body.roomNumber || "").trim()
     const startTime = new Date(body.startTime)
-    const endTime = new Date(body.endTime)
+    const durationHours = Number(body.durationHours)
 
     if (!Number.isFinite(userId) || userId <= 0 || !roomNumber) {
       sendJson(res, 400, {
@@ -301,8 +310,24 @@ async function handleBookRoom(req, res) {
       return
     }
 
-    if (Number.isNaN(startTime.getTime()) || Number.isNaN(endTime.getTime())) {
-      sendJson(res, 400, { ok: false, message: "Invalid startTime or endTime" })
+    if (Number.isNaN(startTime.getTime())) {
+      sendJson(res, 400, { ok: false, message: "Invalid startTime" })
+      return
+    }
+
+    if (!Number.isInteger(durationHours)) {
+      sendJson(res, 400, {
+        ok: false,
+        message: "durationHours must be an integer value",
+      })
+      return
+    }
+
+    if (durationHours < 1 || durationHours > MAX_BOOKING_HOURS) {
+      sendJson(res, 400, {
+        ok: false,
+        message: "Room booking duration must be between 1 and 3 hours.",
+      })
       return
     }
 
@@ -327,32 +352,17 @@ async function handleBookRoom(req, res) {
       return
     }
 
-    if (startTime.getMinutes() % 30 !== 0 || startTime.getSeconds() !== 0) {
+    if (startTime.getMinutes() !== 0 || startTime.getSeconds() !== 0) {
       sendJson(res, 400, {
         ok: false,
-        message: "Room booking start time must be on a 30-minute boundary.",
+        message: "Room booking start time must be on a whole-hour boundary.",
       })
       return
     }
 
-    const minutes = Math.round(
-      (endTime.getTime() - startTime.getTime()) / 60000
+    const endTime = new Date(
+      startTime.getTime() + durationHours * 60 * 60 * 1000
     )
-    if (minutes <= 0 || minutes > MAX_BOOKING_MINUTES) {
-      sendJson(res, 400, {
-        ok: false,
-        message: "Room booking duration must be between 1 and 180 minutes.",
-      })
-      return
-    }
-
-    if (minutes % 30 !== 0) {
-      sendJson(res, 400, {
-        ok: false,
-        message: "Room booking duration must use 30-minute increments.",
-      })
-      return
-    }
 
     const existingBooking = await getUserActiveBooking(userId)
     if (existingBooking) {
@@ -385,7 +395,7 @@ async function handleBookRoom(req, res) {
       userId,
       roomNumber,
       startTime,
-      endTime
+      durationHours
     )
 
     if (!booking) {

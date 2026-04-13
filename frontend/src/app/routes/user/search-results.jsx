@@ -29,8 +29,11 @@ export default function SearchPage() {
   const VIDEO_RANGE_MAX = 360
 
   const clampRange = (minValue, maxValue, maxLimit) => {
-    const min = Number.isFinite(Number(minValue)) ? Number(minValue) : 0
-    const max = Number.isFinite(Number(maxValue)) ? Number(maxValue) : maxLimit
+    const parsedMin = Number(minValue)
+    const parsedMax = Number(maxValue)
+    const min = Number.isFinite(parsedMin) ? parsedMin : 0
+    let max = Number.isFinite(parsedMax) ? parsedMax : maxLimit
+    if (max <= 0) max = maxLimit
     const safeMin = Math.min(Math.max(min, 0), maxLimit)
     const safeMax = Math.min(Math.max(max, safeMin), maxLimit)
     return [safeMin, safeMax]

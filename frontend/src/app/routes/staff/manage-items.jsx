@@ -1,17 +1,12 @@
 import { useEffect, useState } from "react"
 import { Link, useSearchParams } from "react-router-dom"
-import { ArrowLeft, Calendar as CalendarIcon, X } from "lucide-react"
+import { ArrowLeft, X } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import { Calendar } from "@/components/ui/calendar"
+import { Field, FieldLabel } from "@/components/ui/field"
 import {
   Dialog,
   DialogContent,
@@ -81,26 +76,17 @@ function getInitialForm(item) {
   }
 }
 
-function formatPickerDate(value) {
-  if (!value) return "Select a date"
+function toDateInputValue(value) {
+  if (!value) return ""
   const date = new Date(`${value}T00:00:00`)
-  if (Number.isNaN(date.getTime())) return value
-  return date.toLocaleDateString()
-}
-
-function parseDateValue(value) {
-  if (!value) return undefined
-  const date = new Date(`${value}T00:00:00`)
-  return Number.isNaN(date.getTime()) ? undefined : date
-}
-
-function toDateValue(date) {
-  if (!date) return ""
+  if (Number.isNaN(date.getTime())) return ""
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, "0")
   const day = String(date.getDate()).padStart(2, "0")
   return `${year}-${month}-${day}`
 }
+
+const todayDate = new Date().toISOString().slice(0, 10)
 
 async function fileToDataUrl(file) {
   return new Promise((resolve, reject) => {
@@ -586,47 +572,59 @@ export default function ManageItemsPage() {
                         </div>
                       </div>
 
-                      <Input
-                        value={form.title || ""}
-                        onChange={(e) =>
-                          setForm((prev) => ({
-                            ...prev,
-                            title: e.target.value,
-                          }))
-                        }
-                        placeholder="Title"
-                        required
-                      />
-                      <Input
-                        type="number"
-                        value={form.monetaryValue || ""}
-                        onChange={(e) =>
-                          setForm((prev) => ({
-                            ...prev,
-                            monetaryValue: e.target.value,
-                          }))
-                        }
-                        placeholder="Monetary value"
-                      />
-                      <Input
-                        value={String(form.stock ?? "")}
-                        readOnly
-                        disabled
-                        placeholder="Computed stock"
-                      />
-                      <Input
-                        type="number"
-                        min="0"
-                        max="255"
-                        value={form.inventory || ""}
-                        onChange={(e) =>
-                          setForm((prev) => ({
-                            ...prev,
-                            inventory: e.target.value,
-                          }))
-                        }
-                        placeholder="Inventory (total copies)"
-                      />
+                      <Field>
+                        <FieldLabel>Title</FieldLabel>
+                        <Input
+                          value={form.title || ""}
+                          onChange={(e) =>
+                            setForm((prev) => ({
+                              ...prev,
+                              title: e.target.value,
+                            }))
+                          }
+                          placeholder="Title"
+                          required
+                        />
+                      </Field>
+                      <Field>
+                        <FieldLabel>Monetary value</FieldLabel>
+                        <Input
+                          type="number"
+                          value={form.monetaryValue || ""}
+                          onChange={(e) =>
+                            setForm((prev) => ({
+                              ...prev,
+                              monetaryValue: e.target.value,
+                            }))
+                          }
+                          placeholder="Monetary value"
+                        />
+                      </Field>
+                      <Field>
+                        <FieldLabel>Computed stock</FieldLabel>
+                        <Input
+                          value={String(form.stock ?? "")}
+                          readOnly
+                          disabled
+                          placeholder="Computed stock"
+                        />
+                      </Field>
+                      <Field>
+                        <FieldLabel>Inventory (total copies)</FieldLabel>
+                        <Input
+                          type="number"
+                          min="0"
+                          max="255"
+                          value={form.inventory || ""}
+                          onChange={(e) =>
+                            setForm((prev) => ({
+                              ...prev,
+                              inventory: e.target.value,
+                            }))
+                          }
+                          placeholder="Inventory (total copies)"
+                        />
+                      </Field>
                       <div className="space-y-2">
                         <div className="flex flex-wrap gap-2">
                           {(form.genres || []).map((genre) => (
@@ -676,7 +674,7 @@ export default function ManageItemsPage() {
                             placeholder="Type a genre and press Enter..."
                           />
                           {genreInput.trim() && genres.length > 0 && (
-                            <div className="absolute top-full left-0 z-10 mt-1 flex max-h-40 w-full flex-col gap-1 overflow-auto rounded-md border bg-background p-1 shadow-md">
+                            <div className="absolute top-full left-0 z-10 mt-1 flex max-h-40 w-full flex-col gap-1 overflow-auto rounded-md border bg-card p-1 shadow-md">
                               {genres
                                 .filter(
                                   (genre) =>
@@ -721,93 +719,94 @@ export default function ManageItemsPage() {
 
                       {selected.item_type_code === 1 && (
                         <>
-                          <Input
-                            value={form.author || ""}
-                            onChange={(e) =>
-                              setForm((prev) => ({
-                                ...prev,
-                                author: e.target.value,
-                              }))
-                            }
-                            placeholder="Author"
-                          />
-                          <Input
-                            value={form.edition || ""}
-                            onChange={(e) =>
-                              setForm((prev) => ({
-                                ...prev,
-                                edition: e.target.value,
-                              }))
-                            }
-                            placeholder="Edition"
-                          />
-                          <Input
-                            value={form.publication || ""}
-                            onChange={(e) =>
-                              setForm((prev) => ({
-                                ...prev,
-                                publication: e.target.value,
-                              }))
-                            }
-                            placeholder="Publication"
-                          />
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                className={`h-9 w-full justify-start text-left font-normal ${!form.publicationDate ? "text-muted-foreground" : ""}`}
-                              >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {formatPickerDate(form.publicationDate)}
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent
-                              className="w-auto p-0"
-                              align="start"
-                            >
-                              <Calendar
-                                mode="single"
-                                selected={parseDateValue(form.publicationDate)}
-                                onSelect={(date) =>
-                                  setForm((prev) => ({
-                                    ...prev,
-                                    publicationDate: toDateValue(date),
-                                  }))
-                                }
-                                initialFocus
-                              />
-                            </PopoverContent>
-                          </Popover>
+                          <Field>
+                            <FieldLabel>Author</FieldLabel>
+                            <Input
+                              value={form.author || ""}
+                              onChange={(e) =>
+                                setForm((prev) => ({
+                                  ...prev,
+                                  author: e.target.value,
+                                }))
+                              }
+                              placeholder="Author"
+                            />
+                          </Field>
+                          <Field>
+                            <FieldLabel>Edition</FieldLabel>
+                            <Input
+                              value={form.edition || ""}
+                              onChange={(e) =>
+                                setForm((prev) => ({
+                                  ...prev,
+                                  edition: e.target.value,
+                                }))
+                              }
+                              placeholder="Edition"
+                            />
+                          </Field>
+                          <Field>
+                            <FieldLabel>Publication</FieldLabel>
+                            <Input
+                              value={form.publication || ""}
+                              onChange={(e) =>
+                                setForm((prev) => ({
+                                  ...prev,
+                                  publication: e.target.value,
+                                }))
+                              }
+                              placeholder="Publication"
+                            />
+                          </Field>
+                          <Field>
+                            <FieldLabel>Publication date</FieldLabel>
+                            <Input
+                              type="date"
+                              value={toDateInputValue(form.publicationDate)}
+                              onChange={(e) =>
+                                setForm((prev) => ({
+                                  ...prev,
+                                  publicationDate: e.target.value,
+                                }))
+                              }
+                              max={todayDate}
+                            />
+                          </Field>
                         </>
                       )}
 
                       {selected.item_type_code === 2 && (
-                        <Input
-                          type="number"
-                          value={form.videoLengthSeconds || ""}
-                          onChange={(e) =>
-                            setForm((prev) => ({
-                              ...prev,
-                              videoLengthSeconds: e.target.value,
-                            }))
-                          }
-                          placeholder="Video length (seconds)"
-                        />
+                        <Field>
+                          <FieldLabel>Video length (seconds)</FieldLabel>
+                          <Input
+                            type="number"
+                            value={form.videoLengthSeconds || ""}
+                            onChange={(e) =>
+                              setForm((prev) => ({
+                                ...prev,
+                                videoLengthSeconds: e.target.value,
+                              }))
+                            }
+                            placeholder="Video length (seconds)"
+                          />
+                        </Field>
                       )}
 
                       {selected.item_type_code === 3 && (
-                        <Input
-                          type="number"
-                          value={form.audioLengthSeconds || ""}
-                          onChange={(e) =>
-                            setForm((prev) => ({
-                              ...prev,
-                              audioLengthSeconds: e.target.value,
-                            }))
-                          }
-                          placeholder="Audio length (seconds)"
-                        />
+                        <Field>
+                          <FieldLabel>Audio length (seconds)</FieldLabel>
+                          <Input
+                            type="number"
+                            value={form.audioLengthSeconds || ""}
+                            onChange={(e) =>
+                              setForm((prev) => ({
+                                ...prev,
+                                audioLengthSeconds: e.target.value,
+                              }))
+                            }
+                            placeholder="Audio length (seconds)"
+                          />
+                        </Field>
                       )}
 
                       <Button type="submit" disabled={isSubmitting}>

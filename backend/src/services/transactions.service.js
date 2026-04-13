@@ -44,12 +44,11 @@ async function handleBorrow(req, res) {
       return
     }
 
-    const borrowDays = user.is_faculty ? 14 : 7
-    await createBorrowTransaction(user.user_id, itemId, borrowDays)
+    await createBorrowTransaction(user.user_id, itemId)
 
     sendJson(res, 200, {
       ok: true,
-      message: `Item borrowed successfully for ${borrowDays} days.`,
+      message: "Item borrowed successfully.",
     })
   } catch (error) {
     if (error instanceof ItemNotFoundError) {
@@ -239,14 +238,18 @@ async function handleHold(req, res) {
       return
     }
 
-    const created = await createHold(itemId, user.user_id)
-    if (!created) {
-      sendJson(res, 200, { ok: true, message: "Hold already exists." })
-      return
-    }
+    await createHold(itemId, user.user_id)
 
     sendJson(res, 200, { ok: true, message: "Hold placed successfully" })
   } catch (error) {
+    if (error.sqlState === "45000") {
+      sendJson(res, 409, {
+        ok: false,
+        message: error.message || "Unable to place hold.",
+      })
+      return
+    }
+
     sendJson(res, 500, {
       ok: false,
       message: "Failed to place hold",
@@ -288,7 +291,6 @@ async function handleCheckout(req, res) {
       return
     }
 
-    const borrowDays = user.is_faculty ? 14 : 7
     const borrowLimit = user.is_faculty ? 6 : 3
     const activeCount = await getActiveBorrowCount(user.user_id)
     const totalAfterCheckout = activeCount + items.length
@@ -304,7 +306,7 @@ async function handleCheckout(req, res) {
     }
 
     for (const item of items) {
-      await createBorrowTransaction(user.user_id, item.itemId, borrowDays)
+      await createBorrowTransaction(user.user_id, item.itemId)
       await deleteCartItem(user.user_id, item.itemId)
     }
 

@@ -558,7 +558,7 @@ export default function ReportsPage() {
                   name="reportType"
                   value={filters.reportType}
                   onChange={onChange}
-                  className="h-9 w-full rounded-md border border-input bg-transparent px-2.5 py-1 text-sm"
+                  className="h-9 w-full rounded-md border border-input bg-card px-2.5 py-1 text-sm text-foreground"
                 >
                   <option value="itemsCheckedOut">Items checked out</option>
                   <option value="revenue">Revenue</option>
@@ -633,7 +633,7 @@ export default function ReportsPage() {
                   name="userType"
                   value={filters.userType}
                   onChange={onChange}
-                  className="h-9 w-full rounded-md border border-input bg-transparent px-2.5 py-1 text-sm"
+                  className="h-9 w-full rounded-md border border-input bg-card px-2.5 py-1 text-sm text-foreground"
                 >
                   <option value="">All</option>
                   <option value="STUDENT">Student</option>
@@ -647,7 +647,7 @@ export default function ReportsPage() {
                   name="itemType"
                   value={filters.itemType}
                   onChange={onChange}
-                  className="h-9 w-full rounded-md border border-input bg-transparent px-2.5 py-1 text-sm"
+                  className="h-9 w-full rounded-md border border-input bg-card px-2.5 py-1 text-sm text-foreground"
                 >
                   <option value="">All</option>
                   {itemTypes.map((type) => (
@@ -740,7 +740,7 @@ export default function ReportsPage() {
                   name="overdue"
                   value={filters.overdue}
                   onChange={onChange}
-                  className="h-9 w-full rounded-md border border-input bg-transparent px-2.5 py-1 text-sm"
+                  className="h-9 w-full rounded-md border border-input bg-card px-2.5 py-1 text-sm text-foreground"
                 >
                   <option value="all">All</option>
                   <option value="overdue">Overdue only</option>

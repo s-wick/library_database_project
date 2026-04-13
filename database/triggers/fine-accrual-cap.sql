@@ -1,4 +1,4 @@
-DELIMITER //
+DELIMITER ;;
 
 CREATE TRIGGER fine_accrual_and_cap_user_login AFTER UPDATE ON user_account
 FOR EACH ROW
@@ -27,7 +27,7 @@ BEGIN
 			amount = VALUES(amount),
 			amount_paid = LEAST(COALESCE(amount_paid, 0), VALUES(amount));
 	END IF;
-END//
+END;;
 
 CREATE TRIGGER fine_accrual_and_cap_revenue_report AFTER INSERT ON report_generated
 FOR EACH ROW
@@ -62,6 +62,6 @@ BEGIN
 			amount = VALUES(amount),
 			amount_paid = LEAST(COALESCE(amount_paid, 0), VALUES(amount));
 	END IF;
-END//
+END;;
 
 DELIMITER ;

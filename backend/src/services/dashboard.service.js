@@ -11,6 +11,19 @@ function toDateString(value) {
   return new Date(value).toISOString().split("T")[0]
 }
 
+function toMysqlDateTime(value) {
+  if (!value) return null
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return null
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+  const hours = String(date.getHours()).padStart(2, "0")
+  const minutes = String(date.getMinutes()).padStart(2, "0")
+  const seconds = String(date.getSeconds()).padStart(2, "0")
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+}
+
 function getBorrowStatus(dueDate) {
   const now = new Date()
   const due = new Date(dueDate)
@@ -45,9 +58,9 @@ async function handleGetDashboard(_req, res, url) {
     }))
 
     const formattedHolds = holds.map((hold) => ({
-      id: `${hold.item_id}-${new Date(hold.request_date).toISOString()}`,
+      id: `${hold.item_id}-${new Date(hold.request_datetime).toISOString()}`,
       itemId: hold.item_id,
-      requestDate: new Date(hold.request_date).toISOString(),
+      requestDate: toMysqlDateTime(hold.request_datetime),
       title: hold.title || "Unknown Item",
       author: hold.author || "",
       status: "active",

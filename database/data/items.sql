@@ -77,6 +77,77 @@ SELECT item_id, 'J.R.R. Tolkien', '1st', 'George Allen & Unwin', '1937-09-21'
 FROM item
 WHERE title = 'The Hobbit';
 
+-- Book genres
+
+INSERT INTO genre (genre_text, created_by)
+VALUES
+	('Classic', @librarian_id),
+	('Literary', @librarian_id),
+	('Dystopian', @librarian_id),
+	('Romance', @librarian_id),
+	('Fantasy', @librarian_id),
+	('Adventure', @librarian_id);
+
+INSERT INTO assigned_genres (item_id, genre_id)
+SELECT i.item_id, g.genre_id
+FROM item i
+JOIN genre g ON g.genre_text = 'Classic'
+WHERE i.title = 'To Kill a Mockingbird';
+
+INSERT INTO assigned_genres (item_id, genre_id)
+SELECT i.item_id, g.genre_id
+FROM item i
+JOIN genre g ON g.genre_text = 'Literary'
+WHERE i.title = 'To Kill a Mockingbird';
+
+INSERT INTO assigned_genres (item_id, genre_id)
+SELECT i.item_id, g.genre_id
+FROM item i
+JOIN genre g ON g.genre_text = 'Dystopian'
+WHERE i.title = '1984';
+
+INSERT INTO assigned_genres (item_id, genre_id)
+SELECT i.item_id, g.genre_id
+FROM item i
+JOIN genre g ON g.genre_text = 'Classic'
+WHERE i.title = '1984';
+
+INSERT INTO assigned_genres (item_id, genre_id)
+SELECT i.item_id, g.genre_id
+FROM item i
+JOIN genre g ON g.genre_text = 'Classic'
+WHERE i.title = 'The Great Gatsby';
+
+INSERT INTO assigned_genres (item_id, genre_id)
+SELECT i.item_id, g.genre_id
+FROM item i
+JOIN genre g ON g.genre_text = 'Literary'
+WHERE i.title = 'The Great Gatsby';
+
+INSERT INTO assigned_genres (item_id, genre_id)
+SELECT i.item_id, g.genre_id
+FROM item i
+JOIN genre g ON g.genre_text = 'Romance'
+WHERE i.title = 'Pride and Prejudice';
+
+INSERT INTO assigned_genres (item_id, genre_id)
+SELECT i.item_id, g.genre_id
+FROM item i
+JOIN genre g ON g.genre_text = 'Classic'
+WHERE i.title = 'Pride and Prejudice';
+
+INSERT INTO assigned_genres (item_id, genre_id)
+SELECT i.item_id, g.genre_id
+FROM item i
+JOIN genre g ON g.genre_text = 'Fantasy'
+WHERE i.title = 'The Hobbit';
+
+INSERT INTO assigned_genres (item_id, genre_id)
+SELECT i.item_id, g.genre_id
+FROM item i
+JOIN genre g ON g.genre_text = 'Adventure'
+WHERE i.title = 'The Hobbit';
+
 -- Rental equipment
 
 INSERT INTO item (item_type_code, title, thumbnail_image, monetary_value, inventory, created_by)

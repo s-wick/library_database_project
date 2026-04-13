@@ -33,6 +33,7 @@ const {
 const {
   handleGetRooms,
   handleGetMyRoomBooking,
+  handleGetRoomAvailability,
   handleCreateRoom,
   handleUpdateRoom,
   handleDeleteRoom,
@@ -216,6 +217,11 @@ async function handleApiRoute(req, res, url) {
 
   if (req.method === "GET" && pathname === "/api/rooms/my-booking") {
     await handleGetMyRoomBooking(req, res, url)
+    return
+  }
+
+  if (req.method === "GET" && pathname === "/api/rooms/availability") {
+    await handleGetRoomAvailability(req, res, url)
     return
   }
 

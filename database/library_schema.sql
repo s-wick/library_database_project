@@ -187,32 +187,6 @@ CREATE TABLE `fined_for` (
 /*!50003 SET character_set_results = utf8mb4 */ ;
 /*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
-/*!50003 SET sql_mode              = 'NO_AUTO_VALUE_ON_ZERO' */ ;
-DELIMITER ;;
-/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_fined_for_cap_before_insert` BEFORE INSERT ON `fined_for` FOR EACH ROW BEGIN
-  DECLARE item_value DECIMAL(8,2) DEFAULT 0;
-
-  SELECT COALESCE(i.monetary_value, 0)
-    INTO item_value
-    FROM item i
-   WHERE i.item_id = NEW.item_id
-   LIMIT 1;
-
-  SET NEW.amount = LEAST(GREATEST(COALESCE(NEW.amount, 0), 0), item_value);
-  SET NEW.amount_paid = LEAST(GREATEST(COALESCE(NEW.amount_paid, 0), 0), NEW.amount);
-END */;;
-DELIMITER ;
-/*!50003 SET sql_mode              = @saved_sql_mode */ ;
-/*!50003 SET character_set_client  = @saved_cs_client */ ;
-/*!50003 SET character_set_results = @saved_cs_results */ ;
-/*!50003 SET collation_connection  = @saved_col_connection */ ;
-/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
-/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
-/*!50003 SET @saved_col_connection = @@collation_connection */ ;
-/*!50003 SET character_set_client  = utf8mb4 */ ;
-/*!50003 SET character_set_results = utf8mb4 */ ;
-/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
-/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
 /*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_fined_for_delete_holds_after_insert` AFTER INSERT ON `fined_for` FOR EACH ROW BEGIN
@@ -245,32 +219,6 @@ DELIMITER ;;
     DELETE FROM hold_item
      WHERE user_id = NEW.user_id;
   END IF;
-END */;;
-DELIMITER ;
-/*!50003 SET sql_mode              = @saved_sql_mode */ ;
-/*!50003 SET character_set_client  = @saved_cs_client */ ;
-/*!50003 SET character_set_results = @saved_cs_results */ ;
-/*!50003 SET collation_connection  = @saved_col_connection */ ;
-/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
-/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
-/*!50003 SET @saved_col_connection = @@collation_connection */ ;
-/*!50003 SET character_set_client  = utf8mb4 */ ;
-/*!50003 SET character_set_results = utf8mb4 */ ;
-/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
-/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
-/*!50003 SET sql_mode              = 'NO_AUTO_VALUE_ON_ZERO' */ ;
-DELIMITER ;;
-/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_fined_for_cap_before_update` BEFORE UPDATE ON `fined_for` FOR EACH ROW BEGIN
-  DECLARE item_value DECIMAL(8,2) DEFAULT 0;
-
-  SELECT COALESCE(i.monetary_value, 0)
-    INTO item_value
-    FROM item i
-   WHERE i.item_id = NEW.item_id
-   LIMIT 1;
-
-  SET NEW.amount = LEAST(GREATEST(COALESCE(NEW.amount, 0), 0), item_value);
-  SET NEW.amount_paid = LEAST(GREATEST(COALESCE(NEW.amount_paid, 0), 0), NEW.amount);
 END */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -338,7 +286,7 @@ CREATE TABLE `genre` (
   PRIMARY KEY (`genre_id`),
   KEY `created_by` (`created_by`),
   CONSTRAINT `genre_ibfk_1` FOREIGN KEY (`created_by`) REFERENCES `staff_account` (`staff_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -380,7 +328,7 @@ CREATE TABLE `item` (
   KEY `fk_item_created_by` (`created_by`),
   CONSTRAINT `fk_item_created_by` FOREIGN KEY (`created_by`) REFERENCES `staff_account` (`staff_id`),
   CONSTRAINT `fk_item_type` FOREIGN KEY (`item_type_code`) REFERENCES `item_type` (`item_code`)
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
 /*!50003 SET @saved_cs_results     = @@character_set_results */ ;
@@ -554,7 +502,7 @@ CREATE TABLE `item_type` (
   `item_code` tinyint unsigned NOT NULL AUTO_INCREMENT,
   `item_type` varchar(20) NOT NULL,
   PRIMARY KEY (`item_code`)
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -589,6 +537,84 @@ CREATE TABLE `rental_equipment` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `report_generated`
+--
+
+DROP TABLE IF EXISTS `report_generated`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `report_generated` (
+  `staff_id` int unsigned NOT NULL,
+  `generated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `report_type` int unsigned NOT NULL,
+  PRIMARY KEY (`staff_id`,`generated_at`),
+  KEY `report_type` (`report_type`),
+  CONSTRAINT `report_generated_ibfk_1` FOREIGN KEY (`staff_id`) REFERENCES `staff_account` (`staff_id`),
+  CONSTRAINT `report_generated_ibfk_2` FOREIGN KEY (`report_type`) REFERENCES `report_types` (`report_type_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_unicode_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'IGNORE_SPACE,ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `fine_accrual_and_cap_revenue_report` AFTER INSERT ON `report_generated` FOR EACH ROW BEGIN
+	DECLARE v_report_type VARCHAR(30) DEFAULT '';
+	DECLARE v_daily_rate DECIMAL(8,2) DEFAULT 5.00;
+
+	SELECT rt.report_type
+		INTO v_report_type
+		FROM report_types rt
+	 WHERE rt.report_type_id = NEW.report_type
+	 LIMIT 1;
+
+	IF v_report_type = 'revenue' THEN
+		INSERT INTO fined_for (item_id, user_id, checkout_date, amount, amount_paid)
+		SELECT b.item_id,
+					 b.user_id,
+					 b.checkout_date,
+					 LEAST(
+						 ROUND(
+							 GREATEST(TIMESTAMPDIFF(DAY, b.due_date, COALESCE(b.return_date, NOW())), 0)
+							 * v_daily_rate,
+							 2
+						 ),
+						 COALESCE(i.monetary_value, 0)
+					 ) AS amount,
+					 0
+		FROM borrow b
+		INNER JOIN item i ON i.item_id = b.item_id
+		WHERE TIMESTAMPDIFF(DAY, b.due_date, COALESCE(b.return_date, NOW())) > 0
+		ON DUPLICATE KEY UPDATE
+			amount = VALUES(amount),
+			amount_paid = LEAST(COALESCE(amount_paid, 0), VALUES(amount));
+	END IF;
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+
+--
+-- Table structure for table `report_types`
+--
+
+DROP TABLE IF EXISTS `report_types`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `report_types` (
+  `report_type_id` int unsigned NOT NULL,
+  `report_type` varchar(30) NOT NULL,
+  PRIMARY KEY (`report_type_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `staff_account`
 --
 
@@ -607,7 +633,7 @@ CREATE TABLE `staff_account` (
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `is_retired` datetime DEFAULT NULL,
   PRIMARY KEY (`staff_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -628,8 +654,48 @@ CREATE TABLE `user_account` (
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `last_login` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`user_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_unicode_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'IGNORE_SPACE,ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `fine_accrual_and_cap_user_login` AFTER UPDATE ON `user_account` FOR EACH ROW BEGIN
+	DECLARE v_daily_rate DECIMAL(8,2) DEFAULT 5.00;
+
+	IF NEW.last_login <> OLD.last_login THEN
+		INSERT INTO fined_for (item_id, user_id, checkout_date, amount, amount_paid)
+		SELECT b.item_id,
+					 b.user_id,
+					 b.checkout_date,
+					 LEAST(
+						 ROUND(
+							 GREATEST(TIMESTAMPDIFF(DAY, b.due_date, COALESCE(b.return_date, NOW())), 0)
+							 * v_daily_rate,
+							 2
+						 ),
+						 COALESCE(i.monetary_value, 0)
+					 ) AS amount,
+					 0
+		FROM borrow b
+		INNER JOIN item i ON i.item_id = b.item_id
+		WHERE b.user_id = NEW.user_id
+			AND TIMESTAMPDIFF(DAY, b.due_date, COALESCE(b.return_date, NOW())) > 0
+		ON DUPLICATE KEY UPDATE
+			amount = VALUES(amount),
+			amount_paid = LEAST(COALESCE(amount_paid, 0), VALUES(amount));
+	END IF;
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 
 --
 -- Table structure for table `user_notification`
@@ -653,7 +719,7 @@ CREATE TABLE `user_notification` (
   CONSTRAINT `fk_notification_type` FOREIGN KEY (`notification_type`) REFERENCES `user_notification_type` (`notification_type_id`) ON DELETE CASCADE,
   CONSTRAINT `fk_user_notification_item` FOREIGN KEY (`item_id`) REFERENCES `item` (`item_id`) ON DELETE CASCADE,
   CONSTRAINT `fk_user_notification_user` FOREIGN KEY (`user_id`) REFERENCES `user_account` (`user_id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -667,7 +733,7 @@ CREATE TABLE `user_notification_type` (
   `notification_type_id` int unsigned NOT NULL AUTO_INCREMENT,
   `notification_type_text` varchar(30) NOT NULL,
   PRIMARY KEY (`notification_type_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -695,4 +761,4 @@ CREATE TABLE `video` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-04-12 19:18:41
+-- Dump completed on 2026-04-13  1:34:43

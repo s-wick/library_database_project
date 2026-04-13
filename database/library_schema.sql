@@ -78,11 +78,12 @@ CREATE TABLE `book_room` (
   `room_number` varchar(10) NOT NULL,
   `user_id` int unsigned NOT NULL,
   `start_time` datetime NOT NULL,
-  `end_time` datetime NOT NULL,
-  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`room_number`,`user_id`,`start_time`,`end_time`),
+  `duration_hours` tinyint unsigned NOT NULL,
+  `booked_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`room_number`,`user_id`,`start_time`),
   KEY `user_id` (`user_id`),
-  CONSTRAINT `book_room_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `user_account` (`user_id`)
+  CONSTRAINT `book_room_ibfk_1` FOREIGN KEY (`room_number`) REFERENCES `meeting_room` (`room_number`) ON DELETE CASCADE,
+  CONSTRAINT `book_room_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `user_account` (`user_id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -565,9 +566,10 @@ DROP TABLE IF EXISTS `meeting_room`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `meeting_room` (
   `room_number` varchar(10) NOT NULL,
-  `capacity` smallint unsigned DEFAULT NULL,
-  `has_projector` tinyint(1) DEFAULT '0',
-  `has_whiteboard` tinyint(1) DEFAULT '0',
+  `capacity` smallint unsigned NOT NULL,
+  `has_projector` tinyint(1) NOT NULL,
+  `has_whiteboard` tinyint(1) NOT NULL,
+  `has_tv` tinyint(1) NOT NULL,
   PRIMARY KEY (`room_number`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -651,7 +653,7 @@ CREATE TABLE `user_notification` (
   CONSTRAINT `fk_notification_type` FOREIGN KEY (`notification_type`) REFERENCES `user_notification_type` (`notification_type_id`) ON DELETE CASCADE,
   CONSTRAINT `fk_user_notification_item` FOREIGN KEY (`item_id`) REFERENCES `item` (`item_id`) ON DELETE CASCADE,
   CONSTRAINT `fk_user_notification_user` FOREIGN KEY (`user_id`) REFERENCES `user_account` (`user_id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -665,7 +667,7 @@ CREATE TABLE `user_notification_type` (
   `notification_type_id` int unsigned NOT NULL AUTO_INCREMENT,
   `notification_type_text` varchar(30) NOT NULL,
   PRIMARY KEY (`notification_type_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -693,4 +695,4 @@ CREATE TABLE `video` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-04-11 23:42:11
+-- Dump completed on 2026-04-12 19:18:41

@@ -10,6 +10,7 @@ const dataFiles = [
   "notification-types.sql",
   "transactions.sql",
   "holds-fines.sql",
+  "room-bookings.sql",
 ]
 const thumbnailMapFile = path.join(
   __dirname,

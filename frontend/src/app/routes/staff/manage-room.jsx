@@ -32,6 +32,7 @@ const emptyForm = {
   capacity: "",
   hasProjector: false,
   hasWhiteboard: false,
+  hasTv: false,
 }
 
 export default function RoomManagePage() {
@@ -124,6 +125,7 @@ export default function RoomManagePage() {
       capacity: String(room.capacity),
       hasProjector: Boolean(room.features?.hasProjector),
       hasWhiteboard: Boolean(room.features?.hasWhiteboard),
+      hasTv: Boolean(room.features?.hasTv),
     })
     setFieldErrors({})
     setError("")
@@ -176,6 +178,7 @@ export default function RoomManagePage() {
             capacity: capacityValue,
             hasProjector: form.hasProjector,
             hasWhiteboard: form.hasWhiteboard,
+            hasTv: form.hasTv,
           }),
         }
       )
@@ -318,6 +321,16 @@ export default function RoomManagePage() {
                   <span>Has whiteboard</span>
                 </label>
 
+                <label className="flex items-center gap-3 rounded-lg border p-3 text-sm">
+                  <input
+                    name="hasTv"
+                    type="checkbox"
+                    checked={form.hasTv}
+                    onChange={handleChange}
+                  />
+                  <span>Has TV</span>
+                </label>
+
                 <Button type="submit" disabled={submitting}>
                   {submitting
                     ? isEditing
@@ -406,6 +419,7 @@ export default function RoomManagePage() {
                         </div>
                       </div>
                       <div className="mt-3 flex flex-wrap gap-2">
+                        <FeaturePill label="TV" enabled={room.features.hasTv} />
                         <FeaturePill
                           label="Projector"
                           enabled={room.features.hasProjector}

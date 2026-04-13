@@ -29,8 +29,11 @@ export default function SearchPage() {
   const VIDEO_RANGE_MAX = 360
 
   const clampRange = (minValue, maxValue, maxLimit) => {
-    const min = Number.isFinite(Number(minValue)) ? Number(minValue) : 0
-    const max = Number.isFinite(Number(maxValue)) ? Number(maxValue) : maxLimit
+    const parsedMin = Number(minValue)
+    const parsedMax = Number(maxValue)
+    const min = Number.isFinite(parsedMin) ? parsedMin : 0
+    let max = Number.isFinite(parsedMax) ? parsedMax : maxLimit
+    if (max <= 0) max = maxLimit
     const safeMin = Math.min(Math.max(min, 0), maxLimit)
     const safeMax = Math.min(Math.max(max, safeMin), maxLimit)
     return [safeMin, safeMax]
@@ -251,7 +254,7 @@ export default function SearchPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <Navbar showBack={true} />
+      <Navbar />
 
       <div className="border-b bg-slate-50 py-6 dark:bg-slate-900/50">
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-6 md:px-10">
@@ -271,8 +274,8 @@ export default function SearchPage() {
             </Field>
 
             <Button
-              variant={showFilters ? "secondary" : "ghost"}
-              className="h-12 shrink-0 px-4 shadow-none hover:bg-muted"
+              variant="outline"
+              className="h-12 px-4 hover:bg-muted"
               onClick={() => setShowFilters(!showFilters)}
             >
               <Filter className="mr-2 h-4 w-4" />

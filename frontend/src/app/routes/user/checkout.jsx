@@ -268,7 +268,7 @@ export default function CheckoutPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <Navbar showBack={true} />
+      <Navbar />
 
       <LimitExceededModal
         open={showLimitModal}

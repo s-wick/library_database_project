@@ -145,6 +145,7 @@ export default function AuthPage() {
 
       if (isSignUp) {
         setSuccess("Account created successfully.")
+        navigate("/")
       } else {
         sessionStorage.setItem("isLoggedIn", "true")
         sessionStorage.setItem("authToken", data?.token || "")
@@ -159,7 +160,7 @@ export default function AuthPage() {
         ) {
           navigate("/management-dashboard")
         } else {
-          navigate("/user-dashboard")
+          navigate("/")
         }
       }
     } catch {

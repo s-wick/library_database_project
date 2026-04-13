@@ -338,7 +338,7 @@ CREATE TABLE `genre` (
   PRIMARY KEY (`genre_id`),
   KEY `created_by` (`created_by`),
   CONSTRAINT `genre_ibfk_1` FOREIGN KEY (`created_by`) REFERENCES `staff_account` (`staff_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -351,12 +351,30 @@ DROP TABLE IF EXISTS `hold_item`;
 CREATE TABLE `hold_item` (
   `item_id` int unsigned NOT NULL,
   `user_id` int unsigned NOT NULL,
-  `request_date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`item_id`,`user_id`,`request_date`),
+  `request_datetime` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `close_datetime` datetime DEFAULT NULL,
+  `close_reason_id` int unsigned DEFAULT NULL,
+  PRIMARY KEY (`item_id`,`user_id`,`request_datetime`),
   KEY `user_id` (`user_id`),
+  KEY `close_reason_id` (`close_reason_id`),
   CONSTRAINT `hold_item_ibfk_1` FOREIGN KEY (`item_id`) REFERENCES `item` (`item_id`),
-  CONSTRAINT `hold_item_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `user_account` (`user_id`)
+  CONSTRAINT `hold_item_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `user_account` (`user_id`),
+  CONSTRAINT `hold_item_ibfk_3` FOREIGN KEY (`close_reason_id`) REFERENCES `hold_item_closing_reasons` (`reason_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `hold_item_closing_reasons`
+--
+
+DROP TABLE IF EXISTS `hold_item_closing_reasons`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `hold_item_closing_reasons` (
+  `reason_id` int unsigned NOT NULL AUTO_INCREMENT,
+  `reason_text` varchar(30) NOT NULL,
+  PRIMARY KEY (`reason_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -695,4 +713,4 @@ CREATE TABLE `video` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-04-12 19:18:41
+-- Dump completed on 2026-04-12 22:44:24

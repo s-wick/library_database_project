@@ -37,6 +37,8 @@ jobs:
           DB_USER=${{ secrets.PR_DB_USER }}
           DB_PASSWORD=${{ secrets.PR_DB_PASSWORD }}
           DB_NAME=librarydatabase
+          SEED_STAFF_PASSWORD=${{ secrets['SEED_STAFF_PASSWORD'] }}
+          SEED_USER_PASSWORD=${{ secrets['SEED_USER_PASSWORD'] }}
           EOF
 
       - name: Update sample dates

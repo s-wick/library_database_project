@@ -81,9 +81,9 @@ function runDump({
 function postProcessSchemaFile(schemaFilePath) {
   // Read the schema file
   let content = fs.readFileSync(schemaFilePath, "utf8")
-  // Remove AUTO_INCREMENT=... and set to 1 if present
+  // Remove AUTO_INCREMENT=... entirely
   // Handles variations like AUTO_INCREMENT=123, AUTO_INCREMENT = 123, etc.
-  content = content.replace(/AUTO_INCREMENT\s*=\s*\d+/gi, "AUTO_INCREMENT=1")
+  content = content.replace(/\s*AUTO_INCREMENT\s*=\s*\d+/gi, "")
   fs.writeFileSync(schemaFilePath, content, "utf8")
 }
 

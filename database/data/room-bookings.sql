@@ -10,12 +10,12 @@ VALUES
 -- sample-shift-days-next: 0
 INSERT INTO book_room (room_number, user_id, start_time, duration_hours)
 VALUES
- ('101', 1, '2026-04-12 10:00:00', 2);
+ ('101', 1, '2026-04-13 9:00:00', 2);
 
 -- sample-shift-days-next: 0
 INSERT INTO book_room (room_number, user_id, start_time, duration_hours)
 VALUES
- ('101', 2, '2026-04-12 13:00:00', 1);
+ ('101', 2, '2026-04-13 13:00:00', 1);
 
 -- sample-shift-days-next: 0
 INSERT INTO book_room (room_number, user_id, start_time, duration_hours)

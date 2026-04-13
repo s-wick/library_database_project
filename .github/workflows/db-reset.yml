@@ -3,6 +3,8 @@ name: Reset Database
 on:
   push:
     branches: [main, master]
+    paths:
+      - 'database/**'
   workflow_dispatch:
 
 jobs:

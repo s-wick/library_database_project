@@ -185,40 +185,56 @@ CREATE TABLE `fined_for` (
 /*!50003 SET @saved_col_connection = @@collation_connection */ ;
 /*!50003 SET character_set_client  = utf8mb4 */ ;
 /*!50003 SET character_set_results = utf8mb4 */ ;
-/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET collation_connection  = utf8mb4_unicode_ci */ ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
-/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+/*!50003 SET sql_mode              = 'IGNORE_SPACE,ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_fined_for_delete_holds_after_insert` AFTER INSERT ON `fined_for` FOR EACH ROW BEGIN
-  IF COALESCE(NEW.amount, 0) > COALESCE(NEW.amount_paid, 0) THEN
-    INSERT INTO user_notification (
-      user_id,
-      item_id,
-      notification_type,
-      message
-    )
-    SELECT
-      h.user_id,
-      h.item_id,
-      (
-        SELECT notification_type_id
-        FROM user_notification_type
-        WHERE notification_type_text = 'Removed hold'
-        LIMIT 1
-      ),
-      CONCAT(
-        'Your hold for "',
-        i.title,
-        '" was removed because your account has unpaid fines.'
-      )
-    FROM hold_item h
-    INNER JOIN item i
-      ON i.item_id = h.item_id
-    WHERE h.user_id = NEW.user_id;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `fines_delete_holds_insert` AFTER INSERT ON `fined_for` FOR EACH ROW BEGIN
+	DECLARE v_notification_type_id INT UNSIGNED DEFAULT NULL;
+	DECLARE v_close_reason_id INT UNSIGNED DEFAULT NULL;
 
-    DELETE FROM hold_item
-     WHERE user_id = NEW.user_id;
-  END IF;
+	IF COALESCE(NEW.amount, 0) > COALESCE(NEW.amount_paid, 0) THEN
+		SELECT notification_type_id
+			INTO v_notification_type_id
+			FROM user_notification_type
+		 WHERE notification_type_text = 'Removed hold'
+		 LIMIT 1;
+
+		SELECT reason_id
+			INTO v_close_reason_id
+			FROM hold_item_closing_reasons
+		 WHERE reason_text = 'Canceled by fine'
+		 LIMIT 1;
+
+		IF v_notification_type_id IS NOT NULL THEN
+			INSERT INTO user_notification (
+				user_id,
+				item_id,
+				notification_type,
+				message
+			)
+			SELECT
+				h.user_id,
+				h.item_id,
+				v_notification_type_id,
+				CONCAT(
+					'Your hold for "',
+					i.title,
+					'" was removed because your account has unpaid fines.'
+				)
+			FROM hold_item h
+			INNER JOIN item i
+				ON i.item_id = h.item_id
+			WHERE h.user_id = NEW.user_id
+				AND h.close_datetime IS NULL;
+		END IF;
+
+		UPDATE hold_item
+			 SET close_datetime = NOW(),
+					 close_reason_id = v_close_reason_id
+		 WHERE user_id = NEW.user_id
+			 AND close_datetime IS NULL;
+	END IF;
 END */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -230,40 +246,57 @@ DELIMITER ;
 /*!50003 SET @saved_col_connection = @@collation_connection */ ;
 /*!50003 SET character_set_client  = utf8mb4 */ ;
 /*!50003 SET character_set_results = utf8mb4 */ ;
-/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET collation_connection  = utf8mb4_unicode_ci */ ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
-/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+/*!50003 SET sql_mode              = 'IGNORE_SPACE,ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_fined_for_delete_holds_after_update` AFTER UPDATE ON `fined_for` FOR EACH ROW BEGIN
-  IF COALESCE(NEW.amount, 0) > COALESCE(NEW.amount_paid, 0) THEN
-    INSERT INTO user_notification (
-      user_id,
-      item_id,
-      notification_type,
-      message
-    )
-    SELECT
-      h.user_id,
-      h.item_id,
-      (
-        SELECT notification_type_id
-        FROM user_notification_type
-        WHERE notification_type_text = 'Removed hold'
-        LIMIT 1
-      ),
-      CONCAT(
-        'Your hold for "',
-        i.title,
-        '" was removed because your account has unpaid fines.'
-      )
-    FROM hold_item h
-    INNER JOIN item i
-      ON i.item_id = h.item_id
-    WHERE h.user_id = NEW.user_id;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `fines_delete_holds_update` AFTER UPDATE ON `fined_for` FOR EACH ROW BEGIN
+	DECLARE v_notification_type_id INT UNSIGNED DEFAULT NULL;
+	DECLARE v_close_reason_id INT UNSIGNED DEFAULT NULL;
 
-    DELETE FROM hold_item
-     WHERE user_id = NEW.user_id;
-  END IF;
+	IF COALESCE(NEW.amount, 0) > COALESCE(NEW.amount_paid, 0)
+		 AND NOT (COALESCE(OLD.amount, 0) > COALESCE(OLD.amount_paid, 0)) THEN
+		SELECT notification_type_id
+			INTO v_notification_type_id
+			FROM user_notification_type
+		 WHERE notification_type_text = 'Removed hold'
+		 LIMIT 1;
+
+		SELECT reason_id
+			INTO v_close_reason_id
+			FROM hold_item_closing_reasons
+		 WHERE reason_text = 'Canceled by fine'
+		 LIMIT 1;
+
+		IF v_notification_type_id IS NOT NULL THEN
+			INSERT INTO user_notification (
+				user_id,
+				item_id,
+				notification_type,
+				message
+			)
+			SELECT
+				h.user_id,
+				h.item_id,
+				v_notification_type_id,
+				CONCAT(
+					'Your hold for "',
+					i.title,
+					'" was removed because your account has unpaid fines.'
+				)
+			FROM hold_item h
+			INNER JOIN item i
+				ON i.item_id = h.item_id
+			WHERE h.user_id = NEW.user_id
+				AND h.close_datetime IS NULL;
+		END IF;
+
+		UPDATE hold_item
+			 SET close_datetime = NOW(),
+					 close_reason_id = v_close_reason_id
+		 WHERE user_id = NEW.user_id
+			 AND close_datetime IS NULL;
+	END IF;
 END */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -322,7 +355,7 @@ CREATE TABLE `hold_item_closing_reasons` (
   `reason_id` int unsigned NOT NULL AUTO_INCREMENT,
   `reason_text` varchar(30) NOT NULL,
   PRIMARY KEY (`reason_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -779,4 +812,4 @@ CREATE TABLE `video` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-04-13  1:34:43
+-- Dump completed on 2026-04-13  4:04:06

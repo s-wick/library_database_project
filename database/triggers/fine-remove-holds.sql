@@ -1,4 +1,4 @@
-DELIMITER //
+DELIMITER ;;
 
 CREATE TRIGGER fines_delete_holds_insert
 AFTER INSERT ON fined_for
@@ -49,7 +49,7 @@ BEGIN
 		 WHERE user_id = NEW.user_id
 			 AND close_datetime IS NULL;
 	END IF;
-END//
+END;;
 
 CREATE TRIGGER fines_delete_holds_update
 AFTER UPDATE ON fined_for
@@ -101,6 +101,6 @@ BEGIN
 		 WHERE user_id = NEW.user_id
 			 AND close_datetime IS NULL;
 	END IF;
-END//
+END;;
 
-DELIMITER ;
+DELIMITER;

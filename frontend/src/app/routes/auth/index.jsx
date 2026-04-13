@@ -145,6 +145,7 @@ export default function AuthPage() {
 
       if (isSignUp) {
         setSuccess("Account created successfully.")
+        navigate("/")
       } else {
         sessionStorage.setItem("isLoggedIn", "true")
         sessionStorage.setItem("authToken", data?.token || "")
@@ -152,15 +153,7 @@ export default function AuthPage() {
         sessionStorage.setItem("user", JSON.stringify(data?.user || {}))
 
         await syncCartWithServer()
-
-        if (
-          data?.user?.accountType === "staff" ||
-          data?.user?.roleGroup === "adminStaff"
-        ) {
-          navigate("/management-dashboard")
-        } else {
-          navigate("/user-dashboard")
-        }
+        navigate("/")
       }
     } catch {
       setErrors({

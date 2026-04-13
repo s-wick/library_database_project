@@ -48,7 +48,7 @@ export default function CheckInPage() {
   // Store all check-ins in this session
   const [sessionCheckIns, setSessionCheckIns] = useState([])
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [refreshKey, setRefreshKey] = useState(0)
+  // Removed auto-refresh logic
 
   const selectedBorrows = useMemo(
     () =>
@@ -131,13 +131,7 @@ export default function CheckInPage() {
     return () => controller.abort()
   }, [apiBaseUrl, deferredSearchText, refreshKey])
 
-  useEffect(() => {
-    const intervalId = window.setInterval(() => {
-      setRefreshKey((current) => current + 1)
-    }, 15000)
-
-    return () => window.clearInterval(intervalId)
-  }, [])
+  // Removed auto-refresh effect
 
   function handleChange(event) {
     const { name, value } = event.target
@@ -207,7 +201,6 @@ export default function CheckInPage() {
       setForm({ returnDate: getDefaultReturnDateTime() })
       setSelectedBorrowIds([])
       setFieldErrors({})
-      setRefreshKey((current) => current + 1)
     } catch {
       setServerError("Unable to connect to server.")
     } finally {
@@ -292,7 +285,6 @@ export default function CheckInPage() {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => setRefreshKey((current) => current + 1)}
                     disabled={isLoadingCatalog}
                     className="md:w-auto"
                   >

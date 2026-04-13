@@ -339,19 +339,6 @@ export default function AddItemPage() {
                   ))}
                 </select>
               </Field>
-              <Field>
-                <FieldLabel htmlFor="createdAt">Created at</FieldLabel>
-                <Button
-                  id="createdAt"
-                  type="button"
-                  variant="outline"
-                  className="h-9 w-full cursor-not-allowed justify-start text-left font-normal text-muted-foreground"
-                  disabled
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {formatPickerDate(todayDate)}
-                </Button>
-              </Field>
               <Field data-invalid={!!fieldErrors.genres}>
                 <FieldLabel>Genres</FieldLabel>
                 {!supportsGenres ? (

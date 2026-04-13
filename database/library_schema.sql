@@ -567,9 +567,10 @@ CREATE TABLE `hold_item` (
 /*!50003 SET sql_mode              = 'IGNORE_SPACE,ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
 /*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `hold_cap` BEFORE INSERT ON `hold_item` FOR EACH ROW BEGIN
-  DECLARE v_is_faculty   TINYINT(1) DEFAULT 0;
-  DECLARE v_active_count INT        DEFAULT 0;
-  DECLARE v_limit        INT        DEFAULT 3;
+  DECLARE v_is_faculty     TINYINT(1) DEFAULT 0;
+  DECLARE v_active_holds   INT        DEFAULT 0;
+  DECLARE v_active_borrows INT        DEFAULT 0;
+  DECLARE v_limit          INT        DEFAULT 3;
 
   SELECT COALESCE(is_faculty, 0)
     INTO v_is_faculty
@@ -580,14 +581,25 @@ DELIMITER ;;
   SET v_limit = IF(v_is_faculty = 1, 6, 3);
 
   SELECT COUNT(*)
-    INTO v_active_count
+    INTO v_active_holds
     FROM hold_item
    WHERE user_id = NEW.user_id
      AND close_datetime IS NULL;
 
-  IF v_active_count >= v_limit THEN
+  IF v_active_holds >= v_limit THEN
     SIGNAL SQLSTATE '45000'
       SET MESSAGE_TEXT = 'Hold limit reached: you have too many active holds.';
+  END IF;
+
+  SELECT COUNT(*)
+    INTO v_active_borrows
+    FROM borrow
+   WHERE user_id = NEW.user_id
+     AND return_date IS NULL;
+
+  IF v_active_borrows >= v_limit THEN
+    SIGNAL SQLSTATE '45000'
+      SET MESSAGE_TEXT = 'Hold limit reached: you have too many active borrows.';
   END IF;
 END */;;
 DELIMITER ;
@@ -904,4 +916,4 @@ CREATE TABLE `video` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-04-13 16:07:10
+-- Dump completed on 2026-04-13 16:16:30

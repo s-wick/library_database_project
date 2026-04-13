@@ -44,12 +44,11 @@ async function handleBorrow(req, res) {
       return
     }
 
-    const borrowDays = user.is_faculty ? 14 : 7
-    await createBorrowTransaction(user.user_id, itemId, borrowDays)
+    await createBorrowTransaction(user.user_id, itemId)
 
     sendJson(res, 200, {
       ok: true,
-      message: `Item borrowed successfully for ${borrowDays} days.`,
+      message: "Item borrowed successfully.",
     })
   } catch (error) {
     if (error instanceof ItemNotFoundError) {
@@ -288,7 +287,6 @@ async function handleCheckout(req, res) {
       return
     }
 
-    const borrowDays = user.is_faculty ? 14 : 7
     const borrowLimit = user.is_faculty ? 6 : 3
     const activeCount = await getActiveBorrowCount(user.user_id)
     const totalAfterCheckout = activeCount + items.length
@@ -304,7 +302,7 @@ async function handleCheckout(req, res) {
     }
 
     for (const item of items) {
-      await createBorrowTransaction(user.user_id, item.itemId, borrowDays)
+      await createBorrowTransaction(user.user_id, item.itemId)
       await deleteCartItem(user.user_id, item.itemId)
     }
 

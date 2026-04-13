@@ -79,7 +79,7 @@ async function getBorrowRowForCheckin(
   }
 }
 
-async function createBorrowTransaction(userId, itemId, borrowDays = 7) {
+async function createBorrowTransaction(userId, itemId) {
   const connection = await pool.getConnection()
 
   try {
@@ -117,9 +117,9 @@ async function createBorrowTransaction(userId, itemId, borrowDays = 7) {
     }
 
     await connection.execute(
-      `INSERT INTO borrow (item_id, user_id, checkout_date, due_date)
-       VALUES (?, ?, NOW(), DATE_ADD(NOW(), INTERVAL ? DAY))`,
-      [itemId, userId, Number(borrowDays) || 7]
+      `INSERT INTO borrow (item_id, user_id, checkout_date)
+       VALUES (?, ?, NOW())`,
+      [itemId, userId]
     )
 
     await connection.commit()
@@ -447,14 +447,13 @@ async function processUserHoldsOnLogin(userId) {
     HOLD_CLOSE_REASONS.fulfilled
   )
   const borrowLimit = user.is_faculty ? 6 : 3
-  const borrowDays = user.is_faculty ? 14 : 7
   let activeCount = await getActiveBorrowCount(userId)
 
   for (const hold of holds) {
     if (activeCount >= borrowLimit) break
 
     try {
-      await createBorrowTransaction(userId, hold.item_id, borrowDays)
+      await createBorrowTransaction(userId, hold.item_id)
     } catch (error) {
       if (error instanceof OutOfStockError) {
         continue

@@ -251,7 +251,7 @@ export default function SearchPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <Navbar showBack={true} />
+      <Navbar />
 
       <div className="border-b bg-slate-50 py-6 dark:bg-slate-900/50">
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-6 md:px-10">

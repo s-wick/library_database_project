@@ -616,7 +616,7 @@ export default function RoomBookingPage() {
 
   return (
     <div>
-      <Navbar showBack={true} />
+      <Navbar />
       <main className="mx-auto w-full max-w-6xl space-y-8 p-6 md:p-10">
         <section className="space-y-2">
           <h1 className="text-3xl font-bold tracking-tight">Room Booking</h1>

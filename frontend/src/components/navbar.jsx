@@ -40,7 +40,7 @@ async function acknowledgeNotification({ notificationId, userId }) {
   }
 }
 
-export function Navbar({ showBack = false }) {
+export function Navbar({ showBack = true }) {
   const navigate = useNavigate()
   const { theme, setTheme } = useTheme()
   const { cartItems, clearFrontendCart } = useCart()
@@ -145,9 +145,7 @@ export function Navbar({ showBack = false }) {
     sessionStorage.removeItem("user")
     setIsLoggedIn(false)
     clearFrontendCart()
-    if (window.location.pathname === "/checkout") {
-      navigate("/")
-    }
+    navigate("/")
   }
 
   return (

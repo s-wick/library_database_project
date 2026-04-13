@@ -7,19 +7,37 @@ const {
   updateMeetingRoom,
   deleteMeetingRoom,
   getUserActiveBooking,
+  getRoomBookingsInWindow,
   hasRoomOverlap,
   createRoomBooking,
 } = require("../models/rooms.model")
 
-const MAX_BOOKING_MINUTES = 180
+const MAX_BOOKING_HOURS = 3
 const MAX_ADVANCE_HOURS = 24
+const WEEKDAY_OPEN_HOUR = 9
+const WEEKDAY_CLOSE_HOUR = 19
+const WEEKEND_OPEN_HOUR = 9
+const WEEKEND_CLOSE_HOUR = 17
+
+function getDaySchedule(date) {
+  const day = date.getDay()
+  const isWeekend = day === 0 || day === 6
+  return {
+    openHour: isWeekend ? WEEKEND_OPEN_HOUR : WEEKDAY_OPEN_HOUR,
+    closeHour: isWeekend ? WEEKEND_CLOSE_HOUR : WEEKDAY_CLOSE_HOUR,
+  }
+}
 
 function formatBooking(row) {
   if (!row) return null
+  const durationHours = Number(row.duration_hours || 0)
+  const startTime = new Date(row.start_time)
+  const endTime = new Date(startTime.getTime() + durationHours * 60 * 60 * 1000)
   return {
     roomNumber: row.room_number,
-    startTime: new Date(row.start_time).toISOString(),
-    endTime: new Date(row.end_time).toISOString(),
+    startTime: startTime.toISOString(),
+    endTime: endTime.toISOString(),
+    durationHours,
   }
 }
 
@@ -29,18 +47,18 @@ function formatRoom(row) {
   const floor = String(row.room_number || "").charAt(0) || "1"
   const hasProjector = Number(row.has_projector || 0) === 1
   const hasWhiteboard = Number(row.has_whiteboard || 0) === 1
+  const hasTv = Number(row.has_tv || 0) === 1
 
   return {
     roomNumber: row.room_number,
     floor,
     capacity: Number(row.capacity || 0),
     features: {
-      hasTv: hasProjector,
+      hasTv,
       hasProjector,
       hasWhiteboard,
       hasWifi: true,
       hasPowerOutlets: true,
-      quietZone: Number(row.capacity || 0) <= 6,
     },
   }
 }
@@ -77,6 +95,47 @@ async function handleGetMyRoomBooking(_req, res, url) {
   }
 }
 
+async function handleGetRoomAvailability(_req, res, url) {
+  try {
+    const roomNumber = String(url.searchParams.get("roomNumber") || "").trim()
+    if (!roomNumber) {
+      sendJson(res, 400, { ok: false, message: "roomNumber is required" })
+      return
+    }
+
+    const room = await getMeetingRoomByNumber(roomNumber)
+    if (!room) {
+      sendJson(res, 404, { ok: false, message: "Room not found." })
+      return
+    }
+
+    const windowStart = new Date()
+    const windowEnd = new Date(
+      windowStart.getTime() + MAX_ADVANCE_HOURS * 60 * 60 * 1000
+    )
+
+    const bookings = await getRoomBookingsInWindow(
+      roomNumber,
+      windowStart,
+      windowEnd
+    )
+
+    sendJson(res, 200, {
+      ok: true,
+      room: formatRoom(room),
+      windowStart: windowStart.toISOString(),
+      windowEnd: windowEnd.toISOString(),
+      bookings: bookings.map(formatBooking),
+    })
+  } catch (error) {
+    sendJson(res, 500, {
+      ok: false,
+      message: "Failed to fetch room availability",
+      error: error.message,
+    })
+  }
+}
+
 async function handleCreateRoom(req, res) {
   try {
     const body = await parseJsonBody(req)
@@ -84,6 +143,7 @@ async function handleCreateRoom(req, res) {
     const capacity = Number(body.capacity)
     const hasProjector = Boolean(body.hasProjector)
     const hasWhiteboard = Boolean(body.hasWhiteboard)
+    const hasTv = Boolean(body.hasTv)
 
     if (!roomNumber) {
       sendJson(res, 400, { ok: false, message: "roomNumber is required" })
@@ -111,7 +171,8 @@ async function handleCreateRoom(req, res) {
       roomNumber,
       capacity,
       hasProjector,
-      hasWhiteboard
+      hasWhiteboard,
+      hasTv
     )
 
     sendJson(res, 201, {
@@ -147,6 +208,7 @@ async function handleUpdateRoom(req, res, roomNumberParam) {
     const capacity = Number(body.capacity)
     const hasProjector = Boolean(body.hasProjector)
     const hasWhiteboard = Boolean(body.hasWhiteboard)
+    const hasTv = Boolean(body.hasTv)
 
     if (!nextRoomNumber) {
       sendJson(res, 400, { ok: false, message: "roomNumber is required" })
@@ -187,7 +249,8 @@ async function handleUpdateRoom(req, res, roomNumberParam) {
       nextRoomNumber,
       capacity,
       hasProjector,
-      hasWhiteboard
+      hasWhiteboard,
+      hasTv
     )
 
     sendJson(res, 200, {
@@ -249,7 +312,7 @@ async function handleBookRoom(req, res) {
     const userId = Number(body.userId)
     const roomNumber = String(body.roomNumber || "").trim()
     const startTime = new Date(body.startTime)
-    const endTime = new Date(body.endTime)
+    const durationHours = Number(body.durationHours)
 
     if (!Number.isFinite(userId) || userId <= 0 || !roomNumber) {
       sendJson(res, 400, {
@@ -259,8 +322,24 @@ async function handleBookRoom(req, res) {
       return
     }
 
-    if (Number.isNaN(startTime.getTime()) || Number.isNaN(endTime.getTime())) {
-      sendJson(res, 400, { ok: false, message: "Invalid startTime or endTime" })
+    if (Number.isNaN(startTime.getTime())) {
+      sendJson(res, 400, { ok: false, message: "Invalid startTime" })
+      return
+    }
+
+    if (!Number.isInteger(durationHours)) {
+      sendJson(res, 400, {
+        ok: false,
+        message: "durationHours must be an integer value",
+      })
+      return
+    }
+
+    if (durationHours < 1 || durationHours > MAX_BOOKING_HOURS) {
+      sendJson(res, 400, {
+        ok: false,
+        message: "Room booking duration must be between 1 and 3 hours.",
+      })
       return
     }
 
@@ -285,13 +364,36 @@ async function handleBookRoom(req, res) {
       return
     }
 
-    const minutes = Math.round(
-      (endTime.getTime() - startTime.getTime()) / 60000
-    )
-    if (minutes <= 0 || minutes > MAX_BOOKING_MINUTES) {
+    if (startTime.getMinutes() !== 0 || startTime.getSeconds() !== 0) {
       sendJson(res, 400, {
         ok: false,
-        message: "Room booking duration must be between 1 and 180 minutes.",
+        message: "Room booking start time must be on a whole-hour boundary.",
+      })
+      return
+    }
+
+    const { openHour, closeHour } = getDaySchedule(startTime)
+    const startHour = startTime.getHours()
+
+    if (startHour < openHour || startHour >= closeHour) {
+      sendJson(res, 400, {
+        ok: false,
+        message: "Room booking must start during open hours.",
+      })
+      return
+    }
+
+    const endTime = new Date(
+      startTime.getTime() + durationHours * 60 * 60 * 1000
+    )
+
+    if (
+      endTime.getHours() > closeHour ||
+      endTime.getDate() !== startTime.getDate()
+    ) {
+      sendJson(res, 400, {
+        ok: false,
+        message: "Room booking must end by closing time.",
       })
       return
     }
@@ -323,16 +425,21 @@ async function handleBookRoom(req, res) {
       return
     }
 
-    await createRoomBooking(userId, roomNumber, startTime, endTime)
+    const booking = await createRoomBooking(
+      userId,
+      roomNumber,
+      startTime,
+      durationHours
+    )
+
+    if (!booking) {
+      throw new Error("Room booking was not persisted")
+    }
 
     sendJson(res, 200, {
       ok: true,
       message: "Room booked successfully.",
-      booking: {
-        roomNumber,
-        startTime: startTime.toISOString(),
-        endTime: endTime.toISOString(),
-      },
+      booking: formatBooking(booking),
     })
   } catch (error) {
     sendJson(res, 500, {
@@ -346,6 +453,7 @@ async function handleBookRoom(req, res) {
 module.exports = {
   handleGetRooms,
   handleGetMyRoomBooking,
+  handleGetRoomAvailability,
   handleCreateRoom,
   handleUpdateRoom,
   handleDeleteRoom,

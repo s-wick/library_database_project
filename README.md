@@ -29,6 +29,16 @@ npm install
 
 4. Run `npm run dev` to run both frontend and backend concurrently
 
+## Database reset credentials
+
+`npm run db:reset` reads from `database/.env`.
+
+1. Duplicate `database/.env.example` and rename it to `.env`
+2. Set `DB_*` values for your MySQL connection
+3. Set `SEED_STAFF_PASSWORD` and `SEED_USER_PASSWORD` for seeded login passwords
+
+This keeps seed credentials out of tracked SQL files and out of git history.
+
 ## Relevant Links
 
 - [React](https://react.dev/)

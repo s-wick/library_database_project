@@ -165,16 +165,10 @@ function OverviewCards({
       icon: DollarSign,
       accent: "#F87171",
     },
-    {
-      label: "Books Read",
-      value: borrowHistory.length,
-      icon: RotateCcw,
-      accent: "#34D399",
-    },
   ]
 
   return (
-    <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
       {stats.map(({ label, value, icon: Icon, accent }) => (
         <div
           key={label}

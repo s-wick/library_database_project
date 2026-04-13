@@ -144,8 +144,35 @@ export default function AuthPage() {
       }
 
       if (isSignUp) {
+        // After signup, automatically sign in the user
         setSuccess("Account created successfully.")
-        navigate("/")
+        // Attempt sign in with the same credentials
+        const signinResponse = await fetch(`${apiBaseUrl}/api/auth/signin`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            accountType: "user",
+            email: form.email.trim(),
+            password: form.password,
+          }),
+        })
+        const signinData = await signinResponse.json().catch(() => ({}))
+        if (signinResponse.ok) {
+          sessionStorage.setItem("isLoggedIn", "true")
+          sessionStorage.setItem("authToken", signinData?.token || "")
+          sessionStorage.setItem(
+            "authUser",
+            JSON.stringify(signinData?.user || {})
+          )
+          sessionStorage.setItem("user", JSON.stringify(signinData?.user || {}))
+          await syncCartWithServer()
+          navigate("/")
+        } else {
+          setErrors({
+            general:
+              "Account created, but failed to sign in automatically. Please sign in manually.",
+          })
+        }
       } else {
         sessionStorage.setItem("isLoggedIn", "true")
         sessionStorage.setItem("authToken", data?.token || "")

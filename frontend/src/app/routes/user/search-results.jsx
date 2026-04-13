@@ -274,8 +274,8 @@ export default function SearchPage() {
             </Field>
 
             <Button
-              variant={showFilters ? "secondary" : "ghost"}
-              className="h-12 shrink-0 px-4 shadow-none hover:bg-muted"
+              variant="outline"
+              className="h-12 px-4 hover:bg-muted"
               onClick={() => setShowFilters(!showFilters)}
             >
               <Filter className="mr-2 h-4 w-4" />

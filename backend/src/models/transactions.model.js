@@ -250,16 +250,6 @@ async function createBatchCheckinTransactions(records, returnDate) {
 }
 
 async function createHold(itemId, userId) {
-  const existing = await query(
-    `SELECT item_id
-     FROM hold_item
-     WHERE item_id = ? AND user_id = ? AND close_datetime IS NULL
-     LIMIT 1`,
-    [itemId, userId]
-  )
-
-  if (existing.length) return false
-
   await query(
     `INSERT INTO hold_item (item_id, user_id, request_datetime)
      VALUES (?, ?, NOW())`,

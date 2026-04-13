@@ -238,14 +238,18 @@ async function handleHold(req, res) {
       return
     }
 
-    const created = await createHold(itemId, user.user_id)
-    if (!created) {
-      sendJson(res, 200, { ok: true, message: "Hold already exists." })
-      return
-    }
+    await createHold(itemId, user.user_id)
 
     sendJson(res, 200, { ok: true, message: "Hold placed successfully" })
   } catch (error) {
+    if (error.sqlState === "45000") {
+      sendJson(res, 409, {
+        ok: false,
+        message: error.message || "Unable to place hold.",
+      })
+      return
+    }
+
     sendJson(res, 500, {
       ok: false,
       message: "Failed to place hold",

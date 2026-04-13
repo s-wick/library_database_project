@@ -557,6 +557,44 @@ CREATE TABLE `hold_item` (
   CONSTRAINT `hold_item_ibfk_3` FOREIGN KEY (`close_reason_id`) REFERENCES `hold_item_closing_reasons` (`reason_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_unicode_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'IGNORE_SPACE,ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `hold_cap` BEFORE INSERT ON `hold_item` FOR EACH ROW BEGIN
+  DECLARE v_is_faculty   TINYINT(1) DEFAULT 0;
+  DECLARE v_active_count INT        DEFAULT 0;
+  DECLARE v_limit        INT        DEFAULT 3;
+
+  SELECT COALESCE(is_faculty, 0)
+    INTO v_is_faculty
+    FROM user_account
+   WHERE user_id = NEW.user_id
+   LIMIT 1;
+
+  SET v_limit = IF(v_is_faculty = 1, 6, 3);
+
+  SELECT COUNT(*)
+    INTO v_active_count
+    FROM hold_item
+   WHERE user_id = NEW.user_id
+     AND close_datetime IS NULL;
+
+  IF v_active_count >= v_limit THEN
+    SIGNAL SQLSTATE '45000'
+      SET MESSAGE_TEXT = 'Hold limit reached: you have too many active holds.';
+  END IF;
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 
 --
 -- Table structure for table `hold_item_closing_reasons`
@@ -866,4 +904,4 @@ CREATE TABLE `video` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-04-13 15:55:44
+-- Dump completed on 2026-04-13 16:07:10

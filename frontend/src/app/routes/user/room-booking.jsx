@@ -141,6 +141,7 @@ function CalendarWithTimeSlider({
                     variant={
                       slot.value === selectedStartAt ? "default" : "secondary"
                     }
+                    disabled={slot.disabled}
                     onClick={() => onStartAtChange(slot.value)}
                   >
                     {slot.label}
@@ -424,13 +425,58 @@ export default function RoomBookingPage() {
     if (!selectedDate) return []
 
     const selectedKey = getDateKey(selectedDate)
-    return availableSlotsDetailed
-      .filter((slot) => getDateKey(slot.date) === selectedKey)
-      .map((slot) => ({
-        value: slot.value,
-        label: formatTimeLabel(slot.date),
-      }))
-  }, [availableSlotsDetailed, selectedDate])
+    const availableSet = new Set(
+      availableSlotsDetailed
+        .filter((slot) => getDateKey(slot.date) === selectedKey)
+        .map((slot) => slot.value)
+    )
+
+    const windowStart = availability.windowStart
+      ? new Date(availability.windowStart)
+      : new Date(Date.now())
+    const windowEnd = availability.windowEnd
+      ? new Date(availability.windowEnd)
+      : new Date(Date.now() + ADVANCE_WINDOW_MS)
+
+    if (
+      Number.isNaN(windowStart.getTime()) ||
+      Number.isNaN(windowEnd.getTime())
+    ) {
+      return []
+    }
+
+    const { openHour, closeHour } = getDaySchedule(selectedDate)
+    const dayOpen = new Date(selectedDate)
+    dayOpen.setHours(openHour, 0, 0, 0)
+    const dayClose = new Date(selectedDate)
+    dayClose.setHours(closeHour, 0, 0, 0)
+
+    const slots = []
+    for (
+      let cursor = dayOpen.getTime();
+      cursor + SLOT_INTERVAL_MS <= dayClose.getTime();
+      cursor += SLOT_INTERVAL_MS
+    ) {
+      const slotStart = new Date(cursor)
+      const slotEnd = new Date(cursor + SLOT_INTERVAL_MS)
+      const inWindow = slotStart >= windowStart && slotEnd <= windowEnd
+      const value = slotStart.toISOString()
+      const isAvailable = inWindow && availableSet.has(value)
+
+      slots.push({
+        value,
+        label: formatTimeLabel(slotStart),
+        disabled: !isAvailable,
+      })
+    }
+
+    return slots
+  }, [
+    availability.windowEnd,
+    availability.windowStart,
+    availableSlotsDetailed,
+    selectedDate,
+  ])
 
   const slotsForSelectedDate = useMemo(() => {
     if (!selectedDate) return []

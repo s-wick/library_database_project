@@ -109,13 +109,13 @@ CREATE TABLE `borrow` (
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
 /*!50003 SET @saved_cs_results     = @@character_set_results */ ;
 /*!50003 SET @saved_col_connection = @@collation_connection */ ;
-/*!50003 SET character_set_client  = utf8mb3 */ ;
-/*!50003 SET character_set_results = utf8mb3 */ ;
-/*!50003 SET collation_connection  = utf8mb3_general_ci */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_unicode_ci */ ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
-/*!50003 SET sql_mode              = 'NO_AUTO_VALUE_ON_ZERO' */ ;
+/*!50003 SET sql_mode              = 'IGNORE_SPACE,ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_borrow_limit_before_insert` BEFORE INSERT ON `borrow` FOR EACH ROW BEGIN
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `borrow_cap` BEFORE INSERT ON `borrow` FOR EACH ROW BEGIN
   DECLARE v_is_faculty   TINYINT(1) DEFAULT 0;
   DECLARE v_active_count INT        DEFAULT 0;
   DECLARE v_limit        INT        DEFAULT 3;
@@ -137,6 +137,40 @@ DELIMITER ;;
   IF v_active_count >= v_limit THEN
     SIGNAL SQLSTATE '45000'
       SET MESSAGE_TEXT = 'Borrow limit reached: you have too many active borrows.';
+  END IF;
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_unicode_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'IGNORE_SPACE,ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `borrow_due_date` BEFORE INSERT ON `borrow` FOR EACH ROW BEGIN
+  DECLARE v_is_faculty TINYINT(1) DEFAULT 0;
+  DECLARE v_borrow_days INT DEFAULT 7;
+
+  SELECT COALESCE(is_faculty, 0)
+    INTO v_is_faculty
+    FROM user_account
+   WHERE user_id = NEW.user_id
+   LIMIT 1;
+
+  SET v_borrow_days = IF(v_is_faculty = 1, 14, 7);
+
+  IF NEW.checkout_date IS NULL THEN
+    SET NEW.checkout_date = NOW();
+  END IF;
+
+  IF NEW.due_date IS NULL THEN
+    SET NEW.due_date = DATE_ADD(NEW.checkout_date, INTERVAL v_borrow_days DAY);
   END IF;
 END */;;
 DELIMITER ;
@@ -832,4 +866,4 @@ CREATE TABLE `video` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-04-13  4:45:00
+-- Dump completed on 2026-04-13 15:55:44

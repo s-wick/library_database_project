@@ -43,7 +43,7 @@ WHERE title = 'Pride and Prejudice';
 INSERT INTO borrow (item_id, user_id, checkout_date, due_date, return_date)
 SELECT item_id, @student2_id, '2026-03-15 09:15:00', '2026-03-22 09:15:00', NULL
 FROM item
-WHERE title = '1984';
+WHERE title = 'The Great Gatsby';
 
 -- sample-shift-days-next: -7
 INSERT INTO borrow (item_id, user_id, checkout_date, due_date, return_date)

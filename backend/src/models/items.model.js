@@ -200,7 +200,8 @@ async function getActiveHoldCountByItemId(itemId) {
   const rows = await query(
     `SELECT COUNT(*) AS count
      FROM hold_item
-     WHERE item_id = ?`,
+     WHERE item_id = ?
+       AND close_datetime IS NULL`,
     [itemId]
   )
   return rows[0]?.count || 0

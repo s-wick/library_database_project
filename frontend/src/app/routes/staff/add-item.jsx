@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
-import { ArrowLeft, Calendar as CalendarIcon, X } from "lucide-react"
+import { ArrowLeft, X } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,12 +12,6 @@ import {
 } from "@/components/ui/input-group"
 import { Field, FieldError, FieldLabel } from "@/components/ui/field"
 import { Badge } from "@/components/ui/badge"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import { Calendar } from "@/components/ui/calendar"
 import { API_BASE_URL } from "@/lib/api-config"
 
 const itemFields = {
@@ -114,21 +108,10 @@ function formatItemTypeLabel(value = "") {
     .join(" ")
 }
 
-function formatPickerDate(value) {
-  if (!value) return "Select a date"
+function toDateInputValue(value) {
+  if (!value) return ""
   const date = new Date(`${value}T00:00:00`)
-  if (Number.isNaN(date.getTime())) return value
-  return date.toLocaleDateString()
-}
-
-function parseDateValue(value) {
-  if (!value) return undefined
-  const date = new Date(`${value}T00:00:00`)
-  return Number.isNaN(date.getTime()) ? undefined : date
-}
-
-function toDateValue(date) {
-  if (!date) return ""
+  if (Number.isNaN(date.getTime())) return ""
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, "0")
   const day = String(date.getDate()).padStart(2, "0")
@@ -330,7 +313,7 @@ export default function AddItemPage() {
                   id="itemType"
                   value={itemType}
                   onChange={onTypeChange}
-                  className="h-9 w-full rounded-md border border-input bg-transparent px-2.5 py-1 text-sm"
+                  className="h-9 w-full rounded-md border border-input bg-card px-2.5 py-1 text-sm text-foreground"
                 >
                   {itemTypes.map((type) => (
                     <option key={type.itemCode} value={type.itemType}>
@@ -338,19 +321,6 @@ export default function AddItemPage() {
                     </option>
                   ))}
                 </select>
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="createdAt">Created at</FieldLabel>
-                <Button
-                  id="createdAt"
-                  type="button"
-                  variant="outline"
-                  className="h-9 w-full cursor-not-allowed justify-start text-left font-normal text-muted-foreground"
-                  disabled
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {formatPickerDate(todayDate)}
-                </Button>
               </Field>
               <Field data-invalid={!!fieldErrors.genres}>
                 <FieldLabel>Genres</FieldLabel>
@@ -497,31 +467,15 @@ export default function AddItemPage() {
                       />
                     </InputGroup>
                   ) : field.type === "date" ? (
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className={`h-9 w-full justify-start text-left font-normal ${!form[field.name] ? "text-muted-foreground" : ""}`}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {formatPickerDate(form[field.name])}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={parseDateValue(form[field.name])}
-                          onSelect={(date) =>
-                            setForm((prev) => ({
-                              ...prev,
-                              [field.name]: toDateValue(date),
-                            }))
-                          }
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    <Input
+                      id={field.name}
+                      name={field.name}
+                      type="date"
+                      value={toDateInputValue(form[field.name])}
+                      onChange={onChange}
+                      aria-invalid={!!fieldErrors[field.name]}
+                      max={todayDate}
+                    />
                   ) : (
                     <Input
                       id={field.name}

@@ -78,6 +78,15 @@ function runDump({
   }
 }
 
+function postProcessSchemaFile(schemaFilePath) {
+  // Read the schema file
+  let content = fs.readFileSync(schemaFilePath, "utf8")
+  // Remove AUTO_INCREMENT=... entirely
+  // Handles variations like AUTO_INCREMENT=123, AUTO_INCREMENT = 123, etc.
+  content = content.replace(/\s*AUTO_INCREMENT\s*=\s*\d+/gi, "")
+  fs.writeFileSync(schemaFilePath, content, "utf8")
+}
+
 function main() {
   const rootDir = path.resolve(__dirname, "..")
   const envPath = path.join(rootDir, "backend", ".env")
@@ -98,34 +107,22 @@ function main() {
 
   const mysqldumpBin = process.env.MYSQLDUMP_PATH || "mysqldump"
 
-  const targets = [
-    {
-      outputPath: path.join(outDir, "library_full_snapshot.sql"),
-      extraArgs: [],
-      label: "full dump",
-    },
-    {
-      outputPath: path.join(outDir, "library_sample_data.sql"),
-      extraArgs: ["--no-create-info"],
-      label: "data-only dump",
-    },
-    {
-      outputPath: path.join(outDir, "library_schema.sql"),
-      extraArgs: ["--no-data"],
-      label: "schema-only dump",
-    },
-  ]
+  // Only dump the schema
+  const schemaPath = path.join(outDir, "library_schema.sql")
+  runDump({
+    mysqldumpBin,
+    connection,
+    database,
+    outputPath: schemaPath,
+    extraArgs: ["--no-data", "--skip-triggers"],
+  })
+  console.log(`Created schema-only dump: ${schemaPath}`)
 
-  for (const target of targets) {
-    runDump({
-      mysqldumpBin,
-      connection,
-      database,
-      outputPath: target.outputPath,
-      extraArgs: target.extraArgs,
-    })
-    console.log(`Created ${target.label}: ${target.outputPath}`)
-  }
+  // Post-process to remove/normalize AUTO_INCREMENT
+  postProcessSchemaFile(schemaPath)
+  console.log(
+    `Post-processed schema file to reset AUTO_INCREMENT to 1: ${schemaPath}`
+  )
 }
 
 try {

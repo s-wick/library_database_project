@@ -308,7 +308,7 @@ export default function RoomManagePage() {
                     checked={form.hasProjector}
                     onChange={handleChange}
                   />
-                  <span>Has projector</span>
+                  <span>Projector</span>
                 </label>
 
                 <label className="flex items-center gap-3 rounded-lg border p-3 text-sm">
@@ -318,7 +318,17 @@ export default function RoomManagePage() {
                     checked={form.hasWhiteboard}
                     onChange={handleChange}
                   />
-                  <span>Has whiteboard</span>
+                  <span>Whiteboard</span>
+                </label>
+
+                <label className="flex items-center gap-3 rounded-lg border p-3 text-sm">
+                  <input
+                    name="hasTv"
+                    type="checkbox"
+                    checked={form.hasTv}
+                    onChange={handleChange}
+                  />
+                  <span>TV</span>
                 </label>
 
                 <label className="flex items-center gap-3 rounded-lg border p-3 text-sm">
@@ -373,7 +383,7 @@ export default function RoomManagePage() {
                   No rooms are configured yet.
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="max-h-100 space-y-3 overflow-y-auto pr-2">
                   {rooms.map((room) => (
                     <div
                       key={room.roomNumber}
@@ -428,6 +438,7 @@ export default function RoomManagePage() {
                           label="Whiteboard"
                           enabled={room.features.hasWhiteboard}
                         />
+                        <FeaturePill label="TV" enabled={room.features.hasTv} />
                       </div>
                     </div>
                   ))}

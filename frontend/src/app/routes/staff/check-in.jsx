@@ -199,6 +199,7 @@ export default function CheckInPage() {
       setForm({ returnDate: getDefaultReturnDateTime() })
       setSelectedBorrowIds([])
       setFieldErrors({})
+      await fetchActiveBorrows()
     } catch {
       setServerError("Unable to connect to server.")
     } finally {
@@ -229,16 +230,6 @@ export default function CheckInPage() {
     setServerError("")
   }
 
-  function selectAllVisible() {
-    setSelectedBorrowIds(
-      activeBorrows.map((borrow) => borrow.borrowTransactionId)
-    )
-    setFieldErrors((prev) => ({
-      ...prev,
-      selectedBorrowIds: "",
-    }))
-  }
-
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="mx-auto max-w-7xl space-y-6">
@@ -249,8 +240,8 @@ export default function CheckInPage() {
           </Link>
         </Button>
 
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,2.2fr)_minmax(320px,0.9fr)]">
-          <Card>
+        <div className="grid items-stretch gap-6 xl:grid-cols-[minmax(0,2.2fr)_minmax(320px,0.9fr)]">
+          <Card className="h-full">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <PackageCheck className="h-5 w-5 text-primary" />
@@ -299,16 +290,6 @@ export default function CheckInPage() {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={selectAllVisible}
-                    disabled={!activeBorrows.length}
-                    className="md:w-auto"
-                  >
-                    Select all visible
-                  </Button>
-
-                  <Button
-                    type="button"
-                    variant="outline"
                     onClick={() => setSelectedBorrowIds([])}
                     disabled={!selectedBorrowIds.length}
                     className="md:w-auto"
@@ -327,7 +308,7 @@ export default function CheckInPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-[56px]">Select</TableHead>
+                        <TableHead className="w-[56px]"></TableHead>
                         <TableHead>Item</TableHead>
                         <TableHead>Borrower</TableHead>
                         <TableHead>Checked out</TableHead>
@@ -483,14 +464,14 @@ export default function CheckInPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="h-full">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <CalendarClock className="h-4 w-4 text-primary" />
                 Return summary
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4 text-sm">
+            <CardContent className="flex h-full min-h-0 flex-col gap-4 text-sm">
               <div className="rounded-lg border bg-muted/20 p-3">
                 <p className="font-medium">Scheduled return timestamp</p>
                 <p className="mt-1 text-muted-foreground">
@@ -498,10 +479,10 @@ export default function CheckInPage() {
                 </p>
               </div>
 
-              <div className="rounded-lg border bg-muted/20 p-3">
+              <div className="flex min-h-0 flex-1 flex-col rounded-lg border bg-muted/20 p-3">
                 <p className="font-medium">Session check-in history</p>
                 {sessionCheckIns.length ? (
-                  <div className="mt-1 space-y-4 text-muted-foreground">
+                  <div className="mt-4 max-h-95 space-y-4 overflow-y-auto text-muted-foreground">
                     {sessionCheckIns.map((checkIn, idx) => (
                       <div
                         key={idx}

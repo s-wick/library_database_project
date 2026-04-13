@@ -138,7 +138,9 @@ function CalendarWithTimeSlider({
                     key={slot.value}
                     type="button"
                     className="mb-2 w-full break-inside-avoid"
-                    variant={slot.value === selectedStartAt ? "default" : "secondary"}
+                    variant={
+                      slot.value === selectedStartAt ? "default" : "secondary"
+                    }
                     onClick={() => onStartAtChange(slot.value)}
                   >
                     {slot.label}

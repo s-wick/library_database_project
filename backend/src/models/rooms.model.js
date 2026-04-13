@@ -175,12 +175,7 @@ async function createMeetingRoom(
         has_projector,
         has_whiteboard
       ) VALUES (?, ?, ?, ?)`,
-      [
-        roomNumber,
-        capacity,
-        hasProjector ? 1 : 0,
-        hasWhiteboard ? 1 : 0,
-      ]
+      [roomNumber, capacity, hasProjector ? 1 : 0, hasWhiteboard ? 1 : 0]
     )
   }
 

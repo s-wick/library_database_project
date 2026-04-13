@@ -643,22 +643,61 @@ export default function RoomBookingPage() {
           <CardHeader>
             <CardTitle className="text-lg">Book a Room</CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-3">
-            <label className="text-sm">
-              <span className="mb-1 block text-muted-foreground">Room</span>
-              <select
-                className="h-10 w-full rounded-md border px-3"
-                value={selectedRoom}
-                onChange={(e) => setSelectedRoom(e.target.value)}
-              >
-                {rooms.map((room) => (
-                  <option key={room.roomNumber} value={room.roomNumber}>
-                    Room {room.roomNumber} (Floor {room.floor})
-                  </option>
-                ))}
-              </select>
-            </label>
-            <div className="md:col-span-2">
+          <CardContent className="grid gap-4 md:grid-cols-[minmax(0,220px)_1fr]">
+            <div className="flex h-full flex-col">
+              <div className="flex-1 overflow-hidden rounded-md border">
+                <div className="max-h-96 space-y-2 overflow-y-auto p-3">
+                  {loading ? (
+                    <p className="text-sm text-muted-foreground">
+                      Loading rooms...
+                    </p>
+                  ) : rooms.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      No rooms available.
+                    </p>
+                  ) : (
+                    rooms.map((room) => (
+                      <React.Fragment key={room.roomNumber}>
+                        <Button
+                          type="button"
+                          variant={
+                            selectedRoom === room.roomNumber
+                              ? "default"
+                              : "secondary"
+                          }
+                          className="h-auto w-full justify-between px-3 py-2 text-left whitespace-normal"
+                          onClick={() => setSelectedRoom(room.roomNumber)}
+                        >
+                          <span>
+                            Room {room.roomNumber}
+                            <span
+                              className={`text-xs ${
+                                selectedRoom === room.roomNumber
+                                  ? "text-white/80"
+                                  : "text-muted-foreground"
+                              }`}
+                            >
+                              {" "}
+                              (Floor {room.floor})
+                            </span>
+                          </span>
+                          <span
+                            className={`text-xs ${
+                              selectedRoom === room.roomNumber
+                                ? "text-white/80"
+                                : "text-muted-foreground"
+                            }`}
+                          >
+                            {room.capacity} seats
+                          </span>
+                        </Button>
+                      </React.Fragment>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+            <div>
               <CalendarWithTimeSlider
                 dayOption={dayOption}
                 onDayOptionChange={setDayOption}
@@ -674,21 +713,8 @@ export default function RoomBookingPage() {
               />
             </div>
           </CardContent>
-          {selectedRoomDetails && (
-            <CardContent className="pt-0 text-sm text-muted-foreground">
-              Room {selectedRoomDetails.roomNumber} fits up to{" "}
-              {selectedRoomDetails.capacity} people. Projector:{" "}
-              {selectedRoomDetails.features.hasProjector ? "Yes" : "No"}.{" "}
-              Whiteboard:{" "}
-              {selectedRoomDetails.features.hasWhiteboard ? "Yes" : "No"}.
-            </CardContent>
-          )}
+
           <CardContent className="pt-0">
-            {availableStartSlots.length > 0 && !availabilityLoading && (
-              <p className="mb-2 text-sm text-muted-foreground">
-                Select a start time to see available and unavailable slots.
-              </p>
-            )}
             <Button
               onClick={handleBookRoom}
               disabled={
@@ -701,6 +727,11 @@ export default function RoomBookingPage() {
             >
               {submitting ? "Booking..." : "Book Room"}
             </Button>
+            {!!activeBooking && (
+              <p className="mt-2 text-sm text-amber-600">
+                You already have an active booking and cannot book another room.
+              </p>
+            )}
             {!!error && <p className="mt-2 text-sm text-rose-600">{error}</p>}
             {!!success && (
               <p className="mt-2 text-sm text-emerald-600">{success}</p>

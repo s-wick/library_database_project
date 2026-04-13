@@ -129,7 +129,7 @@ export default function CheckInPage() {
     fetchActiveBorrows()
 
     return () => controller.abort()
-  }, [apiBaseUrl, deferredSearchText, refreshKey])
+  }, [apiBaseUrl, deferredSearchText])
 
   // Removed auto-refresh effect
 

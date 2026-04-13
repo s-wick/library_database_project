@@ -9,6 +9,12 @@ const NOTIFICATION_TYPES = {
   holdAssigned: "Checked out item",
 }
 
+const HOLD_CLOSE_REASONS = {
+  fulfilled: "Fulfilled",
+  canceled: "Canceled",
+  canceledByFine: "Canceled by fine",
+}
+
 function normalizeCheckoutDateKey(checkoutDate) {
   const normalized = String(checkoutDate || "").trim()
 
@@ -247,7 +253,7 @@ async function createHold(itemId, userId) {
   const existing = await query(
     `SELECT item_id
      FROM hold_item
-     WHERE item_id = ? AND user_id = ?
+     WHERE item_id = ? AND user_id = ? AND close_datetime IS NULL
      LIMIT 1`,
     [itemId, userId]
   )
@@ -255,7 +261,7 @@ async function createHold(itemId, userId) {
   if (existing.length) return false
 
   await query(
-    `INSERT INTO hold_item (item_id, user_id, request_date)
+    `INSERT INTO hold_item (item_id, user_id, request_datetime)
      VALUES (?, ?, NOW())`,
     [itemId, userId]
   )
@@ -263,14 +269,26 @@ async function createHold(itemId, userId) {
   return true
 }
 
-async function cancelHold(itemId, userId) {
-  const result = await query(
-    `
-    DELETE FROM hold_item
-    WHERE item_id = ? AND user_id = ?
-  `,
-    [itemId, userId]
-  )
+async function cancelHold(itemId, userId, requestDate = null) {
+  let sql = `
+    UPDATE hold_item
+    SET close_datetime = NOW(),
+        close_reason_id = (
+          SELECT reason_id
+          FROM hold_item_closing_reasons
+          WHERE reason_text = ?
+          LIMIT 1
+        )
+    WHERE item_id = ? AND user_id = ? AND close_datetime IS NULL
+  `
+  const params = [HOLD_CLOSE_REASONS.canceled, itemId, userId]
+
+  if (requestDate) {
+    sql += ` AND request_datetime = ?`
+    params.push(requestDate)
+  }
+
+  const result = await query(sql, params)
   return Number(result.affectedRows || 0) > 0
 }
 
@@ -333,6 +351,18 @@ async function getNotificationTypeId(typeText) {
   return rows[0].notification_type_id
 }
 
+async function getHoldCloseReasonId(reasonText) {
+  const rows = await query(
+    `SELECT reason_id
+     FROM hold_item_closing_reasons
+     WHERE reason_text = ?
+     LIMIT 1`,
+    [reasonText]
+  )
+
+  return rows[0]?.reason_id || null
+}
+
 async function processUserHoldsOnLogin(userId) {
   const user = await getUserAccountById(userId)
   if (!user) return
@@ -351,11 +381,15 @@ async function processUserHoldsOnLogin(userId) {
     const holdRemovedTypeId = await getNotificationTypeId(
       NOTIFICATION_TYPES.holdRemoved
     )
+    const closeReasonFineId = await getHoldCloseReasonId(
+      HOLD_CLOSE_REASONS.canceledByFine
+    )
     const holds = await query(
-      `SELECT h.item_id, h.request_date, i.title
+      `SELECT h.item_id, h.request_datetime, i.title
        FROM hold_item h
        INNER JOIN item i ON i.item_id = h.item_id
-       WHERE h.user_id = ?`,
+       WHERE h.user_id = ?
+         AND h.close_datetime IS NULL`,
       [userId]
     )
 
@@ -378,18 +412,26 @@ async function processUserHoldsOnLogin(userId) {
         )
       }
 
-      await query(`DELETE FROM hold_item WHERE user_id = ?`, [userId])
+      await query(
+        `UPDATE hold_item
+         SET close_datetime = NOW(),
+             close_reason_id = ?
+         WHERE user_id = ?
+           AND close_datetime IS NULL`,
+        [closeReasonFineId, userId]
+      )
     }
 
     return
   }
 
   const holds = await query(
-    `SELECT h.item_id, h.request_date, i.title
+    `SELECT h.item_id, h.request_datetime, i.title
      FROM hold_item h
      INNER JOIN item i ON i.item_id = h.item_id
      WHERE h.user_id = ?
-     ORDER BY h.request_date ASC`,
+       AND h.close_datetime IS NULL
+     ORDER BY h.request_datetime ASC`,
     [userId]
   )
 
@@ -397,6 +439,12 @@ async function processUserHoldsOnLogin(userId) {
 
   const holdAssignedTypeId = await getNotificationTypeId(
     NOTIFICATION_TYPES.holdAssigned
+  )
+  const closeReasonCanceledId = await getHoldCloseReasonId(
+    HOLD_CLOSE_REASONS.canceled
+  )
+  const closeReasonFulfilledId = await getHoldCloseReasonId(
+    HOLD_CLOSE_REASONS.fulfilled
   )
   const borrowLimit = user.is_faculty ? 6 : 3
   const borrowDays = user.is_faculty ? 14 : 7
@@ -414,9 +462,12 @@ async function processUserHoldsOnLogin(userId) {
 
       if (error instanceof ItemNotFoundError) {
         await query(
-          `DELETE FROM hold_item
-           WHERE item_id = ? AND user_id = ? AND request_date = ?`,
-          [hold.item_id, userId, hold.request_date]
+          `UPDATE hold_item
+           SET close_datetime = NOW(),
+               close_reason_id = ?
+           WHERE item_id = ? AND user_id = ? AND request_datetime = ?
+             AND close_datetime IS NULL`,
+          [closeReasonCanceledId, hold.item_id, userId, hold.request_datetime]
         )
         continue
       }
@@ -459,9 +510,12 @@ async function processUserHoldsOnLogin(userId) {
       ]
     )
     await query(
-      `DELETE FROM hold_item
-               WHERE item_id = ? AND user_id = ? AND request_date = ?`,
-      [hold.item_id, userId, hold.request_date]
+      `UPDATE hold_item
+       SET close_datetime = NOW(),
+           close_reason_id = ?
+       WHERE item_id = ? AND user_id = ? AND request_datetime = ?
+         AND close_datetime IS NULL`,
+      [closeReasonFulfilledId, hold.item_id, userId, hold.request_datetime]
     )
     activeCount += 1
   }

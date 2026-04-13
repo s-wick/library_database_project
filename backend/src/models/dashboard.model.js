@@ -24,20 +24,22 @@ async function getActiveHolds(userId) {
   return query(
     `
     SELECT h.item_id,
-           h.request_date,
+           h.request_datetime,
            i.title,
            bk.author,
            (
              SELECT COUNT(*) + 1
              FROM hold_item h2
              WHERE h2.item_id = h.item_id
-               AND h2.request_date < h.request_date
+               AND h2.close_datetime IS NULL
+               AND h2.request_datetime < h.request_datetime
            ) AS queue_position
     FROM hold_item h
     INNER JOIN item i ON i.item_id = h.item_id
     LEFT JOIN book bk ON bk.item_id = i.item_id
     WHERE h.user_id = ?
-    ORDER BY h.request_date DESC
+      AND h.close_datetime IS NULL
+    ORDER BY h.request_datetime DESC
     LIMIT 25
   `,
     [userId]
@@ -46,15 +48,23 @@ async function getActiveHolds(userId) {
 
 async function cancelHold(userId, itemId, requestDate = null) {
   let sql = `
-    DELETE FROM hold_item
+    UPDATE hold_item
+    SET close_datetime = NOW(),
+        close_reason_id = (
+          SELECT reason_id
+          FROM hold_item_closing_reasons
+          WHERE reason_text = 'Canceled'
+          LIMIT 1
+        )
     WHERE user_id = ?
       AND item_id = ?
+      AND close_datetime IS NULL
   `
   const params = [userId, itemId]
 
   // Optional legacy support for requestDate. Most clients should omit this.
   if (requestDate) {
-    sql += ` AND request_date = ?`
+    sql += ` AND request_datetime = ?`
     params.push(requestDate)
   }
 

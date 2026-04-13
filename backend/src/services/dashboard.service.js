@@ -45,9 +45,9 @@ async function handleGetDashboard(_req, res, url) {
     }))
 
     const formattedHolds = holds.map((hold) => ({
-      id: `${hold.item_id}-${new Date(hold.request_date).toISOString()}`,
+      id: `${hold.item_id}-${new Date(hold.request_datetime).toISOString()}`,
       itemId: hold.item_id,
-      requestDate: new Date(hold.request_date).toISOString(),
+      requestDate: new Date(hold.request_datetime).toISOString(),
       title: hold.title || "Unknown Item",
       author: hold.author || "",
       status: "active",

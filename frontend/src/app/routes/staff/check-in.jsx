@@ -48,7 +48,6 @@ export default function CheckInPage() {
   // Store all check-ins in this session
   const [sessionCheckIns, setSessionCheckIns] = useState([])
   const [isSubmitting, setIsSubmitting] = useState(false)
-  // Removed auto-refresh logic
 
   const selectedBorrows = useMemo(
     () =>
@@ -86,48 +85,47 @@ export default function CheckInPage() {
     return ""
   }
 
-  useEffect(() => {
-    const controller = new AbortController()
+  // Move fetchActiveBorrows to component scope for manual and effect use
+  async function fetchActiveBorrows(signal) {
+    setIsLoadingCatalog(true)
+    setCatalogError("")
 
-    async function fetchActiveBorrows() {
-      setIsLoadingCatalog(true)
-      setCatalogError("")
+    try {
+      const params = new URLSearchParams()
+      if (deferredSearchText.trim()) {
+        params.set("q", deferredSearchText.trim())
+      }
 
-      try {
-        const params = new URLSearchParams()
-        if (deferredSearchText.trim()) {
-          params.set("q", deferredSearchText.trim())
-        }
+      const response = await fetch(
+        `${apiBaseUrl}/api/check-in/catalog?${params.toString()}`,
+        { signal }
+      )
+      const data = await response.json().catch(() => ({}))
 
-        const response = await fetch(
-          `${apiBaseUrl}/api/check-in/catalog?${params.toString()}`,
-          { signal: controller.signal }
+      if (!response.ok) {
+        throw new Error(data.message || "Unable to load active borrows.")
+      }
+
+      const nextRows = Array.isArray(data.rows) ? data.rows : []
+      setActiveBorrows(nextRows)
+      setSelectedBorrowIds((current) =>
+        current.filter((selectedId) =>
+          nextRows.some((row) => row.borrowTransactionId === selectedId)
         )
-        const data = await response.json().catch(() => ({}))
-
-        if (!response.ok) {
-          throw new Error(data.message || "Unable to load active borrows.")
-        }
-
-        const nextRows = Array.isArray(data.rows) ? data.rows : []
-        setActiveBorrows(nextRows)
-        setSelectedBorrowIds((current) =>
-          current.filter((selectedId) =>
-            nextRows.some((row) => row.borrowTransactionId === selectedId)
-          )
-        )
-      } catch (error) {
-        if (error.name === "AbortError") return
-        setCatalogError(error.message || "Unable to load active borrows.")
-      } finally {
-        if (!controller.signal.aborted) {
-          setIsLoadingCatalog(false)
-        }
+      )
+    } catch (error) {
+      if (error.name === "AbortError") return
+      setCatalogError(error.message || "Unable to load active borrows.")
+    } finally {
+      if (!signal?.aborted) {
+        setIsLoadingCatalog(false)
       }
     }
+  }
 
-    fetchActiveBorrows()
-
+  useEffect(() => {
+    const controller = new AbortController()
+    fetchActiveBorrows(controller.signal)
     return () => controller.abort()
   }, [apiBaseUrl, deferredSearchText])
 
@@ -286,6 +284,10 @@ export default function CheckInPage() {
                     type="button"
                     variant="outline"
                     disabled={isLoadingCatalog}
+                    onClick={() => {
+                      const controller = new AbortController()
+                      fetchActiveBorrows(controller.signal)
+                    }}
                     className="md:w-auto"
                   >
                     <RefreshCw

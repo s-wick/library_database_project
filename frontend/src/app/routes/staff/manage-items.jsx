@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Field, FieldLabel } from "@/components/ui/field"
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field"
 import {
   Dialog,
   DialogContent,
@@ -113,6 +113,13 @@ export default function ManageItemsPage() {
   const [selectedImageName, setSelectedImageName] = useState("")
   const [genreInput, setGenreInput] = useState("")
   const [genres, setGenres] = useState([])
+
+  const baseInventory = Number(selected?.inventory ?? form.inventory ?? 0)
+  const baseStock = Number(selected?.stock ?? form.stock ?? 0)
+  const checkedOutCount = Math.max(baseInventory - baseStock, 0)
+  const inventoryValue = Number(form.inventory)
+  const isInventoryTooLow =
+    Number.isFinite(inventoryValue) && inventoryValue < checkedOutCount
 
   const pageSize = 8
   const skeletonRows = Array.from({ length: pageSize }, (_, index) => index)
@@ -610,12 +617,17 @@ export default function ManageItemsPage() {
                         />
                       </Field>
                       <Field>
-                        <FieldLabel>Inventory (total copies)</FieldLabel>
+                        <FieldLabel
+                          id={isInventoryTooLow ? "input-invalid" : undefined}
+                        >
+                          Inventory (total copies)
+                        </FieldLabel>
                         <Input
                           type="number"
                           min="0"
                           max="255"
                           value={form.inventory || ""}
+                          id="inventory"
                           onChange={(e) =>
                             setForm((prev) => ({
                               ...prev,
@@ -623,7 +635,16 @@ export default function ManageItemsPage() {
                             }))
                           }
                           placeholder="Inventory (total copies)"
+                          aria-invalid={isInventoryTooLow}
                         />
+                        {isInventoryTooLow ? (
+                          <FieldDescription>
+                            Cannot set inventory lower than checked-out item
+                            amount
+                          </FieldDescription>
+                        ) : (
+                          <></>
+                        )}
                       </Field>
                       <div className="space-y-2">
                         <div className="flex flex-wrap gap-2">

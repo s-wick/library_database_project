@@ -141,8 +141,13 @@ async function getFinesForPayment(userId) {
     `SELECT CONCAT(f.item_id, '-', DATE_FORMAT(f.checkout_date, '%Y%m%d%H%i%s')) AS fine_id,
             i.title AS item_title,
             f.amount,
-            CASE WHEN COALESCE(f.amount_paid, 0) >= f.amount THEN 1 ELSE 0 END AS is_paid
+            CASE WHEN COALESCE(f.amount_paid, 0) >= f.amount THEN 1 ELSE 0 END AS is_paid,
+            CASE WHEN b.return_date IS NOT NULL THEN 1 ELSE 0 END AS can_pay
      FROM fined_for f
+     INNER JOIN borrow b
+       ON b.item_id = f.item_id
+      AND b.user_id = f.user_id
+      AND b.checkout_date = f.checkout_date
      INNER JOIN item i ON i.item_id = f.item_id
      WHERE f.user_id = ?
      ORDER BY f.checkout_date DESC`,
@@ -152,9 +157,15 @@ async function getFinesForPayment(userId) {
 
 async function payAllFines(userId) {
   const result = await query(
-    `UPDATE fined_for
-     SET amount_paid = amount
-     WHERE user_id = ? AND (amount_paid IS NULL OR amount_paid < amount)`,
+    `UPDATE fined_for f
+     INNER JOIN borrow b
+       ON b.item_id = f.item_id
+      AND b.user_id = f.user_id
+      AND b.checkout_date = f.checkout_date
+     SET f.amount_paid = f.amount
+     WHERE f.user_id = ?
+       AND (f.amount_paid IS NULL OR f.amount_paid < f.amount)
+       AND b.return_date IS NOT NULL`,
     [userId]
   )
   return Number(result.affectedRows || 0)

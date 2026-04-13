@@ -68,6 +68,7 @@ async function handleGetDashboard(_req, res, url) {
       status: "unpaid",
       book: fine.title || "Unknown Item",
       daysOverdue: Math.max(Number(fine.days_overdue || 0), 0),
+      canPay: fine.return_date != null,
       isAtMaxValue: hasReachedItemValueCap(fine.amount, fine.item_value),
       itemValue: Number(fine.item_value || 0),
     }))

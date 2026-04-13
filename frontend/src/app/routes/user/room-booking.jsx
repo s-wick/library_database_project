@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
 import { CheckCircle2, XCircle, DoorOpen } from "lucide-react"
 import { Navbar } from "@/components/navbar"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -104,6 +103,11 @@ function CalendarWithTimeSlider({
   availabilityLoading,
   availabilityError,
 }) {
+  const effectiveDurationHours = Math.min(
+    durationHours,
+    Math.max(1, maxDurationHours || 1)
+  )
+
   return (
     <Card className="h-full">
       <CardContent className="grid gap-4">
@@ -135,24 +139,14 @@ function CalendarWithTimeSlider({
                     type="button"
                     className="mb-2 w-full break-inside-avoid"
                     variant={
-                      slot.value === selectedStartAt
-                        ? "default"
-                        : slot.isAvailable
-                          ? "secondary"
-                          : "outline"
+                      slot.value === selectedStartAt ? "default" : "secondary"
                     }
-                    disabled={!slot.isAvailable}
+                    disabled={slot.disabled}
                     onClick={() => onStartAtChange(slot.value)}
                   >
                     {slot.label}
                   </Button>
                 ))}
-              </div>
-            )}
-            {timeSlots.length > 0 && (
-              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                <Badge variant="secondary">Available</Badge>
-                <Badge variant="outline">Unavailable</Badge>
               </div>
             )}
           </div>
@@ -161,9 +155,9 @@ function CalendarWithTimeSlider({
             <div className="mt-2 flex items-center gap-3">
               <Slider
                 min={1}
-                max={3}
+                max={Math.max(1, maxDurationHours || 1)}
                 step={1}
-                value={[durationHours]}
+                value={[effectiveDurationHours]}
                 onValueChange={(value) =>
                   onDurationChange(
                     Math.min(value[0], Math.max(1, maxDurationHours || 1))
@@ -172,7 +166,8 @@ function CalendarWithTimeSlider({
                 disabled={maxDurationHours === 0}
               />
               <span className="w-20 text-sm font-medium">
-                {durationHours} hour{durationHours === 1 ? "" : "s"}
+                {effectiveDurationHours} hour
+                {effectiveDurationHours === 1 ? "" : "s"}
               </span>
             </div>
             {maxDurationHours > 0 && maxDurationHours < 3 && (
@@ -426,67 +421,62 @@ export default function RoomBookingPage() {
       .filter((slot) => !Number.isNaN(slot.date.getTime()))
   }, [availableStartSlots])
 
-  const allSlotsForSelectedDate = useMemo(() => {
-    if (!selectedDate || availabilityError) return []
+  const timeSlotsForSelectedDate = useMemo(() => {
+    if (!selectedDate) return []
 
-    const fallbackStart = new Date(Date.now())
-    const fallbackEnd = new Date(Date.now() + ADVANCE_WINDOW_MS)
+    const selectedKey = getDateKey(selectedDate)
+    const availableSet = new Set(
+      availableSlotsDetailed
+        .filter((slot) => getDateKey(slot.date) === selectedKey)
+        .map((slot) => slot.value)
+    )
+
     const windowStart = availability.windowStart
       ? new Date(availability.windowStart)
-      : fallbackStart
+      : new Date(Date.now())
     const windowEnd = availability.windowEnd
       ? new Date(availability.windowEnd)
-      : fallbackEnd
+      : new Date(Date.now() + ADVANCE_WINDOW_MS)
 
     if (
       Number.isNaN(windowStart.getTime()) ||
-      Number.isNaN(windowEnd.getTime()) ||
-      windowStart >= windowEnd
+      Number.isNaN(windowEnd.getTime())
     ) {
       return []
     }
 
-    const dayStart = new Date(selectedDate)
-    dayStart.setHours(0, 0, 0, 0)
-    const { openHour, closeHour } = getDaySchedule(dayStart)
-    const dayOpen = new Date(dayStart)
+    const { openHour, closeHour } = getDaySchedule(selectedDate)
+    const dayOpen = new Date(selectedDate)
     dayOpen.setHours(openHour, 0, 0, 0)
-    const dayClose = new Date(dayStart)
+    const dayClose = new Date(selectedDate)
     dayClose.setHours(closeHour, 0, 0, 0)
 
-    const slotStart = roundUpToNextSlot(
-      new Date(Math.max(dayOpen.getTime(), windowStart.getTime()))
-    )
-    const limit = Math.min(dayClose.getTime(), windowEnd.getTime())
     const slots = []
-
     for (
-      let cursor = slotStart.getTime();
-      cursor + SLOT_INTERVAL_MS <= limit;
+      let cursor = dayOpen.getTime();
+      cursor + SLOT_INTERVAL_MS <= dayClose.getTime();
       cursor += SLOT_INTERVAL_MS
     ) {
-      slots.push(new Date(cursor))
+      const slotStart = new Date(cursor)
+      const slotEnd = new Date(cursor + SLOT_INTERVAL_MS)
+      const inWindow = slotStart >= windowStart && slotEnd <= windowEnd
+      const value = slotStart.toISOString()
+      const isAvailable = inWindow && availableSet.has(value)
+
+      slots.push({
+        value,
+        label: formatTimeLabel(slotStart),
+        disabled: !isAvailable,
+      })
     }
 
     return slots
   }, [
     availability.windowEnd,
     availability.windowStart,
-    availabilityError,
+    availableSlotsDetailed,
     selectedDate,
   ])
-
-  const timeSlotsForSelectedDate = useMemo(() => {
-    const availableSet = new Set(
-      availableSlotsDetailed.map((slot) => slot.date.getTime())
-    )
-
-    return allSlotsForSelectedDate.map((slotDate) => ({
-      value: slotDate.toISOString(),
-      label: formatTimeLabel(slotDate),
-      isAvailable: availableSet.has(slotDate.getTime()),
-    }))
-  }, [allSlotsForSelectedDate, availableSlotsDetailed])
 
   const slotsForSelectedDate = useMemo(() => {
     if (!selectedDate) return []
@@ -510,6 +500,10 @@ export default function RoomBookingPage() {
     const start = new Date(startAt)
     if (Number.isNaN(start.getTime())) return 0
 
+    const { closeHour } = getDaySchedule(start)
+    const dayClose = new Date(start)
+    dayClose.setHours(closeHour, 0, 0, 0)
+
     const windowEnd = availability.windowEnd
       ? new Date(availability.windowEnd)
       : new Date(Date.now() + ADVANCE_WINDOW_MS)
@@ -529,6 +523,7 @@ export default function RoomBookingPage() {
 
     const maxEndTime = Math.min(
       start.getTime() + MAX_BOOKING_HOURS * 60 * 60 * 1000,
+      dayClose.getTime(),
       windowEnd.getTime(),
       nextBooking ? nextBooking.start.getTime() : Number.POSITIVE_INFINITY
     )
@@ -545,7 +540,7 @@ export default function RoomBookingPage() {
       (slot) => slot.value === startAt
     )
 
-    if (selectedSlot?.isAvailable) {
+    if (selectedSlot) {
       return
     }
 
@@ -627,14 +622,15 @@ export default function RoomBookingPage() {
         </section>
 
         {activeBooking && (
-          <Card className="border-emerald-200">
+          <Card className="border-emerald-200 bg-emerald-50">
             <CardHeader>
-              <CardTitle className="text-lg">Your Active Booking</CardTitle>
+              <CardTitle className="text-lg">Active Booking</CardTitle>
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground">
-              Room {activeBooking.roomNumber} from{" "}
-              {new Date(activeBooking.startTime).toLocaleString()} to{" "}
-              {new Date(activeBooking.endTime).toLocaleString()}
+              Room {activeBooking.roomNumber} on{" "}
+              {new Date(activeBooking.startTime).toLocaleDateString()} from{" "}
+              {new Date(activeBooking.startTime).toLocaleTimeString()} to{" "}
+              {new Date(activeBooking.endTime).toLocaleTimeString()}
             </CardContent>
           </Card>
         )}
@@ -642,6 +638,12 @@ export default function RoomBookingPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Book a Room</CardTitle>
+            <p>
+              Weekdays: {WEEKDAY_OPEN_HOUR}:00 - {WEEKDAY_CLOSE_HOUR}:00
+            </p>
+            <p>
+              Weekends: {WEEKEND_OPEN_HOUR}:00 - {WEEKEND_CLOSE_HOUR}:00
+            </p>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-[minmax(0,220px)_1fr]">
             <div className="flex h-full flex-col">

@@ -270,7 +270,7 @@ export default function RoomManagePage() {
               </p>
             </CardHeader>
             <CardContent>
-              <form className="space-y-4" onSubmit={handleSubmit}>
+              <form className="space-y-4 space-x-2" onSubmit={handleSubmit}>
                 <Field data-invalid={!!fieldErrors.roomNumber}>
                   <FieldLabel htmlFor="roomNumber">Room number</FieldLabel>
                   <Input
@@ -329,16 +329,6 @@ export default function RoomManagePage() {
                     onChange={handleChange}
                   />
                   <span>TV</span>
-                </label>
-
-                <label className="flex items-center gap-3 rounded-lg border p-3 text-sm">
-                  <input
-                    name="hasTv"
-                    type="checkbox"
-                    checked={form.hasTv}
-                    onChange={handleChange}
-                  />
-                  <span>Has TV</span>
                 </label>
 
                 <Button type="submit" disabled={submitting}>
@@ -438,7 +428,6 @@ export default function RoomManagePage() {
                           label="Whiteboard"
                           enabled={room.features.hasWhiteboard}
                         />
-                        <FeaturePill label="TV" enabled={room.features.hasTv} />
                       </div>
                     </div>
                   ))}

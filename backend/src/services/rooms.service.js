@@ -28,15 +28,35 @@ function getDaySchedule(date) {
   }
 }
 
+function formatDateTimeLocalIso(value) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return null
+
+  const year = String(date.getFullYear())
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+  const hour = String(date.getHours()).padStart(2, "0")
+  const minute = String(date.getMinutes()).padStart(2, "0")
+  const second = String(date.getSeconds()).padStart(2, "0")
+
+  return `${year}-${month}-${day}T${hour}:${minute}:${second}`
+}
+
 function formatBooking(row) {
   if (!row) return null
   const durationHours = Number(row.duration_hours || 0)
   const startTime = new Date(row.start_time)
   const endTime = new Date(startTime.getTime() + durationHours * 60 * 60 * 1000)
+
+  const formattedStartTime = formatDateTimeLocalIso(startTime)
+  const formattedEndTime = formatDateTimeLocalIso(endTime)
+
+  if (!formattedStartTime || !formattedEndTime) return null
+
   return {
     roomNumber: row.room_number,
-    startTime: startTime.toISOString(),
-    endTime: endTime.toISOString(),
+    startTime: formattedStartTime,
+    endTime: formattedEndTime,
     durationHours,
   }
 }

@@ -270,7 +270,7 @@ export default function RoomManagePage() {
               </p>
             </CardHeader>
             <CardContent>
-              <form className="space-y-4" onSubmit={handleSubmit}>
+              <form className="space-y-4 space-x-2" onSubmit={handleSubmit}>
                 <Field data-invalid={!!fieldErrors.roomNumber}>
                   <FieldLabel htmlFor="roomNumber">Room number</FieldLabel>
                   <Input

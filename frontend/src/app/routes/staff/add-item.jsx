@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
-import { ArrowLeft, X } from "lucide-react"
+import { ArrowLeft, Calendar as CalendarIcon, X } from "lucide-react"
+import { format } from "date-fns"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -13,25 +14,39 @@ import {
 import { Field, FieldError, FieldLabel } from "@/components/ui/field"
 import { Badge } from "@/components/ui/badge"
 import { API_BASE_URL } from "@/lib/api-config"
+import { Calendar } from "@/components/ui/calendar"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
 
 const itemFields = {
   BOOK: [
     { name: "title", label: "Title", required: true },
     { name: "author", label: "Author", required: true },
     { name: "edition", label: "Edition" },
-    { name: "publication", label: "Publication" },
-    { name: "publicationDate", label: "Publication date", type: "date" },
+    { name: "publication", label: "Publication", required: true },
+    {
+      name: "publicationDate",
+      label: "Publication date",
+      type: "date",
+      required: true,
+    },
     { name: "thumbnailImage", label: "Thumbnail image", type: "file" },
     {
       name: "monetaryValue",
       label: "Monetary value",
       type: "number",
       step: "0.01",
+      required: true,
     },
     {
       name: "inventory",
       label: "Inventory (total copies)",
       type: "number",
+      required: true,
     },
   ],
   VIDEO: [
@@ -39,19 +54,22 @@ const itemFields = {
     { name: "thumbnailImage", label: "Thumbnail image", type: "file" },
     {
       name: "videoLengthSeconds",
-      label: "Video length seconds",
+      label: "Video length",
       type: "number",
+      required: true,
     },
     {
       name: "monetaryValue",
       label: "Monetary value",
       type: "number",
       step: "0.01",
+      required: true,
     },
     {
       name: "inventory",
       label: "Inventory (total copies)",
       type: "number",
+      required: true,
     },
   ],
   AUDIO: [
@@ -59,19 +77,22 @@ const itemFields = {
     { name: "thumbnailImage", label: "Thumbnail image", type: "file" },
     {
       name: "audioLengthSeconds",
-      label: "Audio length seconds",
+      label: "Audio length",
       type: "number",
+      required: true,
     },
     {
       name: "monetaryValue",
       label: "Monetary value",
       type: "number",
       step: "0.01",
+      required: true,
     },
     {
       name: "inventory",
       label: "Inventory (total copies)",
       type: "number",
+      required: true,
     },
   ],
   RENTAL_EQUIPMENT: [
@@ -82,13 +103,24 @@ const itemFields = {
       label: "Monetary value",
       type: "number",
       step: "0.01",
+      required: true,
     },
     {
       name: "inventory",
       label: "Inventory (total copies)",
       type: "number",
+      required: true,
     },
   ],
+}
+
+const durationFieldNames = ["audioLengthSeconds", "videoLengthSeconds"]
+
+function defaultDurationInputs() {
+  return {
+    audioLengthSeconds: { hours: "", minutes: "", seconds: "" },
+    videoLengthSeconds: { hours: "", minutes: "", seconds: "" },
+  }
 }
 
 function defaultForm(type) {
@@ -108,14 +140,25 @@ function formatItemTypeLabel(value = "") {
     .join(" ")
 }
 
-function toDateInputValue(value) {
-  if (!value) return ""
-  const date = new Date(`${value}T00:00:00`)
-  if (Number.isNaN(date.getTime())) return ""
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, "0")
-  const day = String(date.getDate()).padStart(2, "0")
-  return `${year}-${month}-${day}`
+function yearDate(year, month = 0, day = 1) {
+  const date = new Date()
+  date.setHours(12, 0, 0, 0)
+  date.setFullYear(year, month, day)
+  return date
+}
+
+function parseDateValue(value) {
+  const [year, month, day] = String(value || "")
+    .split("-")
+    .map(Number)
+  if (!year || !month || !day) return undefined
+  if (month < 1 || month > 12 || day < 1 || day > 31) return undefined
+  const parsed = yearDate(year, month - 1, day)
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed
+}
+
+function toDateValue(date) {
+  return format(date, "yyyy-MM-dd")
 }
 
 export default function AddItemPage() {
@@ -128,6 +171,7 @@ export default function AddItemPage() {
   const [fileNames, setFileNames] = useState({})
   const [fileResetKey, setFileResetKey] = useState(0)
   const [fieldErrors, setFieldErrors] = useState({})
+  const [durationInputs, setDurationInputs] = useState(defaultDurationInputs)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -176,6 +220,7 @@ export default function AddItemPage() {
           : ["NOT_APPLICABLE"],
     })
     setFieldErrors({})
+    setDurationInputs(defaultDurationInputs())
     setFileNames({})
     setFileResetKey((prev) => prev + 1)
     setError("")
@@ -203,6 +248,38 @@ export default function AddItemPage() {
       return
     }
     setForm((prev) => ({ ...prev, [name]: value }))
+  }
+
+  function onDurationPartChange(fieldName, partName, rawValue) {
+    const numericValue = String(rawValue || "").replace(/\D/g, "")
+
+    setDurationInputs((prev) => {
+      const next = {
+        ...prev,
+        [fieldName]: {
+          ...prev[fieldName],
+          [partName]: numericValue,
+        },
+      }
+
+      const parts = next[fieldName]
+      const hasAnyPart = [parts.hours, parts.minutes, parts.seconds].some(
+        (part) => String(part || "").trim() !== ""
+      )
+
+      const hours = Number(parts.hours || 0)
+      const minutes = Number(parts.minutes || 0)
+      const seconds = Number(parts.seconds || 0)
+      const totalSeconds = hours * 3600 + minutes * 60 + seconds
+
+      setForm((prevForm) => ({
+        ...prevForm,
+        [fieldName]: hasAnyPart ? String(totalSeconds) : "",
+      }))
+      setFieldErrors((prevErrors) => ({ ...prevErrors, [fieldName]: "" }))
+
+      return next
+    })
   }
 
   async function onSubmit(event) {
@@ -268,6 +345,7 @@ export default function AddItemPage() {
         ...defaultForm(itemType),
         genres: supportsGenres ? [] : ["NOT_APPLICABLE"],
       })
+      setDurationInputs(defaultDurationInputs())
       setFileNames({})
       setFileResetKey((prev) => prev + 1)
     } catch {
@@ -466,16 +544,113 @@ export default function AddItemPage() {
                         aria-invalid={!!fieldErrors[field.name]}
                       />
                     </InputGroup>
+                  ) : durationFieldNames.includes(field.name) ? (
+                    <div className="grid grid-cols-3 gap-2">
+                      <Input
+                        id={`${field.name}-hours`}
+                        type="number"
+                        inputMode="numeric"
+                        min="0"
+                        placeholder="Hours"
+                        value={durationInputs[field.name]?.hours || ""}
+                        onChange={(event) =>
+                          onDurationPartChange(
+                            field.name,
+                            "hours",
+                            event.target.value
+                          )
+                        }
+                        aria-label={`${field.label} hours`}
+                        aria-invalid={!!fieldErrors[field.name]}
+                      />
+                      <Input
+                        id={`${field.name}-minutes`}
+                        type="number"
+                        inputMode="numeric"
+                        min="0"
+                        max="59"
+                        placeholder="Minutes"
+                        value={durationInputs[field.name]?.minutes || ""}
+                        onChange={(event) =>
+                          onDurationPartChange(
+                            field.name,
+                            "minutes",
+                            event.target.value
+                          )
+                        }
+                        aria-label={`${field.label} minutes`}
+                        aria-invalid={!!fieldErrors[field.name]}
+                      />
+                      <Input
+                        id={`${field.name}-seconds`}
+                        type="number"
+                        inputMode="numeric"
+                        min="0"
+                        max="59"
+                        placeholder="Seconds"
+                        value={durationInputs[field.name]?.seconds || ""}
+                        onChange={(event) =>
+                          onDurationPartChange(
+                            field.name,
+                            "seconds",
+                            event.target.value
+                          )
+                        }
+                        aria-label={`${field.label} seconds`}
+                        aria-invalid={!!fieldErrors[field.name]}
+                      />
+                    </div>
                   ) : field.type === "date" ? (
-                    <Input
-                      id={field.name}
-                      name={field.name}
-                      type="date"
-                      value={toDateInputValue(form[field.name])}
-                      onChange={onChange}
-                      aria-invalid={!!fieldErrors[field.name]}
-                      max={todayDate}
-                    />
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          id={field.name}
+                          name={field.name}
+                          type="button"
+                          variant="outline"
+                          aria-invalid={!!fieldErrors[field.name]}
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !form[field.name] && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {form[field.name]
+                            ? format(
+                                parseDateValue(form[field.name]) || new Date(),
+                                "PPP"
+                              )
+                            : "Pick a publication date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={parseDateValue(form[field.name])}
+                          onSelect={(date) => {
+                            setFieldErrors((prev) => ({
+                              ...prev,
+                              [field.name]: "",
+                            }))
+                            setForm((prev) => ({
+                              ...prev,
+                              [field.name]: date ? toDateValue(date) : "",
+                            }))
+                          }}
+                          disabled={(date) =>
+                            date >
+                            yearDate(
+                              Number(todayDate.slice(0, 4)),
+                              Number(todayDate.slice(5, 7)) - 1,
+                              Number(todayDate.slice(8, 10))
+                            )
+                          }
+                          captionLayout="dropdown-years"
+                          startMonth={yearDate(1, 0, 1)}
+                          endMonth={parseDateValue(todayDate)}
+                        />
+                      </PopoverContent>
+                    </Popover>
                   ) : (
                     <Input
                       id={field.name}

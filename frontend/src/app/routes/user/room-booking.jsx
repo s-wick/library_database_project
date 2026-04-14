@@ -22,6 +22,43 @@ const WEEKDAY_CLOSE_HOUR = 19
 const WEEKEND_OPEN_HOUR = 9
 const WEEKEND_CLOSE_HOUR = 17
 
+function parseDateTimeAsLocal(value) {
+  if (value instanceof Date) return new Date(value)
+
+  if (typeof value === "string") {
+    const match = value
+      .trim()
+      .match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})(?::(\d{2}))?/)
+
+    if (match) {
+      const year = Number(match[1])
+      const month = Number(match[2])
+      const day = Number(match[3])
+      const hour = Number(match[4])
+      const minute = Number(match[5])
+      const second = Number(match[6] || 0)
+
+      return new Date(year, month - 1, day, hour, minute, second)
+    }
+  }
+
+  return new Date(value)
+}
+
+function formatDateTimeForApi(value) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return null
+
+  const year = String(date.getFullYear())
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+  const hour = String(date.getHours()).padStart(2, "0")
+  const minute = String(date.getMinutes()).padStart(2, "0")
+  const second = String(date.getSeconds()).padStart(2, "0")
+
+  return `${year}-${month}-${day} ${hour}:${minute}:${second}`
+}
+
 function getBookingWindowEnd(fromDate = new Date()) {
   const end = new Date(fromDate)
   end.setDate(end.getDate() + 1)
@@ -68,8 +105,8 @@ function isWholeHour(value) {
 }
 
 function getBookingEndTime(booking) {
-  if (booking.endTime) return new Date(booking.endTime)
-  const start = new Date(booking.startTime)
+  if (booking.endTime) return parseDateTimeAsLocal(booking.endTime)
+  const start = parseDateTimeAsLocal(booking.startTime)
   const durationHours = Number(booking.durationHours || 0)
   return new Date(start.getTime() + durationHours * 60 * 60 * 1000)
 }
@@ -354,7 +391,7 @@ export default function RoomBookingPage() {
 
     const bookings = availability.bookings
       .map((booking) => ({
-        start: new Date(booking.startTime),
+        start: parseDateTimeAsLocal(booking.startTime),
         end: getBookingEndTime(booking),
       }))
       .filter(
@@ -517,7 +554,7 @@ export default function RoomBookingPage() {
 
     const nextBooking = availability.bookings
       .map((booking) => ({
-        start: new Date(booking.startTime),
+        start: parseDateTimeAsLocal(booking.startTime),
         end: getBookingEndTime(booking),
       }))
       .filter(
@@ -597,6 +634,12 @@ export default function RoomBookingPage() {
       return
     }
 
+    const startTimeForApi = formatDateTimeForApi(start)
+    if (!startTimeForApi) {
+      setError("Please choose a valid start date/time.")
+      return
+    }
+
     setSubmitting(true)
     try {
       const res = await fetch(`${apiBaseUrl}/api/rooms/book`, {
@@ -605,7 +648,7 @@ export default function RoomBookingPage() {
         body: JSON.stringify({
           userId: user.id,
           roomNumber: selectedRoom,
-          startTime: start.toISOString(),
+          startTime: startTimeForApi,
           durationHours,
         }),
       })
@@ -646,9 +689,15 @@ export default function RoomBookingPage() {
             </CardHeader>
             <CardContent className="font-semibold text-emerald-900 dark:text-emerald-100">
               Room {activeBooking.roomNumber} on{" "}
-              {new Date(activeBooking.startTime).toLocaleDateString()} from{" "}
-              {new Date(activeBooking.startTime).toLocaleTimeString()} to{" "}
-              {new Date(activeBooking.endTime).toLocaleTimeString()}
+              {parseDateTimeAsLocal(
+                activeBooking.startTime
+              ).toLocaleDateString()}{" "}
+              from{" "}
+              {parseDateTimeAsLocal(
+                activeBooking.startTime
+              ).toLocaleTimeString()}{" "}
+              to{" "}
+              {parseDateTimeAsLocal(activeBooking.endTime).toLocaleTimeString()}
             </CardContent>
           </Card>
         )}

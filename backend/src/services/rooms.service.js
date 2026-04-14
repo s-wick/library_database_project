@@ -18,15 +18,6 @@ const WEEKDAY_CLOSE_HOUR = 19
 const WEEKEND_OPEN_HOUR = 9
 const WEEKEND_CLOSE_HOUR = 17
 
-function getDaySchedule(date) {
-  const day = date.getDay()
-  const isWeekend = day === 0 || day === 6
-  return {
-    openHour: isWeekend ? WEEKEND_OPEN_HOUR : WEEKDAY_OPEN_HOUR,
-    closeHour: isWeekend ? WEEKEND_CLOSE_HOUR : WEEKDAY_CLOSE_HOUR,
-  }
-}
-
 function formatDateTimeLocalIso(value) {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return null
@@ -41,6 +32,59 @@ function formatDateTimeLocalIso(value) {
   return `${year}-${month}-${day}T${hour}:${minute}:${second}`
 }
 
+function parseDateTimeInput(value) {
+  if (value instanceof Date) return value
+
+  if (typeof value === "string") {
+    const match = value
+      .trim()
+      .match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})(?::(\d{2}))?/)
+
+    if (match) {
+      const year = Number(match[1])
+      const month = Number(match[2])
+      const day = Number(match[3])
+      const hour = Number(match[4])
+      const minute = Number(match[5])
+      const second = Number(match[6] || 0)
+
+      return new Date(year, month - 1, day, hour, minute, second)
+    }
+  }
+
+  return new Date(value)
+}
+
+function normalizeDateTimeString(value) {
+  if (typeof value === "string") {
+    const match = value
+      .trim()
+      .match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})(?::(\d{2}))?/)
+
+    if (match) {
+      const year = match[1]
+      const month = match[2]
+      const day = match[3]
+      const hour = match[4]
+      const minute = match[5]
+      const second = match[6] || "00"
+
+      return `${year}-${month}-${day}T${hour}:${minute}:${second}`
+    }
+  }
+
+  return formatDateTimeLocalIso(value)
+}
+
+function getDaySchedule(date) {
+  const day = date.getDay()
+  const isWeekend = day === 0 || day === 6
+  return {
+    openHour: isWeekend ? WEEKEND_OPEN_HOUR : WEEKDAY_OPEN_HOUR,
+    closeHour: isWeekend ? WEEKEND_CLOSE_HOUR : WEEKDAY_CLOSE_HOUR,
+  }
+}
+
 function getBookingWindowEnd(fromDate = new Date()) {
   const end = new Date(fromDate)
   end.setDate(end.getDate() + 1)
@@ -51,11 +95,16 @@ function getBookingWindowEnd(fromDate = new Date()) {
 function formatBooking(row) {
   if (!row) return null
   const durationHours = Number(row.duration_hours || 0)
-  const startTime = new Date(row.start_time)
-  const endTime = new Date(startTime.getTime() + durationHours * 60 * 60 * 1000)
+  const formattedStartTime = normalizeDateTimeString(row.start_time)
+  let formattedEndTime = normalizeDateTimeString(row.end_time)
 
-  const formattedStartTime = formatDateTimeLocalIso(startTime)
-  const formattedEndTime = formatDateTimeLocalIso(endTime)
+  if (!formattedEndTime && formattedStartTime) {
+    const startTime = parseDateTimeInput(formattedStartTime)
+    const endTime = new Date(
+      startTime.getTime() + durationHours * 60 * 60 * 1000
+    )
+    formattedEndTime = formatDateTimeLocalIso(endTime)
+  }
 
   if (!formattedStartTime || !formattedEndTime) return null
 
@@ -335,7 +384,7 @@ async function handleBookRoom(req, res) {
     const body = await parseJsonBody(req)
     const userId = Number(body.userId)
     const roomNumber = String(body.roomNumber || "").trim()
-    const startTime = new Date(body.startTime)
+    const startTime = parseDateTimeInput(body.startTime)
     const durationHours = Number(body.durationHours)
 
     if (!Number.isFinite(userId) || userId <= 0 || !roomNumber) {

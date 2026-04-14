@@ -60,10 +60,10 @@ const actions = [
   },
   {
     title: "Mark faculty",
-    description: "Mark existing user accounts as faculty.",
+    description: "Mark or undo faculty status for user accounts.",
     to: "/management-dashboard/mark-faculty",
     icon: GraduationCap,
-    adminOnly: false,
+    adminOnly: true,
   },
 
   {

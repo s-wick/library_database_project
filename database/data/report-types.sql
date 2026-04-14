@@ -5,4 +5,5 @@ VALUES
   (1, 'itemsCheckedOut'),
   (2, 'revenue'),
   (3, 'finesOwed'),
-  (4, 'userDemographics');
+  (4, 'userDemographics'),
+  (5, 'holds');

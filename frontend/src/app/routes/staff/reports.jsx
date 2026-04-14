@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
 import {
   ArrowLeft,
@@ -21,7 +21,7 @@ import { Calendar } from "@/components/ui/calendar"
 import { Navbar } from "@/components/navbar"
 import { API_BASE_URL } from "@/lib/api-config"
 
-const CHART_COLORS = ["#2563eb", "#16a34a", "#f59e0b", "#dc2626", "#7c3aed"]
+const CHART_COLORS = ["#0f766e", "#0369a1", "#b45309", "#be123c", "#4f46e5"]
 const INITIAL_FILTERS = {
   reportType: "itemsCheckedOut",
   startDate: "",
@@ -42,17 +42,6 @@ function formatItemTypeForDisplay(value) {
     .join(" ")
 }
 
-function formatItemTypesSummary(value) {
-  if (!value || !String(value).trim()) return "-"
-  return (
-    String(value)
-      .split(", ")
-      .map((part) => formatItemTypeForDisplay(part.trim()))
-      .filter((part) => part !== "-")
-      .join(", ") || "-"
-  )
-}
-
 function formatUserTypeForDisplay(value) {
   if (!value) return "-"
   const v = String(value).trim().toUpperCase()
@@ -63,217 +52,514 @@ function formatUserTypeForDisplay(value) {
   )
 }
 
-function buildCheckoutBuckets(rows) {
-  const buckets = Array.from({ length: 6 }, (_, index) => ({
-    label: String(index + 1),
-    value: 0,
-  }))
-  const counts = new Map()
-
-  rows.forEach((row) => {
-    const key = String(row.userId || row.userEmail || row.userName || "")
-    if (!key) return
-    if (!counts.has(key)) counts.set(key, 0)
-    if (!row.returnDate) {
-      counts.set(key, (counts.get(key) || 0) + 1)
-    }
-  })
-
-  counts.forEach((count) => {
-    const clamped = Math.min(Math.max(count, 1), 6)
-    buckets[clamped - 1].value += 1
-  })
-
-  return buckets
+function formatDate(value) {
+  if (!value) return "-"
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return String(value)
+  return date.toLocaleDateString()
 }
 
-function buildDurationBuckets(rows) {
-  const buckets = [
-    { label: "1-3 days", value: 0 },
-    { label: "4-7 days", value: 0 },
-    { label: "7-10 days", value: 0 },
-    { label: "10-14 days", value: 0 },
-    { label: "15+ days", value: 0 },
-  ]
-
-  rows.forEach((row) => {
-    const days = Number(row.borrowDays || 0)
-    if (days <= 3) {
-      buckets[0].value += 1
-      return
-    }
-    if (days <= 7) {
-      buckets[1].value += 1
-      return
-    }
-    if (days <= 10) {
-      buckets[2].value += 1
-      return
-    }
-    if (days <= 14) {
-      buckets[3].value += 1
-      return
-    }
-    buckets[4].value += 1
-  })
-
-  return buckets
+function formatDateTime(value) {
+  if (!value) return "-"
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return String(value)
+  return date.toLocaleString()
 }
 
-function buildPieBackground(data) {
-  const total = data.reduce((sum, item) => sum + Number(item.value || 0), 0)
-  if (!total) return "conic-gradient(#e5e7eb 0deg 360deg)"
-
-  let current = 0
-  const segments = data
-    .map((item, index) => ({ ...item, colorIndex: index }))
-    .filter((item) => Number(item.value || 0) > 0)
-    .map((item) => {
-      const value = Number(item.value || 0)
-      const start = (current / total) * 360
-      current += value
-      const end = (current / total) * 360
-      return `${CHART_COLORS[item.colorIndex % CHART_COLORS.length]} ${start}deg ${end}deg`
-    })
-
-  return `conic-gradient(${segments.join(", ")})`
+function formatCurrency(value) {
+  const amount = Number(value || 0)
+  return `$${amount.toFixed(2)}`
 }
 
-function PieChartCard({ title, data, className = "" }) {
-  const total = data.reduce((sum, item) => sum + Number(item.value || 0), 0)
-  const background = buildPieBackground(data)
+function formatPercent(value) {
+  const num = Number(value || 0)
+  return `${num.toFixed(1)}%`
+}
 
+function formatPickerDate(value) {
+  if (!value) return "Select a date"
+  const date = new Date(`${value}T00:00:00`)
+  if (Number.isNaN(date.getTime())) return value
+  return date.toLocaleDateString()
+}
+
+function parseDateValue(value) {
+  if (!value) return undefined
+  const date = new Date(`${value}T00:00:00`)
+  return Number.isNaN(date.getTime()) ? undefined : date
+}
+
+function toDateValue(date) {
+  if (!date) return ""
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
+}
+
+function toDisplayDateBucket(value) {
+  if (!value) return "Unknown"
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return "Unknown"
+  return d.toLocaleDateString()
+}
+
+function MetricCard({ label, value, helper }) {
   return (
-    <div className={`flex flex-col rounded-md border p-4 ${className}`}>
-      <p className="mb-3 text-sm font-medium">{title}</p>
-      <div className="flex flex-1 flex-col items-center justify-center gap-4 md:flex-row md:items-center md:justify-center">
-        <div
-          className="aspect-square h-36 w-36 shrink-0 rounded-full border"
-          style={{ background }}
-          aria-label={`${title} pie chart`}
-        />
-        <div className="space-y-2">
-          {data.map((item, index) => {
-            const value = Number(item.value || 0)
-            const percent = total ? Math.round((value / total) * 100) : 0
-            return (
-              <div key={item.label} className="flex items-center gap-2 text-sm">
-                <span
-                  className="h-3 w-3 rounded-sm"
-                  style={{
-                    backgroundColor: CHART_COLORS[index % CHART_COLORS.length],
-                  }}
-                />
-                <span className="min-w-36">{item.label}</span>
-                <span className="text-muted-foreground">
-                  {value} ({percent}%)
-                </span>
-              </div>
-            )
-          })}
-        </div>
-      </div>
+    <div className="rounded-md border bg-card p-3">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="text-xl font-semibold">{value}</p>
+      {helper ? (
+        <p className="text-xs text-muted-foreground">{helper}</p>
+      ) : null}
     </div>
   )
 }
 
-function HorizontalBarChartCard({ title, data, className = "" }) {
+function AggregationTable({ columns, rows }) {
+  return (
+    <div className="overflow-x-auto rounded-md border">
+      <table className="w-full text-sm">
+        <thead className="bg-muted/40 text-left">
+          <tr>
+            {columns.map((column) => (
+              <th key={column.key} className="px-3 py-2">
+                {column.label}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.length === 0 ? (
+            <tr>
+              <td
+                className="px-3 py-3 text-muted-foreground"
+                colSpan={columns.length}
+              >
+                No data.
+              </td>
+            </tr>
+          ) : (
+            rows.map((row, index) => (
+              <tr
+                key={`${index}-${row[columns[0].key] ?? "row"}`}
+                className="border-t"
+              >
+                {columns.map((column) => (
+                  <td key={column.key} className="px-3 py-2 align-top">
+                    {column.render
+                      ? column.render(row[column.key], row)
+                      : (row[column.key] ?? "-")}
+                  </td>
+                ))}
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function HorizontalBarChart({ data, valueFormatter }) {
   const max = data.length
     ? Math.max(...data.map((item) => Number(item.value || 0)))
     : 0
 
+  if (!data.length) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        No data available for this chart.
+      </p>
+    )
+  }
+
   return (
-    <div className={`flex flex-col rounded-md border p-4 ${className}`}>
-      <p className="mb-3 text-sm font-medium">{title}</p>
-      {data.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No data.</p>
-      ) : (
-        <div className="flex flex-1 items-center">
-          <div className="w-full rounded-md border bg-background p-4">
-            <div className="flex min-h-48 flex-col justify-center gap-4">
-              {data.map((item, index) => {
-                const value = Number(item.value || 0)
-                const percent = max > 0 ? (value / max) * 100 : 0
-                return (
-                  <div key={item.label} className="flex items-center gap-3">
-                    <span className="w-28 text-sm font-medium">
-                      {item.label}
-                    </span>
-                    <div className="flex-1">
-                      <div className="h-6 w-full rounded-md bg-muted">
-                        <div
-                          className="h-6 rounded-md"
-                          style={{
-                            width: `${percent}%`,
-                            backgroundColor:
-                              CHART_COLORS[index % CHART_COLORS.length],
-                          }}
-                        />
-                      </div>
-                    </div>
-                    <span className="w-12 text-right text-sm font-medium text-muted-foreground">
-                      {value}
-                    </span>
-                  </div>
-                )
-              })}
+    <div className="space-y-3">
+      {data.map((item, index) => {
+        const value = Number(item.value || 0)
+        const percent = max ? (value / max) * 100 : 0
+        return (
+          <div
+            key={item.label}
+            className="grid grid-cols-[170px_1fr_120px] items-center gap-3"
+          >
+            <span className="text-sm font-medium">{item.label}</span>
+            <div className="h-6 rounded-md bg-muted">
+              <div
+                className="h-6 rounded-md"
+                style={{
+                  width: `${percent}%`,
+                  backgroundColor: CHART_COLORS[index % CHART_COLORS.length],
+                }}
+              />
             </div>
+            <span className="text-right text-sm text-muted-foreground">
+              {valueFormatter ? valueFormatter(value) : value}
+            </span>
           </div>
-        </div>
-      )}
+        )
+      })}
     </div>
   )
 }
 
-function BarChartCard({ data, chartHeading = "Financial Summary" }) {
+function StackedBarChart({ data, segments }) {
   const max = data.length
-    ? Math.max(...data.map((item) => Number(item.value || 0)))
+    ? Math.max(
+        ...data.map((row) =>
+          segments.reduce((sum, s) => sum + Number(row[s.key] || 0), 0)
+        )
+      )
     : 0
-  const barColors = ["#d97706", "#0284c7", "#059669"]
+
+  if (!data.length) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        No data available for this chart.
+      </p>
+    )
+  }
 
   return (
-    <div className="rounded-md border p-4">
-      {data.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No data.</p>
-      ) : (
-        <div className="rounded-md border bg-background p-4">
-          <div className="mb-4 text-center">
-            <p className="text-xl font-semibold">{chartHeading}</p>
-          </div>
-          <div className="flex h-72 items-end justify-center gap-6">
-            {data.map((item, index) => {
-              const value = Number(item.value || 0)
-              const height = max > 0 ? (value / max) * 100 : 0
-              return (
-                <div
-                  key={item.label}
-                  className="flex w-32 flex-col items-center justify-end gap-2"
-                >
-                  <span className="text-sm font-medium">
-                    ${value.toFixed(2)}
-                  </span>
-                  <div className="flex h-56 w-full items-end">
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+        {segments.map((segment, idx) => (
+          <span key={segment.key} className="inline-flex items-center gap-1">
+            <span
+              className="inline-block h-2.5 w-2.5 rounded-sm"
+              style={{
+                backgroundColor: CHART_COLORS[idx % CHART_COLORS.length],
+              }}
+            />
+            {segment.label}
+          </span>
+        ))}
+      </div>
+      {data.map((row) => {
+        const total = segments.reduce(
+          (sum, s) => sum + Number(row[s.key] || 0),
+          0
+        )
+        const width = max ? (total / max) * 100 : 0
+
+        return (
+          <div
+            key={row.label}
+            className="grid grid-cols-[170px_1fr_120px] items-center gap-3"
+          >
+            <span className="text-sm font-medium">{row.label}</span>
+            <div className="h-6 overflow-hidden rounded-md bg-muted">
+              <div className="flex h-6" style={{ width: `${width}%` }}>
+                {segments.map((segment, index) => {
+                  const segmentValue = Number(row[segment.key] || 0)
+                  const segmentWidth = total ? (segmentValue / total) * 100 : 0
+                  return (
                     <div
-                      className="w-full rounded-t-md"
+                      key={segment.key}
                       style={{
-                        height: `${height}%`,
-                        backgroundColor: barColors[index % barColors.length],
+                        width: `${segmentWidth}%`,
+                        backgroundColor:
+                          CHART_COLORS[index % CHART_COLORS.length],
                       }}
                     />
-                  </div>
-                  <span className="text-sm">{item.label}</span>
-                </div>
-              )
-            })}
+                  )
+                })}
+              </div>
+            </div>
+            <span className="text-right text-sm text-muted-foreground">
+              {total}
+            </span>
           </div>
-        </div>
-      )}
+        )
+      })}
     </div>
   )
+}
+
+function MiniTrendChart({ data }) {
+  const max = data.length
+    ? Math.max(...data.map((item) => Number(item.value || 0)))
+    : 0
+
+  if (!data.length) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        No data available for this chart.
+      </p>
+    )
+  }
+
+  return (
+    <div className="flex h-44 items-end gap-2 overflow-x-auto rounded-md border bg-background p-3">
+      {data.map((item, index) => {
+        const value = Number(item.value || 0)
+        const height = max ? (value / max) * 100 : 0
+        return (
+          <div
+            key={`${item.label}-${index}`}
+            className="flex min-w-14 flex-col items-center gap-1"
+          >
+            <span className="text-xs text-muted-foreground">{value}</span>
+            <div className="flex h-28 w-8 items-end rounded-sm bg-muted">
+              <div
+                className="w-8 rounded-sm"
+                style={{
+                  height: `${height}%`,
+                  backgroundColor: CHART_COLORS[index % CHART_COLORS.length],
+                }}
+              />
+            </div>
+            <span className="text-center text-[11px] text-muted-foreground">
+              {item.label}
+            </span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function ChartBlock({ title, formula, chart, columns, rows }) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">{title}</CardTitle>
+        <p className="text-xs text-muted-foreground">{formula}</p>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {chart}
+        <div>
+          <p className="mb-2 text-sm font-medium">
+            Source table for this chart
+          </p>
+          <AggregationTable columns={columns} rows={rows} />
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function buildBorrowedInsights(rows) {
+  const byTypeMap = new Map()
+  const overdueByTypeMap = new Map()
+  const byTitleMap = new Map()
+  const trendMap = new Map()
+  let totalBorrowDays = 0
+
+  rows.forEach((row) => {
+    const itemType = formatItemTypeForDisplay(row.itemType)
+    const itemTitle = row.itemName || "Unknown"
+    const day = toDisplayDateBucket(row.checkoutDate)
+    const overdue = Number(row.isOverdue) === 1
+    const checkoutDate = new Date(row.checkoutDate)
+    const endDate = row.returnDate ? new Date(row.returnDate) : new Date()
+    const borrowDays =
+      Number.isNaN(checkoutDate.getTime()) || Number.isNaN(endDate.getTime())
+        ? 0
+        : Math.max(
+            1,
+            Math.round(
+              (endDate.getTime() - checkoutDate.getTime()) /
+                (1000 * 60 * 60 * 24)
+            )
+          )
+
+    totalBorrowDays += borrowDays
+    byTypeMap.set(itemType, (byTypeMap.get(itemType) || 0) + 1)
+    byTitleMap.set(itemTitle, (byTitleMap.get(itemTitle) || 0) + 1)
+
+    if (!overdueByTypeMap.has(itemType)) {
+      overdueByTypeMap.set(itemType, { overdue: 0, onTime: 0 })
+    }
+    const bucket = overdueByTypeMap.get(itemType)
+    if (overdue) bucket.overdue += 1
+    else bucket.onTime += 1
+
+    trendMap.set(day, (trendMap.get(day) || 0) + 1)
+  })
+
+  const byType = Array.from(byTypeMap.entries())
+    .map(([label, value]) => ({ label, value }))
+    .sort((a, b) => b.value - a.value)
+
+  const overdueByType = Array.from(overdueByTypeMap.entries())
+    .map(([label, values]) => ({
+      label,
+      overdue: values.overdue,
+      onTime: values.onTime,
+    }))
+    .sort((a, b) => b.overdue + b.onTime - (a.overdue + a.onTime))
+
+  const topItems = Array.from(byTitleMap.entries())
+    .map(([label, value]) => ({ label, value }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 10)
+
+  const trend = Array.from(trendMap.entries())
+    .map(([label, value]) => ({ label, value }))
+    .sort((a, b) => new Date(a.label) - new Date(b.label))
+
+  const overdueCount = rows.filter((row) => Number(row.isOverdue) === 1).length
+  const activeCount = rows.filter((row) => !row.returnDate).length
+
+  return {
+    byType,
+    overdueByType,
+    topItems,
+    trend,
+    metrics: {
+      activeCount,
+      overdueRate: rows.length ? (overdueCount / rows.length) * 100 : 0,
+      avgBorrowDays: rows.length ? totalBorrowDays / rows.length : 0,
+    },
+  }
+}
+
+function buildRevenueInsights(rows) {
+  const byUserTypeMap = new Map()
+  const byBorrowerMap = new Map()
+  const paidSplit = { paid: 0, unpaid: 0 }
+  let totalFineOwed = 0
+  let totalItemValue = 0
+  let totalRevenue = 0
+
+  rows.forEach((row) => {
+    const userType = formatUserTypeForDisplay(row.userType)
+    const borrower = row.borrowerName || row.borrowerId || "Unknown"
+    const revenueAmount = Number(row.revenueAmount || 0)
+    const fineOwed = Number(row.fineOwed || 0)
+    const itemValue = Number(row.itemValue || 0)
+    const isPaid = Number(row.isPaidOff) === 1
+
+    totalFineOwed += fineOwed
+    totalItemValue += itemValue
+    totalRevenue += revenueAmount
+
+    byUserTypeMap.set(
+      userType,
+      (byUserTypeMap.get(userType) || 0) + revenueAmount
+    )
+    byBorrowerMap.set(
+      borrower,
+      (byBorrowerMap.get(borrower) || 0) + revenueAmount
+    )
+
+    if (isPaid) paidSplit.paid += 1
+    else paidSplit.unpaid += 1
+  })
+
+  const byUserType = Array.from(byUserTypeMap.entries())
+    .map(([label, value]) => ({ label, value }))
+    .sort((a, b) => b.value - a.value)
+
+  const byBorrower = Array.from(byBorrowerMap.entries())
+    .map(([label, value]) => ({ label, value }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 10)
+
+  const composition = [
+    { label: "Fines owed", value: totalFineOwed },
+    { label: "Item value", value: totalItemValue },
+  ]
+
+  const paymentStatus = [
+    { label: "Paid off", value: paidSplit.paid },
+    { label: "Unpaid", value: paidSplit.unpaid },
+  ]
+
+  return {
+    byUserType,
+    byBorrower,
+    composition,
+    paymentStatus,
+    metrics: {
+      totalFineOwed,
+      totalItemValue,
+      totalRevenue,
+      paidOffRatio: rows.length ? (paidSplit.paid / rows.length) * 100 : 0,
+    },
+  }
+}
+
+function buildHoldsInsights(rows) {
+  const statusMap = new Map()
+  const byItemMap = new Map()
+  const waitByTypeMap = new Map()
+  const reasonMap = new Map()
+  let totalWaitHours = 0
+
+  rows.forEach((row) => {
+    const status = String(row.holdStatus || "ACTIVE")
+    const itemName = row.itemName || "Unknown"
+    const itemType = formatItemTypeForDisplay(row.itemType)
+    const reason = row.closeReason || "ACTIVE"
+    const waitHours = Number(row.waitHours || 0)
+
+    totalWaitHours += waitHours
+    statusMap.set(status, (statusMap.get(status) || 0) + 1)
+    byItemMap.set(itemName, (byItemMap.get(itemName) || 0) + 1)
+    reasonMap.set(reason, (reasonMap.get(reason) || 0) + 1)
+
+    if (!waitByTypeMap.has(itemType)) {
+      waitByTypeMap.set(itemType, { totalHours: 0, count: 0 })
+    }
+    const bucket = waitByTypeMap.get(itemType)
+    bucket.totalHours += waitHours
+    bucket.count += 1
+  })
+
+  const statusBreakdown = Array.from(statusMap.entries()).map(
+    ([label, value]) => ({
+      label,
+      value,
+    })
+  )
+
+  const topRequestedItems = Array.from(byItemMap.entries())
+    .map(([label, value]) => ({ label, value }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 10)
+
+  const averageWaitByType = Array.from(waitByTypeMap.entries())
+    .map(([label, entry]) => ({
+      label,
+      value: entry.count ? entry.totalHours / entry.count : 0,
+      requestCount: entry.count,
+    }))
+    .sort((a, b) => b.value - a.value)
+
+  const closeReasons = Array.from(reasonMap.entries())
+    .map(([label, value]) => ({ label, value }))
+    .sort((a, b) => b.value - a.value)
+
+  const active = rows.filter(
+    (row) => String(row.holdStatus) === "ACTIVE"
+  ).length
+  const fulfilled = rows.filter(
+    (row) => String(row.holdStatus) === "FULFILLED"
+  ).length
+  const canceled = rows.filter(
+    (row) => String(row.holdStatus) === "CANCELED"
+  ).length
+
+  return {
+    statusBreakdown,
+    topRequestedItems,
+    averageWaitByType,
+    closeReasons,
+    metrics: {
+      active,
+      fulfilled,
+      canceled,
+      avgWaitHours: rows.length ? totalWaitHours / rows.length : 0,
+      fulfillmentRate: rows.length ? (fulfilled / rows.length) * 100 : 0,
+    },
+  }
 }
 
 export default function ReportsPage() {
-  const [itemTypes, setItemTypes] = useState([
+  const [itemTypes] = useState([
     { itemCode: 1, itemType: "BOOK" },
     { itemCode: 2, itemType: "VIDEO" },
     { itemCode: 3, itemType: "AUDIO" },
@@ -320,6 +606,7 @@ export default function ReportsPage() {
           error,
         },
       }))
+
       const cached = reportCache[value]
       if (cached) {
         setFilters(cached.filters)
@@ -331,17 +618,17 @@ export default function ReportsPage() {
         setError(cached.error || "")
         return
       }
+
       setHasGenerated(false)
       setRows([])
       setSummary(null)
       setError("")
       setPage(1)
     }
+
     setFilters((prev) => {
-      if (name === "itemType") {
-        if (value !== "" && value !== "BOOK") {
-          return { ...prev, itemType: value, genre: [] }
-        }
+      if (name === "itemType" && value !== "" && value !== "BOOK") {
+        return { ...prev, itemType: value, genre: [] }
       }
       return { ...prev, [name]: value }
     })
@@ -376,6 +663,7 @@ export default function ReportsPage() {
 
       const response = await fetch(`${API_BASE_URL}/api/reports?${params}`)
       const data = await response.json().catch(() => ({}))
+
       if (!response.ok) {
         setError(data.message || "Failed to generate report.")
         setRows([])
@@ -383,14 +671,16 @@ export default function ReportsPage() {
         return
       }
 
-      setRows(Array.isArray(data.rows) ? data.rows : [])
-      setSummary(data.summary || null)
+      const nextRows = Array.isArray(data.rows) ? data.rows : []
+      const nextSummary = data.summary || null
+      setRows(nextRows)
+      setSummary(nextSummary)
       setReportCache((prev) => ({
         ...prev,
         [filters.reportType]: {
           filters: { ...filters },
-          rows: Array.isArray(data.rows) ? data.rows : [],
-          summary: data.summary || null,
+          rows: nextRows,
+          summary: nextSummary,
           hasGenerated: true,
           page: nextPage,
           pageSize,
@@ -429,114 +719,24 @@ export default function ReportsPage() {
     setIsGenreOpen(false)
   }
 
-  function formatDate(value) {
-    if (!value) return "-"
-    const date = new Date(value)
-    if (Number.isNaN(date.getTime())) return String(value)
-    return date.toLocaleDateString()
-  }
-
-  function formatPickerDate(value) {
-    if (!value) return "Select a date"
-    const date = new Date(`${value}T00:00:00`)
-    if (Number.isNaN(date.getTime())) return value
-    return date.toLocaleDateString()
-  }
-
-  function parseDateValue(value) {
-    if (!value) return undefined
-    const date = new Date(`${value}T00:00:00`)
-    return Number.isNaN(date.getTime()) ? undefined : date
-  }
-
-  function toDateValue(date) {
-    if (!date) return ""
-    const year = date.getFullYear()
-    const month = String(date.getMonth() + 1).padStart(2, "0")
-    const day = String(date.getDate()).padStart(2, "0")
-    return `${year}-${month}-${day}`
-  }
-
   const supportsGenreForItemType =
     filters.itemType === "" || filters.itemType === "BOOK"
   const filteredGenres = genres.filter((genre) =>
     genre.toLowerCase().includes(genreQuery.trim().toLowerCase())
   )
-  const checkoutPieData =
-    filters.reportType === "userDemographics" ? buildCheckoutBuckets(rows) : []
-  const durationPieData =
-    filters.reportType === "userDemographics" ? buildDurationBuckets(rows) : []
-  const itemTypePieData =
-    filters.reportType === "itemsCheckedOut"
-      ? Object.entries(
-          rows.reduce((acc, row) => {
-            const key = row.itemType || "UNKNOWN"
-            acc[key] = (acc[key] || 0) + 1
-            return acc
-          }, {})
-        ).map(([label, value]) => ({
-          label:
-            label === "UNKNOWN" ? "Unknown" : formatItemTypeForDisplay(label),
-          value: Number(value || 0),
-        }))
-      : []
-  const userTypePieData =
-    filters.reportType === "itemsCheckedOut"
-      ? Object.entries(
-          rows.reduce((acc, row) => {
-            const key = formatUserTypeForDisplay(row.userType)
-            acc[key] = (acc[key] || 0) + 1
-            return acc
-          }, {})
-        ).map(([label, value]) => ({
-          label,
-          value: Number(value || 0),
-        }))
-      : []
-  const revenueBarData =
-    filters.reportType === "revenue"
-      ? [
-          {
-            label: "Fines owed",
-            value: Number(summary?.totalFineOwed || 0),
-          },
-          {
-            label: "Item value",
-            value: Number(summary?.totalItemValue || 0),
-          },
-          {
-            label: "Balance",
-            value: Number(summary?.totalRevenue || 0),
-          },
-        ]
-      : []
-  const revenueUserTypeBarData =
-    filters.reportType === "revenue"
-      ? Object.entries(
-          rows.reduce((acc, row) => {
-            const key = formatUserTypeForDisplay(row.userType)
-            acc[key] = (acc[key] || 0) + Number(row.revenueAmount || 0)
-            return acc
-          }, {})
-        ).map(([label, value]) => ({
-          label,
-          value: Number(value || 0),
-        }))
-      : []
-  const overdueUsers =
-    filters.reportType === "userDemographics"
-      ? new Set(
-          rows
-            .filter((row) => Number(row.isOverdue) === 1 && !row.returnDate)
-            .map((row) => row.userId || row.userEmail || row.userName)
-            .filter(Boolean)
-        ).size
-      : 0
+
+  const borrowedInsights = useMemo(() => buildBorrowedInsights(rows), [rows])
+  const revenueInsights = useMemo(() => buildRevenueInsights(rows), [rows])
+  const holdsInsights = useMemo(() => buildHoldsInsights(rows), [rows])
+
+  const isBorrowedReport = filters.reportType === "itemsCheckedOut"
+  const isRevenueReport = filters.reportType === "revenue"
+  const isHoldsReport = filters.reportType === "holds"
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="mx-auto max-w-6xl space-y-6 p-6">
+      <div className="mx-auto max-w-7xl space-y-6 p-6">
         <Button asChild variant="outline">
           <Link to="/management-dashboard">
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -562,11 +762,12 @@ export default function ReportsPage() {
                   onChange={onChange}
                   className="h-9 w-full rounded-md border border-input bg-card px-2.5 py-1 text-sm text-foreground"
                 >
-                  <option value="itemsCheckedOut">Items checked out</option>
+                  <option value="itemsCheckedOut">Borrowed items</option>
                   <option value="revenue">Revenue</option>
-                  <option value="userDemographics">User demographics</option>
+                  <option value="holds">Holds and waitlist demand</option>
                 </select>
               </Field>
+
               <Field>
                 <FieldLabel htmlFor="startDate">From date</FieldLabel>
                 <Popover>
@@ -595,6 +796,7 @@ export default function ReportsPage() {
                   </PopoverContent>
                 </Popover>
               </Field>
+
               <Field>
                 <FieldLabel htmlFor="endDate">To date</FieldLabel>
                 <Popover>
@@ -628,6 +830,7 @@ export default function ReportsPage() {
                   </PopoverContent>
                 </Popover>
               </Field>
+
               <Field>
                 <FieldLabel htmlFor="userType">User type</FieldLabel>
                 <select
@@ -642,6 +845,7 @@ export default function ReportsPage() {
                   <option value="FACULTY">Faculty</option>
                 </select>
               </Field>
+
               <Field>
                 <FieldLabel htmlFor="itemType">Item type</FieldLabel>
                 <select
@@ -659,6 +863,7 @@ export default function ReportsPage() {
                   ))}
                 </select>
               </Field>
+
               <Field>
                 <FieldLabel htmlFor="genre">Genre</FieldLabel>
                 {!supportsGenreForItemType ? (
@@ -735,20 +940,30 @@ export default function ReportsPage() {
                   </Popover>
                 )}
               </Field>
+
               <Field>
                 <FieldLabel htmlFor="overdue">Overdue</FieldLabel>
-                <select
-                  id="overdue"
-                  name="overdue"
-                  value={filters.overdue}
-                  onChange={onChange}
-                  className="h-9 w-full rounded-md border border-input bg-card px-2.5 py-1 text-sm text-foreground"
-                >
-                  <option value="all">All</option>
-                  <option value="overdue">Overdue only</option>
-                  <option value="notOverdue">Not overdue</option>
-                </select>
+                {isHoldsReport ? (
+                  <Input
+                    value="Not applicable for holds"
+                    disabled
+                    className="h-9"
+                  />
+                ) : (
+                  <select
+                    id="overdue"
+                    name="overdue"
+                    value={filters.overdue}
+                    onChange={onChange}
+                    className="h-9 w-full rounded-md border border-input bg-card px-2.5 py-1 text-sm text-foreground"
+                  >
+                    <option value="all">All</option>
+                    <option value="overdue">Overdue only</option>
+                    <option value="notOverdue">Not overdue</option>
+                  </select>
+                )}
               </Field>
+
               <div className="flex items-end justify-end gap-2">
                 <Button
                   type="submit"
@@ -768,6 +983,7 @@ export default function ReportsPage() {
                 </Button>
               </div>
             </form>
+
             {error && (
               <p className="mt-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
                 {error}
@@ -781,308 +997,476 @@ export default function ReportsPage() {
             <CardHeader>
               <CardTitle>Report results</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {summary && (
-                <div
-                  className={`grid gap-4 ${filters.reportType === "revenue" ? "md:grid-cols-4" : "md:grid-cols-3"}`}
-                >
-                  <div
-                    className={`rounded-md border p-3 ${filters.reportType === "revenue" ? "border-indigo-200 bg-indigo-50/70 dark:border-indigo-900/50 dark:bg-indigo-950/20" : filters.reportType === "itemsCheckedOut" ? "border-sky-200 bg-sky-50/70 dark:border-sky-900/50 dark:bg-sky-950/20" : filters.reportType === "userDemographics" ? "border-emerald-200 bg-emerald-50/70 dark:border-emerald-900/50 dark:bg-emerald-950/20" : ""}`}
-                  >
-                    <p
-                      className={`text-xs ${filters.reportType === "revenue" ? "text-indigo-700 dark:text-indigo-300" : filters.reportType === "itemsCheckedOut" ? "text-sky-700 dark:text-sky-300" : filters.reportType === "userDemographics" ? "text-emerald-700 dark:text-emerald-300" : "text-muted-foreground"}`}
-                    >
-                      Records shown
-                    </p>
-                    <p
-                      className={`text-lg font-semibold ${filters.reportType === "revenue" ? "text-indigo-900 dark:text-indigo-100" : filters.reportType === "itemsCheckedOut" ? "text-sky-900 dark:text-sky-100" : filters.reportType === "userDemographics" ? "text-emerald-900 dark:text-emerald-100" : ""}`}
-                    >
-                      {summary.totalRecords ?? 0}
-                    </p>
+            <CardContent className="space-y-6">
+              {isBorrowedReport && (
+                <>
+                  <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+                    <MetricCard
+                      label="Active checkouts"
+                      value={borrowedInsights.metrics.activeCount}
+                      helper="Rows where return date is empty"
+                    />
+                    <MetricCard
+                      label="Overdue rate"
+                      value={formatPercent(
+                        borrowedInsights.metrics.overdueRate
+                      )}
+                      helper="Overdue rows / all rows"
+                    />
+                    <MetricCard
+                      label="Utilization"
+                      value={formatPercent(
+                        summary?.itemsInLibrary
+                          ? ((summary?.itemsCheckedOut || 0) /
+                              summary.itemsInLibrary) *
+                              100
+                          : 0
+                      )}
+                      helper="itemsCheckedOut / itemsInLibrary"
+                    />
+                    <MetricCard
+                      label="Average borrow days"
+                      value={borrowedInsights.metrics.avgBorrowDays.toFixed(1)}
+                      helper="Average days between checkout and return/now"
+                    />
                   </div>
-                  {filters.reportType === "itemsCheckedOut" ? (
-                    <>
-                      <div className="rounded-md border border-amber-200 bg-amber-50/70 p-3 dark:border-amber-900/50 dark:bg-amber-950/20">
-                        <p className="text-xs text-amber-700 dark:text-amber-300">
-                          Overdue count
-                        </p>
-                        <p className="text-lg font-semibold text-amber-900 dark:text-amber-100">
-                          {summary.overdueCount ?? 0}
-                        </p>
-                      </div>
-                      <div className="rounded-md border border-emerald-200 bg-emerald-50/70 p-3 dark:border-emerald-900/50 dark:bg-emerald-950/20">
-                        <p className="text-xs text-emerald-700 dark:text-emerald-300">
-                          Items in library
-                        </p>
-                        <p className="text-lg font-semibold text-emerald-900 dark:text-emerald-100">
-                          {summary.itemsInLibrary ?? 0}
-                        </p>
-                      </div>
-                    </>
-                  ) : filters.reportType === "userDemographics" ? (
-                    <>
-                      <div className="rounded-md border border-lime-200 bg-lime-50/70 p-3 dark:border-lime-900/50 dark:bg-lime-950/20">
-                        <p className="text-xs text-lime-700 dark:text-lime-300">
-                          Users
-                        </p>
-                        <p className="text-lg font-semibold text-lime-900 dark:text-lime-100">
-                          {summary.totalUsers ?? 0}
-                        </p>
-                      </div>
-                      <div className="rounded-md border border-rose-200 bg-rose-50/70 p-3 dark:border-rose-900/50 dark:bg-rose-950/20">
-                        <p className="text-xs text-rose-700 dark:text-rose-300">
-                          Users with active overdue items
-                        </p>
-                        <p className="text-lg font-semibold text-rose-900 dark:text-rose-100">
-                          {overdueUsers}
-                        </p>
-                      </div>
-                    </>
-                  ) : filters.reportType === "revenue" ? (
-                    <>
-                      <div className="rounded-md border border-amber-200 bg-amber-50/70 p-3 dark:border-amber-900/50 dark:bg-amber-950/20">
-                        <p className="text-xs text-amber-700 dark:text-amber-300">
-                          Fines owed
-                        </p>
-                        <p className="text-lg font-semibold text-amber-900 dark:text-amber-100">
-                          ${Number(summary.totalFineOwed || 0).toFixed(2)}
-                        </p>
-                      </div>
-                      <div className="rounded-md border border-sky-200 bg-sky-50/70 p-3 dark:border-sky-900/50 dark:bg-sky-950/20">
-                        <p className="text-xs text-sky-700 dark:text-sky-300">
-                          Item value
-                        </p>
-                        <p className="text-lg font-semibold text-sky-900 dark:text-sky-100">
-                          ${Number(summary.totalItemValue || 0).toFixed(2)}
-                        </p>
-                      </div>
-                      <div className="rounded-md border border-emerald-200 bg-emerald-50/70 p-3 dark:border-emerald-900/50 dark:bg-emerald-950/20">
-                        <p className="text-xs text-emerald-700 dark:text-emerald-300">
-                          Balance
-                        </p>
-                        <p className="text-lg font-semibold text-emerald-900 dark:text-emerald-100">
-                          ${Number(summary.totalRevenue || 0).toFixed(2)}
-                        </p>
-                        <p className="text-xs text-emerald-700/80 dark:text-emerald-300/80">
-                          Sum of fines owed and item value
-                        </p>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="rounded-md border p-3">
-                      <p className="text-xs text-muted-foreground">
-                        Total amount
-                      </p>
-                      <p className="text-lg font-semibold">
-                        ${Number(summary.totalAmount || 0)}
-                      </p>
-                    </div>
-                  )}
-                </div>
+
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    <ChartBlock
+                      title="Checkout volume by item type"
+                      formula="Count rows grouped by item type."
+                      chart={
+                        <HorizontalBarChart data={borrowedInsights.byType} />
+                      }
+                      columns={[
+                        { key: "label", label: "Item type" },
+                        { key: "value", label: "Checkouts" },
+                      ]}
+                      rows={borrowedInsights.byType}
+                    />
+
+                    <ChartBlock
+                      title="Overdue status by item type"
+                      formula="For each item type: overdue rows and non-overdue rows."
+                      chart={
+                        <StackedBarChart
+                          data={borrowedInsights.overdueByType}
+                          segments={[
+                            { key: "overdue", label: "Overdue" },
+                            { key: "onTime", label: "On time" },
+                          ]}
+                        />
+                      }
+                      columns={[
+                        { key: "label", label: "Item type" },
+                        { key: "overdue", label: "Overdue" },
+                        { key: "onTime", label: "On time" },
+                      ]}
+                      rows={borrowedInsights.overdueByType}
+                    />
+
+                    <ChartBlock
+                      title="Top borrowed items"
+                      formula="Count rows grouped by item title, sorted descending."
+                      chart={
+                        <HorizontalBarChart data={borrowedInsights.topItems} />
+                      }
+                      columns={[
+                        { key: "label", label: "Item" },
+                        { key: "value", label: "Checkouts" },
+                      ]}
+                      rows={borrowedInsights.topItems}
+                    />
+
+                    <ChartBlock
+                      title="Checkout trend by day"
+                      formula="Count checkout rows per calendar day from checkout date."
+                      chart={<MiniTrendChart data={borrowedInsights.trend} />}
+                      columns={[
+                        { key: "label", label: "Date" },
+                        { key: "value", label: "Checkouts" },
+                      ]}
+                      rows={borrowedInsights.trend}
+                    />
+                  </div>
+                </>
               )}
 
-              {filters.reportType === "userDemographics" && (
-                <div className="grid gap-4 lg:grid-cols-2">
-                  <PieChartCard
-                    title="Users by checked out items"
-                    data={checkoutPieData}
-                  />
-                  <PieChartCard
-                    title="Borrowing time distribution"
-                    data={durationPieData}
-                  />
-                </div>
-              )}
-              {filters.reportType === "itemsCheckedOut" && (
-                <div className="grid gap-4 lg:grid-cols-2">
-                  <PieChartCard
-                    title="Checked out by item type"
-                    data={itemTypePieData}
-                  />
-                  <HorizontalBarChartCard
-                    title="Checked out by user type"
-                    data={userTypePieData}
-                  />
-                </div>
-              )}
-              {filters.reportType === "revenue" && (
-                <div className="grid gap-4 lg:grid-cols-2">
-                  <BarChartCard
-                    data={revenueBarData}
-                    chartHeading="Overall financial summary"
-                  />
+              {isRevenueReport && (
+                <>
+                  <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+                    <MetricCard
+                      label="Total fines owed"
+                      value={formatCurrency(
+                        revenueInsights.metrics.totalFineOwed
+                      )}
+                      helper="Sum of fineOwed"
+                    />
+                    <MetricCard
+                      label="Item value exposure"
+                      value={formatCurrency(
+                        revenueInsights.metrics.totalItemValue
+                      )}
+                      helper="Sum of itemValue"
+                    />
+                    <MetricCard
+                      label="Revenue amount"
+                      value={formatCurrency(
+                        revenueInsights.metrics.totalRevenue
+                      )}
+                      helper="Sum of revenueAmount"
+                    />
+                    <MetricCard
+                      label="Paid-off ratio"
+                      value={formatPercent(
+                        revenueInsights.metrics.paidOffRatio
+                      )}
+                      helper="Paid rows / all rows"
+                    />
+                  </div>
 
-                  <BarChartCard
-                    data={revenueUserTypeBarData}
-                    chartHeading="Financial summary by user"
-                  />
-                </div>
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    <ChartBlock
+                      title="Revenue composition"
+                      formula="Split total into fines owed and item value."
+                      chart={
+                        <HorizontalBarChart
+                          data={revenueInsights.composition}
+                          valueFormatter={formatCurrency}
+                        />
+                      }
+                      columns={[
+                        { key: "label", label: "Component" },
+                        {
+                          key: "value",
+                          label: "Amount",
+                          render: (v) => formatCurrency(v),
+                        },
+                      ]}
+                      rows={revenueInsights.composition}
+                    />
+
+                    <ChartBlock
+                      title="Revenue by user type"
+                      formula="Sum revenueAmount grouped by userType."
+                      chart={
+                        <HorizontalBarChart
+                          data={revenueInsights.byUserType}
+                          valueFormatter={formatCurrency}
+                        />
+                      }
+                      columns={[
+                        { key: "label", label: "User type" },
+                        {
+                          key: "value",
+                          label: "Revenue",
+                          render: (v) => formatCurrency(v),
+                        },
+                      ]}
+                      rows={revenueInsights.byUserType}
+                    />
+
+                    <ChartBlock
+                      title="Top borrowers by outstanding amount"
+                      formula="Sum revenueAmount grouped by borrower, sorted descending."
+                      chart={
+                        <HorizontalBarChart
+                          data={revenueInsights.byBorrower}
+                          valueFormatter={formatCurrency}
+                        />
+                      }
+                      columns={[
+                        { key: "label", label: "Borrower" },
+                        {
+                          key: "value",
+                          label: "Revenue",
+                          render: (v) => formatCurrency(v),
+                        },
+                      ]}
+                      rows={revenueInsights.byBorrower}
+                    />
+
+                    <ChartBlock
+                      title="Fine payment status"
+                      formula="Count rows by isPaidOff status."
+                      chart={
+                        <HorizontalBarChart
+                          data={revenueInsights.paymentStatus}
+                        />
+                      }
+                      columns={[
+                        { key: "label", label: "Status" },
+                        { key: "value", label: "Count" },
+                      ]}
+                      rows={revenueInsights.paymentStatus}
+                    />
+                  </div>
+                </>
               )}
 
-              <div className="overflow-x-auto rounded-md border">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted/40 text-left">
-                    {filters.reportType === "itemsCheckedOut" ? (
-                      <tr>
-                        <th className="px-3 py-2">Item</th>
-                        <th className="px-3 py-2">Item type</th>
-                        <th className="px-3 py-2">User type</th>
-                        <th className="px-3 py-2">Borrower</th>
-                        <th className="px-3 py-2">Genre</th>
-                        <th className="px-3 py-2">Checkout</th>
-                        <th className="px-3 py-2">Due</th>
-                        <th className="px-3 py-2">Overdue</th>
-                      </tr>
-                    ) : filters.reportType === "userDemographics" ? (
-                      <tr>
-                        <th className="px-3 py-2">Name</th>
-                        <th className="px-3 py-2">Email</th>
-                        <th className="px-3 py-2">User type</th>
-                        <th className="px-3 py-2">Item</th>
-                        <th className="px-3 py-2">Item type</th>
-                        <th className="px-3 py-2">Genre</th>
-                        <th className="px-3 py-2">Checkout</th>
-                        <th className="px-3 py-2">Due</th>
-                        <th className="px-3 py-2">Overdue</th>
-                        <th className="px-3 py-2">Borrow days</th>
-                      </tr>
-                    ) : (
-                      <tr>
-                        <th className="px-3 py-2">Borrow date</th>
-                        <th className="px-3 py-2">Item</th>
-                        <th className="px-3 py-2">Item type</th>
-                        <th className="px-3 py-2">User type</th>
-                        <th className="px-3 py-2">Borrower</th>
-                        <th className="px-3 py-2">Genre</th>
-                        <th className="px-3 py-2">Fine Amount</th>
-                        <th className="px-3 py-2">Item value</th>
-                        <th className="px-3 py-2">Paid off</th>
-                        <th className="px-3 py-2">Source</th>
-                        <th className="px-3 py-2">Checkout</th>
-                        <th className="px-3 py-2">Overdue</th>
-                      </tr>
-                    )}
-                  </thead>
-                  <tbody>
-                    {rows.length === 0 ? (
-                      <tr>
-                        <td
-                          className="px-3 py-4 text-muted-foreground"
-                          colSpan={
-                            filters.reportType === "itemsCheckedOut"
-                              ? 8
-                              : filters.reportType === "userDemographics"
-                                ? 10
-                                : 12
-                          }
-                        >
-                          No report data.
-                        </td>
-                      </tr>
-                    ) : filters.reportType === "itemsCheckedOut" ? (
-                      rows.map((row) => (
-                        <tr key={row.borrowTransactionId} className="border-t">
-                          <td className="px-3 py-2">{row.itemName || "-"}</td>
-                          <td className="px-3 py-2">
-                            {formatItemTypeForDisplay(row.itemType)}
-                          </td>
-                          <td className="px-3 py-2">
-                            {formatUserTypeForDisplay(row.userType)}
-                          </td>
-                          <td className="px-3 py-2">
-                            {row.borrowerName || row.borrowerId || "-"}
-                          </td>
-                          <td className="px-3 py-2">{row.genres || "-"}</td>
-                          <td className="px-3 py-2">
-                            {formatDate(row.checkoutDate)}
-                          </td>
-                          <td className="px-3 py-2">
-                            {formatDate(row.dueDate)}
-                          </td>
-                          <td className="px-3 py-2">
-                            {Number(row.isOverdue) === 1 ? "Yes" : "No"}
+              {isHoldsReport && (
+                <>
+                  <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-5">
+                    <MetricCard
+                      label="Active holds"
+                      value={holdsInsights.metrics.active}
+                      helper="Rows with holdStatus = ACTIVE"
+                    />
+                    <MetricCard
+                      label="Fulfilled holds"
+                      value={holdsInsights.metrics.fulfilled}
+                      helper="Rows with holdStatus = FULFILLED"
+                    />
+                    <MetricCard
+                      label="Canceled holds"
+                      value={holdsInsights.metrics.canceled}
+                      helper="Rows with holdStatus = CANCELED"
+                    />
+                    <MetricCard
+                      label="Average wait hours"
+                      value={holdsInsights.metrics.avgWaitHours.toFixed(1)}
+                      helper="Average waitHours"
+                    />
+                    <MetricCard
+                      label="Fulfillment rate"
+                      value={formatPercent(
+                        holdsInsights.metrics.fulfillmentRate
+                      )}
+                      helper="Fulfilled rows / all hold rows"
+                    />
+                  </div>
+
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    <ChartBlock
+                      title="Hold status distribution"
+                      formula="Count rows grouped by holdStatus."
+                      chart={
+                        <HorizontalBarChart
+                          data={holdsInsights.statusBreakdown}
+                        />
+                      }
+                      columns={[
+                        { key: "label", label: "Status" },
+                        { key: "value", label: "Count" },
+                      ]}
+                      rows={holdsInsights.statusBreakdown}
+                    />
+
+                    <ChartBlock
+                      title="Most requested items"
+                      formula="Count hold rows grouped by item title."
+                      chart={
+                        <HorizontalBarChart
+                          data={holdsInsights.topRequestedItems}
+                        />
+                      }
+                      columns={[
+                        { key: "label", label: "Item" },
+                        { key: "value", label: "Hold requests" },
+                      ]}
+                      rows={holdsInsights.topRequestedItems}
+                    />
+
+                    <ChartBlock
+                      title="Average wait time by item type"
+                      formula="Average waitHours grouped by item type."
+                      chart={
+                        <HorizontalBarChart
+                          data={holdsInsights.averageWaitByType}
+                          valueFormatter={(v) => `${Number(v).toFixed(1)}h`}
+                        />
+                      }
+                      columns={[
+                        { key: "label", label: "Item type" },
+                        {
+                          key: "value",
+                          label: "Avg wait (hours)",
+                          render: (v) => `${Number(v || 0).toFixed(1)}`,
+                        },
+                        { key: "requestCount", label: "Requests" },
+                      ]}
+                      rows={holdsInsights.averageWaitByType}
+                    />
+
+                    <ChartBlock
+                      title="Closing reasons"
+                      formula="Count rows grouped by closeReason."
+                      chart={
+                        <HorizontalBarChart data={holdsInsights.closeReasons} />
+                      }
+                      columns={[
+                        { key: "label", label: "Reason" },
+                        { key: "value", label: "Count" },
+                      ]}
+                      rows={holdsInsights.closeReasons}
+                    />
+                  </div>
+                </>
+              )}
+
+              <div>
+                <p className="mb-2 text-sm font-medium">
+                  Full raw data (current filtered report rows)
+                </p>
+                <div className="overflow-x-auto rounded-md border">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/40 text-left">
+                      {isBorrowedReport ? (
+                        <tr>
+                          <th className="px-3 py-2">Item</th>
+                          <th className="px-3 py-2">Item type</th>
+                          <th className="px-3 py-2">User type</th>
+                          <th className="px-3 py-2">Borrower</th>
+                          <th className="px-3 py-2">Genre</th>
+                          <th className="px-3 py-2">Checkout</th>
+                          <th className="px-3 py-2">Due</th>
+                          <th className="px-3 py-2">Return</th>
+                          <th className="px-3 py-2">Overdue</th>
+                        </tr>
+                      ) : isRevenueReport ? (
+                        <tr>
+                          <th className="px-3 py-2">Borrow date</th>
+                          <th className="px-3 py-2">Item</th>
+                          <th className="px-3 py-2">Item type</th>
+                          <th className="px-3 py-2">User type</th>
+                          <th className="px-3 py-2">Borrower</th>
+                          <th className="px-3 py-2">Fine owed</th>
+                          <th className="px-3 py-2">Item value</th>
+                          <th className="px-3 py-2">Revenue amount</th>
+                          <th className="px-3 py-2">Paid off</th>
+                          <th className="px-3 py-2">Source</th>
+                        </tr>
+                      ) : (
+                        <tr>
+                          <th className="px-3 py-2">Requested</th>
+                          <th className="px-3 py-2">Closed</th>
+                          <th className="px-3 py-2">Status</th>
+                          <th className="px-3 py-2">Reason</th>
+                          <th className="px-3 py-2">Wait hours</th>
+                          <th className="px-3 py-2">Item</th>
+                          <th className="px-3 py-2">Item type</th>
+                          <th className="px-3 py-2">User</th>
+                          <th className="px-3 py-2">User type</th>
+                          <th className="px-3 py-2">Genres</th>
+                        </tr>
+                      )}
+                    </thead>
+                    <tbody>
+                      {rows.length === 0 ? (
+                        <tr>
+                          <td
+                            className="px-3 py-4 text-muted-foreground"
+                            colSpan={
+                              isBorrowedReport ? 9 : isRevenueReport ? 10 : 10
+                            }
+                          >
+                            No report data.
                           </td>
                         </tr>
-                      ))
-                    ) : filters.reportType === "userDemographics" ? (
-                      rows.map((row) => (
-                        <tr
-                          key={row.userBorrowId || row.userId || row.userEmail}
-                          className="border-t"
-                        >
-                          <td className="px-3 py-2">
-                            {row.userName || row.userId || "-"}
-                          </td>
-                          <td className="px-3 py-2">{row.userEmail || "-"}</td>
-                          <td className="px-3 py-2">
-                            {formatUserTypeForDisplay(row.userType)}
-                          </td>
-                          <td className="px-3 py-2">
-                            {row.itemName || row.itemId || "-"}
-                          </td>
-                          <td className="px-3 py-2">
-                            {formatItemTypeForDisplay(row.itemType)}
-                          </td>
-                          <td className="px-3 py-2">
-                            {row.genres?.trim() || "-"}
-                          </td>
-                          <td className="px-3 py-2">
-                            {formatDate(row.checkoutDate)}
-                          </td>
-                          <td className="px-3 py-2">
-                            {formatDate(row.dueDate)}
-                          </td>
-                          <td className="px-3 py-2">
-                            {Number(row.isOverdue) === 1 ? "Yes" : "No"}
-                          </td>
-                          <td className="px-3 py-2">
-                            {row.borrowDays === null
-                              ? "-"
-                              : Number(row.borrowDays)}
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      rows.map((row) => (
-                        <tr key={row.fineId} className="border-t">
-                          <td className="px-3 py-2">
-                            {formatDate(row.checkoutDate)}
-                          </td>
-                          <td className="px-3 py-2">{row.itemName || "-"}</td>
-                          <td className="px-3 py-2">
-                            {formatItemTypeForDisplay(row.itemType)}
-                          </td>
-                          <td className="px-3 py-2">
-                            {formatUserTypeForDisplay(row.userType)}
-                          </td>
-                          <td className="px-3 py-2">
-                            {row.borrowerName || row.borrowerId || "-"}
-                          </td>
-                          <td className="px-3 py-2">{row.genres || "-"}</td>
-                          <td className="px-3 py-2">
-                            ${Number(row.fineOwed || 0).toFixed(2)}
-                          </td>
-                          <td className="px-3 py-2">
-                            ${Number(row.itemValue || 0).toFixed(2)}
-                          </td>
-                          <td className="px-3 py-2">
-                            {Number(row.isPaidOff) === 1 ? "Yes" : "No"}
-                          </td>
-                          <td className="px-3 py-2">
-                            {row.revenueSource || "-"}
-                          </td>
-                          <td className="px-3 py-2">
-                            {formatDate(row.dateAssigned)}
-                          </td>
-                          <td className="px-3 py-2">
-                            {Number(row.isOverdue) === 1 ? "Yes" : "No"}
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                      ) : isBorrowedReport ? (
+                        rows.map((row) => (
+                          <tr
+                            key={row.borrowTransactionId}
+                            className="border-t"
+                          >
+                            <td className="px-3 py-2">{row.itemName || "-"}</td>
+                            <td className="px-3 py-2">
+                              {formatItemTypeForDisplay(row.itemType)}
+                            </td>
+                            <td className="px-3 py-2">
+                              {formatUserTypeForDisplay(row.userType)}
+                            </td>
+                            <td className="px-3 py-2">
+                              {row.borrowerName || row.borrowerId || "-"}
+                            </td>
+                            <td className="px-3 py-2">{row.genres || "-"}</td>
+                            <td className="px-3 py-2">
+                              {formatDate(row.checkoutDate)}
+                            </td>
+                            <td className="px-3 py-2">
+                              {formatDate(row.dueDate)}
+                            </td>
+                            <td className="px-3 py-2">
+                              {formatDate(row.returnDate)}
+                            </td>
+                            <td className="px-3 py-2">
+                              {Number(row.isOverdue) === 1 ? "Yes" : "No"}
+                            </td>
+                          </tr>
+                        ))
+                      ) : isRevenueReport ? (
+                        rows.map((row) => (
+                          <tr key={row.fineId} className="border-t">
+                            <td className="px-3 py-2">
+                              {formatDate(row.checkoutDate)}
+                            </td>
+                            <td className="px-3 py-2">{row.itemName || "-"}</td>
+                            <td className="px-3 py-2">
+                              {formatItemTypeForDisplay(row.itemType)}
+                            </td>
+                            <td className="px-3 py-2">
+                              {formatUserTypeForDisplay(row.userType)}
+                            </td>
+                            <td className="px-3 py-2">
+                              {row.borrowerName || row.borrowerId || "-"}
+                            </td>
+                            <td className="px-3 py-2">
+                              {formatCurrency(row.fineOwed)}
+                            </td>
+                            <td className="px-3 py-2">
+                              {formatCurrency(row.itemValue)}
+                            </td>
+                            <td className="px-3 py-2">
+                              {formatCurrency(row.revenueAmount)}
+                            </td>
+                            <td className="px-3 py-2">
+                              {Number(row.isPaidOff) === 1 ? "Yes" : "No"}
+                            </td>
+                            <td className="px-3 py-2">
+                              {row.revenueSource || "-"}
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        rows.map((row) => (
+                          <tr key={row.holdId} className="border-t">
+                            <td className="px-3 py-2">
+                              {formatDateTime(row.requestDateTime)}
+                            </td>
+                            <td className="px-3 py-2">
+                              {formatDateTime(row.closeDateTime)}
+                            </td>
+                            <td className="px-3 py-2">
+                              {row.holdStatus || "-"}
+                            </td>
+                            <td className="px-3 py-2">
+                              {row.closeReason || "-"}
+                            </td>
+                            <td className="px-3 py-2">
+                              {Number(row.waitHours || 0)}
+                            </td>
+                            <td className="px-3 py-2">{row.itemName || "-"}</td>
+                            <td className="px-3 py-2">
+                              {formatItemTypeForDisplay(row.itemType)}
+                            </td>
+                            <td className="px-3 py-2">
+                              {row.userName ||
+                                row.userEmail ||
+                                row.userId ||
+                                "-"}
+                            </td>
+                            <td className="px-3 py-2">
+                              {formatUserTypeForDisplay(row.userType)}
+                            </td>
+                            <td className="px-3 py-2">{row.genres || "-"}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
+
               <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
                 <span>
                   Page {summary?.page ?? page}
@@ -1094,11 +1478,7 @@ export default function ReportsPage() {
                     variant="outline"
                     size="sm"
                     onClick={() => goToPage((summary?.page ?? page) - 1)}
-                    disabled={
-                      filters.reportType === "userDemographics" ||
-                      (summary?.page ?? page) <= 1 ||
-                      isLoading
-                    }
+                    disabled={(summary?.page ?? page) <= 1 || isLoading}
                   >
                     Previous
                   </Button>
@@ -1107,11 +1487,7 @@ export default function ReportsPage() {
                     variant="outline"
                     size="sm"
                     onClick={() => goToPage((summary?.page ?? page) + 1)}
-                    disabled={
-                      filters.reportType === "userDemographics" ||
-                      !summary?.hasMore ||
-                      isLoading
-                    }
+                    disabled={!summary?.hasMore || isLoading}
                   >
                     Next
                   </Button>

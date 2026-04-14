@@ -246,7 +246,36 @@ async function listUserAccountsPaginated({
   limit = 25,
   offset = 0,
 }) {
+  const safeLimit = Number.isInteger(limit) && limit > 0 ? limit : 25
+  const safeOffset = Number.isInteger(offset) && offset >= 0 ? offset : 0
   const { whereSql, params } = buildUserSearchWhere(search)
+
+  if (!whereSql) {
+    const countRows = await query(
+      `SELECT COUNT(*) AS total
+       FROM user_account`
+    )
+
+    const rows = await query(
+      `SELECT
+         user_id,
+         email,
+         first_name,
+         middle_name,
+         last_name,
+         is_faculty,
+         created_at,
+         updated_at
+       FROM user_account
+       ORDER BY last_name ASC, first_name ASC, user_id ASC
+       LIMIT ${safeLimit} OFFSET ${safeOffset}`
+    )
+
+    return {
+      rows,
+      total: Number(countRows[0]?.total || 0),
+    }
+  }
 
   const countRows = await query(
     `SELECT COUNT(*) AS total
@@ -268,8 +297,8 @@ async function listUserAccountsPaginated({
      FROM user_account
      ${whereSql}
      ORDER BY last_name ASC, first_name ASC, user_id ASC
-     LIMIT ? OFFSET ?`,
-    [...params, limit, offset]
+     LIMIT ${safeLimit} OFFSET ${safeOffset}`,
+    params
   )
 
   return {

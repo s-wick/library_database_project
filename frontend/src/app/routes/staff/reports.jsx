@@ -1254,13 +1254,6 @@ export default function ReportsPage() {
                         revenueInsights.metrics.totalFineOwed
                       )}
                     />
-                    {/* <MetricCard
-                      label="Item value exposure"
-                      value={formatCurrency(
-                        revenueInsights.metrics.totalItemValue
-                      )}
-                      helper="Value of currently associated items"
-                    /> */}
                     <MetricCard
                       label="Paid-off ratio"
                       value={formatPercent(

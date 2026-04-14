@@ -352,16 +352,28 @@ function CheckoutCalendarChart({ data }) {
   )
 }
 
-function ChartBlock({ title, formula, chart, columns, rows }) {
+function ChartBlock({
+  title,
+  formula,
+  chart,
+  columns,
+  rows,
+  sideBySide = false,
+  className = "",
+}) {
   return (
-    <Card>
+    <Card className={className}>
       <CardHeader>
         <CardTitle className="text-base">{title}</CardTitle>
         <p className="text-xs text-muted-foreground">{formula}</p>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {chart}
-        <div>
+      <CardContent
+        className={
+          sideBySide ? "grid gap-4 xl:grid-cols-2 xl:items-start" : "space-y-4"
+        }
+      >
+        <div>{chart}</div>
+        <div className={sideBySide ? "xl:min-w-0" : ""}>
           <p className="mb-2 text-sm font-medium">
             Source table for this chart
           </p>
@@ -1187,6 +1199,7 @@ export default function ReportsPage() {
                     <ChartBlock
                       title="Checkout activity calendar"
                       formula="Daily checkout counts shown directly on each day."
+                      sideBySide={false}
                       chart={
                         <CheckoutCalendarChart data={borrowedInsights.trend} />
                       }
@@ -1270,28 +1283,10 @@ export default function ReportsPage() {
                     />
 
                     <ChartBlock
-                      title="Item value by user type"
-                      formula="Catalog value grouped by who currently has the items."
-                      chart={
-                        <HorizontalBarChart
-                          data={revenueInsights.valueByUserType}
-                          valueFormatter={formatCurrency}
-                        />
-                      }
-                      columns={[
-                        { key: "label", label: "User type" },
-                        {
-                          key: "value",
-                          label: "Item value",
-                          render: (v) => formatCurrency(v),
-                        },
-                      ]}
-                      rows={revenueInsights.valueByUserType}
-                    />
-
-                    <ChartBlock
                       title="Top borrowers by fines owed"
                       formula="Borrowers with the highest outstanding fines."
+                      sideBySide
+                      className="lg:col-span-2"
                       chart={
                         <HorizontalBarChart
                           data={revenueInsights.fineByBorrower}

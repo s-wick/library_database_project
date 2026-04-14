@@ -73,11 +73,13 @@ async function handleGetDashboard(_req, res, url) {
       const amountPaid = Number(fine.amount_paid || 0)
       const itemValue = Number(fine.item_value || 0)
       const outstanding = Math.max(amount - amountPaid, 0)
+      const canPay = Boolean(fine.return_date)
 
       return {
         id: `${fine.item_id}-${new Date(fine.checkout_date).toISOString()}`,
         amount: outstanding,
         status: "unpaid",
+        canPay,
         book: fine.title || "Unknown Item",
         daysOverdue: Math.max(Number(fine.days_overdue || 0), 0),
         isAtMaxValue: itemValue > 0 && amount >= itemValue,

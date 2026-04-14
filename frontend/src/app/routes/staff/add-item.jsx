@@ -108,16 +108,6 @@ function formatItemTypeLabel(value = "") {
     .join(" ")
 }
 
-function toDateInputValue(value) {
-  if (!value) return ""
-  const date = new Date(`${value}T00:00:00`)
-  if (Number.isNaN(date.getTime())) return ""
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, "0")
-  const day = String(date.getDate()).padStart(2, "0")
-  return `${year}-${month}-${day}`
-}
-
 export default function AddItemPage() {
   const apiBaseUrl = API_BASE_URL
   const [itemTypes, setItemTypes] = useState([])
@@ -471,7 +461,7 @@ export default function AddItemPage() {
                       id={field.name}
                       name={field.name}
                       type="date"
-                      value={toDateInputValue(form[field.name])}
+                      value={form[field.name] ?? ""}
                       onChange={onChange}
                       aria-invalid={!!fieldErrors[field.name]}
                       max={todayDate}

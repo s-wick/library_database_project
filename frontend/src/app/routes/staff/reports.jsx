@@ -1155,17 +1155,15 @@ export default function ReportsPage() {
                     <MetricCard
                       label="Active checkouts"
                       value={borrowedInsights.metrics.activeCount}
-                      helper="Currently checked out"
                     />
                     <MetricCard
                       label="Overdue rate"
                       value={formatPercent(
                         borrowedInsights.metrics.overdueRate
                       )}
-                      helper="Share of checkouts that are overdue"
                     />
                     <MetricCard
-                      label="Utilization"
+                      label="Utilization (checked out items / total items)"
                       value={formatPercent(
                         summary?.itemsInLibrary
                           ? ((summary?.itemsCheckedOut || 0) /
@@ -1173,12 +1171,10 @@ export default function ReportsPage() {
                               100
                           : 0
                       )}
-                      helper="Checked out vs total units"
                     />
                     <MetricCard
                       label="Average borrow days"
                       value={borrowedInsights.metrics.avgBorrowDays.toFixed(1)}
-                      helper="Typical borrowing duration"
                     />
                   </div>
 
@@ -1251,27 +1247,25 @@ export default function ReportsPage() {
 
               {isRevenueReport && (
                 <>
-                  <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+                  <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                     <MetricCard
-                      label="Total fines owed"
+                      label="Outstanding fines"
                       value={formatCurrency(
                         revenueInsights.metrics.totalFineOwed
                       )}
-                      helper="Outstanding fines"
                     />
-                    <MetricCard
+                    {/* <MetricCard
                       label="Item value exposure"
                       value={formatCurrency(
                         revenueInsights.metrics.totalItemValue
                       )}
                       helper="Value of currently associated items"
-                    />
+                    /> */}
                     <MetricCard
                       label="Paid-off ratio"
                       value={formatPercent(
                         revenueInsights.metrics.paidOffRatio
                       )}
-                      helper="Share of fine records already settled"
                     />
                     <MetricCard
                       label="Average fine per record"
@@ -1280,7 +1274,6 @@ export default function ReportsPage() {
                           ? revenueInsights.metrics.totalFineOwed / rows.length
                           : 0
                       )}
-                      helper="Average outstanding amount per record"
                     />
                   </div>
 
@@ -1372,24 +1365,20 @@ export default function ReportsPage() {
                 <>
                   <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
                     <MetricCard
-                      label="Catalog value"
+                      label="Total value of catalog"
                       value={formatCurrency(summary?.totalCatalogValue || 0)}
-                      helper="Total value of all visible items"
                     />
                     <MetricCard
-                      label="Inventory units"
                       value={Number(summary?.totalInventoryUnits || 0)}
-                      helper="Total units in catalog"
+                      label="Number of items in catalog"
                     />
                     <MetricCard
-                      label="Active checkouts"
+                      label="Number of currently checked out items"
                       value={Number(summary?.totalActiveBorrows || 0)}
-                      helper="Currently checked out units"
                     />
                     <MetricCard
-                      label="Active overdue"
+                      label="Currently overdue checkouts"
                       value={Number(summary?.totalOverdueActiveBorrows || 0)}
-                      helper="Currently overdue checkouts"
                     />
                   </div>
 
@@ -1473,29 +1462,24 @@ export default function ReportsPage() {
                     <MetricCard
                       label="Active holds"
                       value={holdsInsights.metrics.active}
-                      helper="Open hold requests"
                     />
                     <MetricCard
                       label="Fulfilled holds"
                       value={holdsInsights.metrics.fulfilled}
-                      helper="Completed hold requests"
                     />
                     <MetricCard
                       label="Canceled holds"
                       value={holdsInsights.metrics.canceled}
-                      helper="Canceled hold requests"
                     />
                     <MetricCard
                       label="Average wait hours"
                       value={holdsInsights.metrics.avgWaitHours.toFixed(1)}
-                      helper="Average waitHours"
                     />
                     <MetricCard
                       label="Fulfillment rate"
                       value={formatPercent(
                         holdsInsights.metrics.fulfillmentRate
                       )}
-                      helper="Fulfilled rows / all hold rows"
                     />
                   </div>
 

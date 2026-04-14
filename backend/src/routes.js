@@ -43,6 +43,8 @@ const { handleGetFines, handlePayFines } = require("./services/fines.service")
 const {
   handleGetLibrarians,
   handleUpdateLibrarian,
+  handleGetUsers,
+  handleMarkUserAsFaculty,
 } = require("./services/staff.service")
 
 async function handleApiRoute(req, res, url) {
@@ -245,10 +247,23 @@ async function handleApiRoute(req, res, url) {
     return
   }
 
+  if (req.method === "GET" && pathname === "/api/users") {
+    await handleGetUsers(req, res, url)
+    return
+  }
+
   if (req.method === "PUT" && pathname.startsWith("/api/staff/")) {
     const parts = pathname.split("/").filter(Boolean)
     if (parts.length === 3) {
       await handleUpdateLibrarian(req, res, parts[2])
+      return
+    }
+  }
+
+  if (req.method === "PUT" && pathname.startsWith("/api/users/")) {
+    const parts = pathname.split("/").filter(Boolean)
+    if (parts.length === 4 && parts[3] === "faculty") {
+      await handleMarkUserAsFaculty(req, res, parts[2])
       return
     }
   }

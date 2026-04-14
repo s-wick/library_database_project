@@ -7,6 +7,7 @@ import {
   FileBarChart2,
   LogOut,
   DoorOpen,
+  GraduationCap,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -56,6 +57,13 @@ const actions = [
     to: "/management-dashboard/room-manage",
     icon: DoorOpen,
     adminOnly: true,
+  },
+  {
+    title: "Mark faculty",
+    description: "Mark existing user accounts as faculty.",
+    to: "/management-dashboard/mark-faculty",
+    icon: GraduationCap,
+    adminOnly: false,
   },
 
   {

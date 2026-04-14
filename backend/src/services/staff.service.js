@@ -4,6 +4,9 @@ const {
   listLibrarianAccounts,
   findLibrarianAccountById,
   updateLibrarianAccount,
+  listUserAccounts,
+  findUserAccountById,
+  updateUserFacultyStatus,
 } = require("../models/auth.model")
 
 function normalizeDateTime(value) {
@@ -112,7 +115,66 @@ async function handleUpdateLibrarian(req, res, staffId) {
   }
 }
 
+async function handleGetUsers(_req, res, url) {
+  try {
+    const search = url.searchParams.get("q") || ""
+    const rows = await listUserAccounts(search)
+
+    sendJson(res, 200, {
+      ok: true,
+      users: rows,
+    })
+  } catch (error) {
+    sendJson(res, 500, {
+      ok: false,
+      message: "Failed to load users.",
+      error: error.message,
+    })
+  }
+}
+
+async function handleMarkUserAsFaculty(_req, res, userId) {
+  try {
+    const id = Number(userId)
+    if (!Number.isInteger(id) || id <= 0) {
+      sendJson(res, 400, { ok: false, message: "Invalid user id." })
+      return
+    }
+
+    const existing = await findUserAccountById(id)
+    if (!existing) {
+      sendJson(res, 404, { ok: false, message: "User not found." })
+      return
+    }
+
+    if (existing.is_faculty) {
+      sendJson(res, 409, {
+        ok: false,
+        message: "User is already marked as faculty.",
+      })
+      return
+    }
+
+    await updateUserFacultyStatus(id, true)
+    const updated = await findUserAccountById(id)
+
+    sendJson(res, 200, {
+      ok: true,
+      message: "User marked as faculty.",
+      user: updated,
+    })
+  } catch (error) {
+    sendJson(res, 500, {
+      ok: false,
+      message: "Failed to update user.",
+      error: error.message,
+    })
+  }
+}
+
 module.exports = {
   handleGetLibrarians,
   handleUpdateLibrarian,
+  handleGetUsers,
+  handleMarkUserAsFaculty,
 }

@@ -12,6 +12,18 @@ async function findUserAccountByEmail(email) {
   return rows[0] || null
 }
 
+async function findUserAccountById(userId) {
+  const rows = await query(
+    `SELECT user_id, email, first_name, middle_name, last_name, is_faculty
+     FROM user_account
+     WHERE user_id = ?
+     LIMIT 1`,
+    [userId]
+  )
+
+  return rows[0] || null
+}
+
 async function findStaffAccountByEmail(email) {
   const rows = await query(
     `SELECT staff_id, email, first_name, middle_name, last_name, phone_number, is_admin, is_retired
@@ -177,15 +189,66 @@ async function updateUserLastLogin(userId) {
   )
 }
 
+async function listUserAccounts(search = "") {
+  const normalizedSearch = String(search || "").trim()
+
+  if (!normalizedSearch) {
+    return query(
+      `SELECT
+         user_id,
+         email,
+         first_name,
+         middle_name,
+         last_name,
+         is_faculty
+       FROM user_account
+       ORDER BY last_name ASC, first_name ASC, email ASC`
+    )
+  }
+
+  const likePattern = `%${normalizedSearch}%`
+
+  return query(
+    `SELECT
+       user_id,
+       email,
+       first_name,
+       middle_name,
+       last_name,
+       is_faculty
+     FROM user_account
+     WHERE email LIKE ?
+        OR first_name LIKE ?
+        OR middle_name LIKE ?
+        OR last_name LIKE ?
+     ORDER BY last_name ASC, first_name ASC, email ASC`,
+    [likePattern, likePattern, likePattern, likePattern]
+  )
+}
+
+async function updateUserFacultyStatus(userId, isFaculty) {
+  const result = await query(
+    `UPDATE user_account
+     SET is_faculty = ?
+     WHERE user_id = ?`,
+    [isFaculty ? 1 : 0, userId]
+  )
+
+  return Number(result.affectedRows || 0)
+}
+
 module.exports = {
   findUserAccountByEmail,
+  findUserAccountById,
   findStaffAccountByEmail,
   findUserAccountByCredentials,
   findStaffAccountByCredentials,
   createUserAccount,
   createStaffAccount,
   listLibrarianAccounts,
+  listUserAccounts,
   findLibrarianAccountById,
   updateLibrarianAccount,
+  updateUserFacultyStatus,
   updateUserLastLogin,
 }

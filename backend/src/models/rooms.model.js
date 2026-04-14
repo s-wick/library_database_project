@@ -97,6 +97,15 @@ function getBookRoomEndExpression(bookRoomColumns) {
   return "start_time"
 }
 
+function getBookRoomStartSelect() {
+  return "DATE_FORMAT(start_time, '%Y-%m-%d %H:%i:%s') AS start_time"
+}
+
+function getBookRoomEndSelect(bookRoomColumns) {
+  const bookingEndExpression = getBookRoomEndExpression(bookRoomColumns)
+  return `DATE_FORMAT(${bookingEndExpression}, '%Y-%m-%d %H:%i:%s') AS end_time`
+}
+
 function mapRoomRow(row) {
   const floor = String(row.room_number || "").charAt(0) || "1"
   const hasProjector = Number(row.has_projector || 0) === 1
@@ -255,10 +264,12 @@ async function deleteMeetingRoom(roomNumber) {
 
 async function getUserActiveBooking(userId) {
   const bookRoomColumns = await getBookRoomColumns()
+  const bookingStartSelect = getBookRoomStartSelect()
+  const bookingEndSelect = getBookRoomEndSelect(bookRoomColumns)
   const bookingDurationSelect = getBookRoomDurationSelect(bookRoomColumns)
   const bookingEndExpression = getBookRoomEndExpression(bookRoomColumns)
   const rows = await query(
-    `SELECT room_number, start_time, ${bookingDurationSelect}
+    `SELECT room_number, ${bookingStartSelect}, ${bookingEndSelect}, ${bookingDurationSelect}
      FROM book_room
      WHERE user_id = ?
        AND ${bookingEndExpression} > NOW()
@@ -272,10 +283,12 @@ async function getUserActiveBooking(userId) {
 
 async function getRoomBookingsInWindow(roomNumber, windowStart, windowEnd) {
   const bookRoomColumns = await getBookRoomColumns()
+  const bookingStartSelect = getBookRoomStartSelect()
+  const bookingEndSelect = getBookRoomEndSelect(bookRoomColumns)
   const bookingDurationSelect = getBookRoomDurationSelect(bookRoomColumns)
   const bookingEndExpression = getBookRoomEndExpression(bookRoomColumns)
   const rows = await query(
-    `SELECT room_number, start_time, ${bookingDurationSelect}
+    `SELECT room_number, ${bookingStartSelect}, ${bookingEndSelect}, ${bookingDurationSelect}
      FROM book_room
      WHERE room_number = ?
        AND start_time < ?
@@ -305,6 +318,8 @@ async function hasRoomOverlap(roomNumber, startTime, endTime) {
 
 async function createRoomBooking(userId, roomNumber, startTime, durationHours) {
   const bookRoomColumns = await getBookRoomColumns()
+  const bookingStartSelect = getBookRoomStartSelect()
+  const bookingEndSelect = getBookRoomEndSelect(bookRoomColumns)
   const bookingDurationSelect = getBookRoomDurationSelect(bookRoomColumns)
 
   if (bookRoomColumns.durationColumn) {
@@ -315,7 +330,7 @@ async function createRoomBooking(userId, roomNumber, startTime, durationHours) {
     )
 
     const rows = await query(
-      `SELECT room_number, start_time, ${bookingDurationSelect}
+      `SELECT room_number, ${bookingStartSelect}, ${bookingEndSelect}, ${bookingDurationSelect}
        FROM book_room
        WHERE room_number = ?
          AND user_id = ?
@@ -337,7 +352,7 @@ async function createRoomBooking(userId, roomNumber, startTime, durationHours) {
   )
 
   const rows = await query(
-    `SELECT room_number, start_time, ${bookingDurationSelect}
+    `SELECT room_number, ${bookingStartSelect}, ${bookingEndSelect}, ${bookingDurationSelect}
      FROM book_room
      WHERE room_number = ?
        AND user_id = ?

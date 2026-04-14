@@ -1,9 +1,11 @@
 DELIMITER ;;
 
+-- When an item is returned, give the next eligible hold user the item automatically.
 CREATE TRIGGER auto_checkout_holds
 AFTER UPDATE ON borrow
 FOR EACH ROW
 BEGIN
+	-- Track the current hold being inspected and helper values used during reassignment.
 	DECLARE v_done TINYINT(1) DEFAULT 0;
 	DECLARE v_hold_user_id INT UNSIGNED DEFAULT NULL;
 	DECLARE v_hold_request_datetime DATETIME DEFAULT NULL;
@@ -18,6 +20,7 @@ BEGIN
 	DECLARE v_close_reason_fulfilled_id INT UNSIGNED DEFAULT NULL;
 	DECLARE v_item_title VARCHAR(100) DEFAULT NULL;
 
+	-- Process open holds for this item from oldest to newest.
 	DECLARE hold_cursor CURSOR FOR
 		SELECT h.user_id, h.request_datetime
 		FROM hold_item h
@@ -27,7 +30,9 @@ BEGIN
 
 	DECLARE CONTINUE HANDLER FOR NOT FOUND SET v_done = 1;
 
+	-- Only react when a borrow transitions from active to returned.
 	IF NEW.return_date IS NOT NULL AND OLD.return_date IS NULL THEN
+		-- Load text/id values once so they can be reused throughout the loop.
 		SELECT title
 			INTO v_item_title
 			FROM item
@@ -61,12 +66,14 @@ BEGIN
 		OPEN hold_cursor;
 
 		hold_loop: LOOP
+			-- Pull the next waiting hold request for this item.
 			FETCH hold_cursor INTO v_hold_user_id, v_hold_request_datetime;
 
 			IF v_done = 1 THEN
 				LEAVE hold_loop;
 			END IF;
 
+			-- Users with unpaid fines lose their hold instead of receiving the item.
 			SELECT COUNT(*)
 				INTO v_has_unpaid_fine
 				FROM fined_for f
@@ -104,6 +111,7 @@ BEGIN
 				ITERATE hold_loop;
 			END IF;
 
+			-- Faculty receive a higher checkout limit and longer loan period.
 			SELECT COALESCE(ua.is_faculty, 0)
 				INTO v_is_faculty
 				FROM user_account ua
@@ -118,10 +126,12 @@ BEGIN
 			 WHERE b.user_id = v_hold_user_id
 				 AND b.return_date IS NULL;
 
+			-- Skip this hold if the user is already at their active borrow limit.
 			IF v_active_count >= v_borrow_limit THEN
 				ITERATE hold_loop;
 			END IF;
 
+			-- Create the new checkout for the first eligible user in line.
 			SET v_checkout_ts = NOW();
 			INSERT INTO borrow (item_id, user_id, checkout_date, due_date)
 			VALUES (
@@ -155,6 +165,7 @@ BEGIN
 				);
 			END IF;
 
+			-- Close the hold once it has been fulfilled by the automatic checkout.
 			UPDATE hold_item
 				 SET close_datetime = NOW(),
 						 close_reason_id = v_close_reason_fulfilled_id

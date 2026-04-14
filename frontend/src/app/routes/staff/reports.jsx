@@ -126,21 +126,11 @@ function MetricCard({ label, value, helper }) {
 }
 
 function AggregationTable({ columns, rows }) {
-  const pageSize = 10
-  const [page, setPage] = useState(1)
-  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize))
-  const startIndex = (page - 1) * pageSize
-  const pagedRows = rows.slice(startIndex, startIndex + pageSize)
-
-  useEffect(() => {
-    setPage(1)
-  }, [rows.length, columns.length])
-
   return (
-    <div className="space-y-2">
-      <div className="overflow-x-auto rounded-md border">
+    <div className="max-h-80 overflow-auto rounded-md border">
+      <div className="min-w-max">
         <table className="w-full text-sm">
-          <thead className="bg-muted/40 text-left">
+          <thead className="sticky top-0 bg-muted/40 text-left">
             <tr>
               {columns.map((column) => (
                 <th key={column.key} className="px-3 py-2">
@@ -160,9 +150,9 @@ function AggregationTable({ columns, rows }) {
                 </td>
               </tr>
             ) : (
-              pagedRows.map((row, index) => (
+              rows.map((row, index) => (
                 <tr
-                  key={`${startIndex + index}-${row[columns[0].key] ?? "row"}`}
+                  key={`${index}-${row[columns[0].key] ?? "row"}`}
                   className="border-t"
                 >
                   {columns.map((column) => (
@@ -178,34 +168,6 @@ function AggregationTable({ columns, rows }) {
           </tbody>
         </table>
       </div>
-      {rows.length > pageSize ? (
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>
-            Showing {startIndex + 1}-
-            {Math.min(startIndex + pageSize, rows.length)} of {rows.length}
-          </span>
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-              disabled={page <= 1}
-            >
-              Previous
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
-              disabled={page >= totalPages}
-            >
-              Next
-            </Button>
-          </div>
-        </div>
-      ) : null}
     </div>
   )
 }
@@ -224,31 +186,33 @@ function HorizontalBarChart({ data, valueFormatter }) {
   }
 
   return (
-    <div className="space-y-3">
-      {data.map((item, index) => {
-        const value = Number(item.value || 0)
-        const percent = max ? (value / max) * 100 : 0
-        return (
-          <div
-            key={item.label}
-            className="grid grid-cols-[170px_1fr_120px] items-center gap-3"
-          >
-            <span className="text-sm font-medium">{item.label}</span>
-            <div className="h-6 rounded-md bg-muted">
-              <div
-                className="h-6 rounded-md"
-                style={{
-                  width: `${percent}%`,
-                  backgroundColor: CHART_COLORS[index % CHART_COLORS.length],
-                }}
-              />
+    <div className="max-h-80 overflow-y-auto pr-1">
+      <div className="space-y-3">
+        {data.map((item, index) => {
+          const value = Number(item.value || 0)
+          const percent = max ? (value / max) * 100 : 0
+          return (
+            <div
+              key={item.label}
+              className="grid grid-cols-[170px_1fr_120px] items-center gap-3"
+            >
+              <span className="text-sm font-medium">{item.label}</span>
+              <div className="h-6 rounded-md bg-muted">
+                <div
+                  className="h-6 rounded-md"
+                  style={{
+                    width: `${percent}%`,
+                    backgroundColor: CHART_COLORS[index % CHART_COLORS.length],
+                  }}
+                />
+              </div>
+              <span className="text-right text-sm text-muted-foreground">
+                {valueFormatter ? valueFormatter(value) : value}
+              </span>
             </div>
-            <span className="text-right text-sm text-muted-foreground">
-              {valueFormatter ? valueFormatter(value) : value}
-            </span>
-          </div>
-        )
-      })}
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -285,43 +249,49 @@ function StackedBarChart({ data, segments }) {
           </span>
         ))}
       </div>
-      {data.map((row) => {
-        const total = segments.reduce(
-          (sum, s) => sum + Number(row[s.key] || 0),
-          0
-        )
-        const width = max ? (total / max) * 100 : 0
+      <div className="max-h-80 overflow-y-auto pr-1">
+        <div className="space-y-3">
+          {data.map((row) => {
+            const total = segments.reduce(
+              (sum, s) => sum + Number(row[s.key] || 0),
+              0
+            )
+            const width = max ? (total / max) * 100 : 0
 
-        return (
-          <div
-            key={row.label}
-            className="grid grid-cols-[170px_1fr_120px] items-center gap-3"
-          >
-            <span className="text-sm font-medium">{row.label}</span>
-            <div className="h-6 overflow-hidden rounded-md bg-muted">
-              <div className="flex h-6" style={{ width: `${width}%` }}>
-                {segments.map((segment, index) => {
-                  const segmentValue = Number(row[segment.key] || 0)
-                  const segmentWidth = total ? (segmentValue / total) * 100 : 0
-                  return (
-                    <div
-                      key={segment.key}
-                      style={{
-                        width: `${segmentWidth}%`,
-                        backgroundColor:
-                          CHART_COLORS[index % CHART_COLORS.length],
-                      }}
-                    />
-                  )
-                })}
+            return (
+              <div
+                key={row.label}
+                className="grid grid-cols-[170px_1fr_120px] items-center gap-3"
+              >
+                <span className="text-sm font-medium">{row.label}</span>
+                <div className="h-6 overflow-hidden rounded-md bg-muted">
+                  <div className="flex h-6" style={{ width: `${width}%` }}>
+                    {segments.map((segment, index) => {
+                      const segmentValue = Number(row[segment.key] || 0)
+                      const segmentWidth = total
+                        ? (segmentValue / total) * 100
+                        : 0
+                      return (
+                        <div
+                          key={segment.key}
+                          style={{
+                            width: `${segmentWidth}%`,
+                            backgroundColor:
+                              CHART_COLORS[index % CHART_COLORS.length],
+                          }}
+                        />
+                      )
+                    })}
+                  </div>
+                </div>
+                <span className="text-right text-sm text-muted-foreground">
+                  {total}
+                </span>
               </div>
-            </div>
-            <span className="text-right text-sm text-muted-foreground">
-              {total}
-            </span>
-          </div>
-        )
-      })}
+            )
+          })}
+        </div>
+      </div>
     </div>
   )
 }
@@ -690,7 +660,6 @@ export default function ReportsPage() {
   const [isGenreOpen, setIsGenreOpen] = useState(false)
   const [genreQuery, setGenreQuery] = useState("")
   const [reportCache, setReportCache] = useState({})
-  const [rawPage, setRawPage] = useState(1)
 
   useEffect(() => {
     fetch(`${API_BASE_URL}/api/genres/search?q=`)
@@ -729,7 +698,6 @@ export default function ReportsPage() {
         setHasGenerated(cached.hasGenerated)
         setPage(cached.page)
         setPageSize(cached.pageSize)
-        setRawPage(1)
         setError(cached.error || "")
         return
       }
@@ -739,7 +707,6 @@ export default function ReportsPage() {
       setSummary(null)
       setError("")
       setPage(1)
-      setRawPage(1)
     }
 
     setFilters((prev) => {
@@ -816,7 +783,6 @@ export default function ReportsPage() {
       const nextSummary = data.summary || null
       setRows(nextRows)
       setSummary(nextSummary)
-      setRawPage(1)
       setReportCache((prev) => ({
         ...prev,
         [filters.reportType]: {
@@ -857,7 +823,6 @@ export default function ReportsPage() {
     setError("")
     setHasGenerated(false)
     setPage(1)
-    setRawPage(1)
     setGenreQuery("")
     setIsGenreOpen(false)
   }
@@ -877,11 +842,6 @@ export default function ReportsPage() {
   const isRevenueReport = filters.reportType === "revenue"
   const isHoldsReport = filters.reportType === "holds"
   const isInventoryReport = filters.reportType === "inventory"
-
-  const rawPageSize = 12
-  const rawTotalPages = Math.max(1, Math.ceil(rows.length / rawPageSize))
-  const rawStartIndex = (rawPage - 1) * rawPageSize
-  const rawRows = rows.slice(rawStartIndex, rawStartIndex + rawPageSize)
 
   return (
     <div className="min-h-screen bg-background">
@@ -1273,7 +1233,6 @@ export default function ReportsPage() {
                   <div className="grid gap-4 lg:grid-cols-2">
                     <ChartBlock
                       title="Fines vs item value"
-                      formula="Keep fines and item value separate for clear interpretation."
                       chart={
                         <HorizontalBarChart
                           data={revenueInsights.composition}
@@ -1618,7 +1577,7 @@ export default function ReportsPage() {
                           </td>
                         </tr>
                       ) : isBorrowedReport ? (
-                        rawRows.map((row) => (
+                        rows.map((row) => (
                           <tr
                             key={row.borrowTransactionId}
                             className="border-t"
@@ -1649,7 +1608,7 @@ export default function ReportsPage() {
                           </tr>
                         ))
                       ) : isRevenueReport ? (
-                        rawRows.map((row) => (
+                        rows.map((row) => (
                           <tr key={row.fineId} className="border-t">
                             <td className="px-3 py-2">
                               {formatDate(row.checkoutDate)}
@@ -1683,7 +1642,7 @@ export default function ReportsPage() {
                           </tr>
                         ))
                       ) : isInventoryReport ? (
-                        rawRows.map((row) => (
+                        rows.map((row) => (
                           <tr key={row.itemId} className="border-t">
                             <td className="px-3 py-2">{row.itemName || "-"}</td>
                             <td className="px-3 py-2">
@@ -1710,7 +1669,7 @@ export default function ReportsPage() {
                           </tr>
                         ))
                       ) : (
-                        rawRows.map((row) => (
+                        rows.map((row) => (
                           <tr key={row.holdId} className="border-t">
                             <td className="px-3 py-2">
                               {formatDateTime(row.requestDateTime)}
@@ -1747,41 +1706,6 @@ export default function ReportsPage() {
                     </tbody>
                   </table>
                 </div>
-                {rows.length > rawPageSize ? (
-                  <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
-                    <span>
-                      Showing {rawStartIndex + 1}-
-                      {Math.min(rawStartIndex + rawPageSize, rows.length)} of{" "}
-                      {rows.length}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          setRawPage((prev) => Math.max(1, prev - 1))
-                        }
-                        disabled={rawPage <= 1}
-                      >
-                        Previous
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          setRawPage((prev) =>
-                            Math.min(rawTotalPages, prev + 1)
-                          )
-                        }
-                        disabled={rawPage >= rawTotalPages}
-                      >
-                        Next
-                      </Button>
-                    </div>
-                  </div>
-                ) : null}
               </div>
 
               <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">

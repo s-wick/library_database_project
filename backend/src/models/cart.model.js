@@ -17,7 +17,10 @@ async function getStandardItemForCart(itemId) {
        i.title,
        i.thumbnail_image,
        i.inventory,
-       GREATEST(i.inventory - COALESCE(ab.active_borrow_count, 0), 0) AS stock,
+       GREATEST(
+         CAST(i.inventory AS SIGNED) - COALESCE(CAST(ab.active_borrow_count AS SIGNED), 0),
+         0
+       ) AS stock,
        b.author
      FROM item i
      LEFT JOIN book b ON b.item_id = i.item_id

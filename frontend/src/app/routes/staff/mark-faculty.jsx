@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Navbar } from "@/components/navbar"
 import { API_BASE_URL } from "@/lib/api-config"
 
 const PAGE_SIZE = 25
@@ -202,8 +203,9 @@ export default function MarkFacultyPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="mx-auto max-w-6xl space-y-6">
+    <div className="min-h-screen bg-background">
+      <Navbar />
+      <div className="mx-auto max-w-6xl space-y-6 p-6">
         <Button asChild variant="outline">
           <Link to="/management-dashboard">
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -265,8 +267,8 @@ export default function MarkFacultyPage() {
             </div>
 
             {pendingOperation ? (
-              <div className="space-y-3 rounded-md border border-amber-400/50 bg-amber-50/50 p-4">
-                <p className="text-sm font-medium">
+              <div className="space-y-3 rounded-md border border-amber-400/50 bg-amber-50/50 p-4 dark:border-amber-700/50 dark:bg-amber-950/30">
+                <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
                   Review changes: you are about to{" "}
                   {pendingOperation === "mark" ? "mark" : "undo"} faculty status
                   for {selectedIds.length} user(s).

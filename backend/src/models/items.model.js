@@ -100,7 +100,10 @@ async function searchItems({ queryText = "", itemType = "All", limit = 50 }) {
        i.monetary_value,
        i.thumbnail_image,
        i.inventory,
-       GREATEST(i.inventory - COALESCE(ab.active_borrow_count, 0), 0) AS stock,
+       GREATEST(
+         CAST(i.inventory AS SIGNED) - COALESCE(CAST(ab.active_borrow_count AS SIGNED), 0),
+         0
+       ) AS stock,
        b.author,
        b.edition,
        b.publication,
@@ -154,7 +157,10 @@ async function getItemById(itemId) {
        i.monetary_value,
        i.thumbnail_image,
        i.inventory,
-       GREATEST(i.inventory - COALESCE(ab.active_borrow_count, 0), 0) AS stock,
+       GREATEST(
+         CAST(i.inventory AS SIGNED) - COALESCE(CAST(ab.active_borrow_count AS SIGNED), 0),
+         0
+       ) AS stock,
        b.author,
        b.edition,
        b.publication,

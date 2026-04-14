@@ -1545,15 +1545,15 @@ export default function ReportsPage() {
                         </tr>
                       ) : (
                         <tr>
+                          <th className="px-3 py-2">User</th>
+                          <th className="px-3 py-2">User type</th>
                           <th className="px-3 py-2">Requested</th>
                           <th className="px-3 py-2">Closed</th>
                           <th className="px-3 py-2">Status</th>
-                          <th className="px-3 py-2">Reason</th>
+                          <th className="px-3 py-2">Closing reason</th>
                           <th className="px-3 py-2">Wait hours</th>
                           <th className="px-3 py-2">Item</th>
                           <th className="px-3 py-2">Item type</th>
-                          <th className="px-3 py-2">User</th>
-                          <th className="px-3 py-2">User type</th>
                           <th className="px-3 py-2">Genres</th>
                         </tr>
                       )}
@@ -1672,6 +1672,15 @@ export default function ReportsPage() {
                         rows.map((row) => (
                           <tr key={row.holdId} className="border-t">
                             <td className="px-3 py-2">
+                              {row.userName ||
+                                row.userEmail ||
+                                row.userId ||
+                                "-"}
+                            </td>
+                            <td className="px-3 py-2">
+                              {formatUserTypeForDisplay(row.userType)}
+                            </td>
+                            <td className="px-3 py-2">
                               {formatDateTime(row.requestDateTime)}
                             </td>
                             <td className="px-3 py-2">
@@ -1681,7 +1690,9 @@ export default function ReportsPage() {
                               {row.holdStatus || "-"}
                             </td>
                             <td className="px-3 py-2">
-                              {row.closeReason || "-"}
+                              {row.closeDateTime
+                                ? row.closeReason || "-"
+                                : "--"}
                             </td>
                             <td className="px-3 py-2">
                               {Number(row.waitHours || 0)}
@@ -1689,15 +1700,6 @@ export default function ReportsPage() {
                             <td className="px-3 py-2">{row.itemName || "-"}</td>
                             <td className="px-3 py-2">
                               {formatItemTypeForDisplay(row.itemType)}
-                            </td>
-                            <td className="px-3 py-2">
-                              {row.userName ||
-                                row.userEmail ||
-                                row.userId ||
-                                "-"}
-                            </td>
-                            <td className="px-3 py-2">
-                              {formatUserTypeForDisplay(row.userType)}
                             </td>
                             <td className="px-3 py-2">{row.genres || "-"}</td>
                           </tr>

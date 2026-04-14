@@ -373,8 +373,14 @@ function ChartBlock({
         }
       >
         <div>{chart}</div>
-        <div className={sideBySide ? "xl:min-w-0" : ""}>
-          <p className="mb-2 text-sm font-medium">
+        <div className={sideBySide ? "xl:relative xl:min-w-0" : ""}>
+          <p
+            className={
+              sideBySide
+                ? "mb-2 text-sm font-medium xl:absolute xl:-mt-6 xl:mb-0"
+                : "mb-2 text-sm font-medium"
+            }
+          >
             Source table for this chart
           </p>
           <AggregationTable columns={columns} rows={rows} />

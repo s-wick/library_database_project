@@ -86,6 +86,52 @@ function buildWhereFilters(url) {
   }
 }
 
+function buildHoldsWhereFilters(url) {
+  const params = []
+  const clauses = []
+
+  const startDate = String(url.searchParams.get("startDate") || "").trim()
+  if (startDate) {
+    clauses.push("hi.request_datetime >= ?")
+    params.push(`${startDate} 00:00:00`)
+  }
+
+  const endDate = String(url.searchParams.get("endDate") || "").trim()
+  if (endDate) {
+    clauses.push("hi.request_datetime < DATE_ADD(?, INTERVAL 1 DAY)")
+    params.push(endDate)
+  }
+
+  const userType = normalizeUserType(url.searchParams.get("userType"))
+  if (userType) {
+    clauses.push("ua.is_faculty = ?")
+    params.push(userType === "FACULTY" ? 1 : 0)
+  }
+
+  const itemType = String(url.searchParams.get("itemType") || "").trim()
+  if (itemType) {
+    clauses.push("it.item_type = ?")
+    params.push(itemType)
+  }
+
+  const genres = parseGenresFilter(url.searchParams.get("genre"))
+  if (genres.length) {
+    const placeholders = genres.map(() => "?").join(",")
+    clauses.push(`EXISTS (
+      SELECT 1
+      FROM assigned_genres agf
+      INNER JOIN genre gf ON gf.genre_id = agf.genre_id
+      WHERE agf.item_id = i.item_id AND gf.genre_text IN (${placeholders})
+    )`)
+    params.push(...genres)
+  }
+
+  return {
+    whereClause: clauses.length ? `WHERE ${clauses.join(" AND ")}` : "",
+    params,
+  }
+}
+
 function getPagination(url) {
   const pageValue = Number(url.searchParams.get("page") || 1)
   const pageSizeValue = Number(url.searchParams.get("pageSize") || 100)
@@ -227,6 +273,129 @@ async function getRevenueRows(url) {
   }
 }
 
+async function getHoldsRows(url) {
+  const { whereClause, params } = buildHoldsWhereFilters(url)
+  const { page, pageSize, offset } = getPagination(url)
+  const limit = pageSize + 1
+  const safeOffset = Math.max(0, Math.trunc(offset))
+  const safeLimit = Math.max(1, Math.trunc(limit))
+
+  const rows = await query(
+    `SELECT
+       CONCAT(hi.item_id, '-', hi.user_id, '-', DATE_FORMAT(hi.request_datetime, '%Y-%m-%d %H:%i:%s')) AS holdId,
+       hi.item_id AS itemId,
+       hi.user_id AS userId,
+       i.title AS itemName,
+       it.item_type AS itemType,
+       CASE WHEN ua.is_faculty = 1 THEN 'FACULTY' ELSE 'STUDENT' END AS userType,
+       CONCAT(ua.first_name, ' ', ua.last_name) AS userName,
+       ua.email AS userEmail,
+       hi.request_datetime AS requestDateTime,
+       hi.close_datetime AS closeDateTime,
+       COALESCE(hcr.reason_text, 'ACTIVE') AS closeReason,
+       CASE
+         WHEN hi.close_datetime IS NULL THEN 'ACTIVE'
+         WHEN hcr.reason_text = 'Fulfilled' THEN 'FULFILLED'
+         ELSE 'CANCELED'
+       END AS holdStatus,
+       TIMESTAMPDIFF(
+         HOUR,
+         hi.request_datetime,
+         COALESCE(hi.close_datetime, NOW())
+       ) AS waitHours,
+       COALESCE(ig.genres, '') AS genres
+     FROM hold_item hi
+     INNER JOIN item i ON i.item_id = hi.item_id
+     LEFT JOIN item_type it ON it.item_code = i.item_type_code
+     INNER JOIN user_account ua ON ua.user_id = hi.user_id
+     LEFT JOIN hold_item_closing_reasons hcr ON hcr.reason_id = hi.close_reason_id
+     LEFT JOIN (
+       SELECT
+         ag.item_id,
+         GROUP_CONCAT(DISTINCT g.genre_text ORDER BY g.genre_text SEPARATOR ', ') AS genres
+       FROM assigned_genres ag
+       INNER JOIN genre g ON g.genre_id = ag.genre_id
+       GROUP BY ag.item_id
+     ) ig ON ig.item_id = i.item_id
+     ${whereClause}
+    ORDER BY hi.request_datetime DESC
+    LIMIT ${safeOffset}, ${safeLimit}`,
+    params
+  )
+
+  const hasMore = rows.length > pageSize
+
+  return {
+    rows: hasMore ? rows.slice(0, pageSize) : rows,
+    page,
+    pageSize,
+    hasMore,
+  }
+}
+
+async function getInventoryRows(url) {
+  const itemFilters = buildItemOnlyFilters(url, {
+    itemAlias: "i",
+    itemTypeAlias: "it",
+  })
+  const borrowFilters = buildBorrowOnlyFilters(url, {
+    borrowAlias: "b2",
+    itemAlias: "i2",
+    userAlias: "ua2",
+  })
+  const { page, pageSize, offset } = getPagination(url)
+  const limit = pageSize + 1
+  const safeOffset = Math.max(0, Math.trunc(offset))
+  const safeLimit = Math.max(1, Math.trunc(limit))
+
+  const rows = await query(
+    `SELECT
+       i.item_id AS itemId,
+       i.title AS itemName,
+       i.created_at AS createdAt,
+       it.item_type AS itemType,
+       i.inventory AS inventory,
+       i.monetary_value AS itemValue,
+       COALESCE(i.inventory, 0) * COALESCE(i.monetary_value, 0) AS catalogValue,
+       COALESCE(bs.totalBorrows, 0) AS totalBorrows,
+       COALESCE(bs.activeBorrows, 0) AS activeBorrows,
+       COALESCE(bs.overdueActiveBorrows, 0) AS overdueActiveBorrows
+     FROM item i
+     LEFT JOIN item_type it ON it.item_code = i.item_type_code
+     LEFT JOIN (
+       SELECT
+         b2.item_id,
+         COUNT(*) AS totalBorrows,
+         SUM(CASE WHEN b2.return_date IS NULL THEN 1 ELSE 0 END) AS activeBorrows,
+         SUM(
+           CASE
+             WHEN b2.return_date IS NULL AND b2.due_date < NOW() THEN 1
+             ELSE 0
+           END
+         ) AS overdueActiveBorrows
+       FROM borrow b2
+       INNER JOIN item i2 ON i2.item_id = b2.item_id
+       LEFT JOIN item_type it2 ON it2.item_code = i2.item_type_code
+       INNER JOIN user_account ua2 ON ua2.user_id = b2.user_id
+       ${borrowFilters.whereClause}
+       GROUP BY b2.item_id
+     ) bs ON bs.item_id = i.item_id
+     ${itemFilters.whereClause}
+     ORDER BY it.item_type ASC, i.title ASC
+     LIMIT ${safeOffset}, ${safeLimit}`,
+    [...borrowFilters.params, ...itemFilters.params]
+  )
+
+  const hasMore = rows.length > pageSize
+
+  return {
+    rows: hasMore ? rows.slice(0, pageSize) : rows,
+    page,
+    pageSize,
+    hasMore,
+  }
+}
+
 function buildBorrowOnlyFilters(url, options = {}) {
   const params = []
   const clauses = []
@@ -302,6 +471,18 @@ function buildItemOnlyFilters(url, options = {}) {
   const clauses = []
   const itemAlias = options.itemAlias || "i"
   const itemTypeAlias = options.itemTypeAlias || "it"
+
+  const startDate = String(url.searchParams.get("startDate") || "").trim()
+  if (startDate) {
+    clauses.push(`${itemAlias}.created_at >= ?`)
+    params.push(`${startDate} 00:00:00`)
+  }
+
+  const endDate = String(url.searchParams.get("endDate") || "").trim()
+  if (endDate) {
+    clauses.push(`${itemAlias}.created_at < DATE_ADD(?, INTERVAL 1 DAY)`)
+    params.push(endDate)
+  }
 
   const itemType = String(url.searchParams.get("itemType") || "").trim()
   if (itemType) {
@@ -608,6 +789,84 @@ async function handleGetReports(_req, res, url) {
           page: 1,
           pageSize: rows.length,
           hasMore: false,
+        },
+      })
+      return
+    }
+
+    if (reportType === "holds") {
+      const availability = await getItemAvailabilityStats(url)
+      const { rows, page, pageSize, hasMore } = await getHoldsRows(url)
+      const totalActiveHolds = rows.filter(
+        (row) => String(row.holdStatus) === "ACTIVE"
+      ).length
+      const totalFulfilledHolds = rows.filter(
+        (row) => String(row.holdStatus) === "FULFILLED"
+      ).length
+      const totalCanceledHolds = rows.filter(
+        (row) => String(row.holdStatus) === "CANCELED"
+      ).length
+      const averageWaitHours = rows.length
+        ? rows.reduce((sum, row) => sum + Number(row.waitHours || 0), 0) /
+          rows.length
+        : 0
+      const fulfillmentRate = rows.length
+        ? (totalFulfilledHolds / rows.length) * 100
+        : 0
+
+      sendJson(res, 200, {
+        ok: true,
+        reportType,
+        rows,
+        summary: {
+          totalRecords: rows.length,
+          totalActiveHolds,
+          totalFulfilledHolds,
+          totalCanceledHolds,
+          averageWaitHours,
+          fulfillmentRate,
+          itemsInLibrary: availability.itemsInLibrary,
+          itemsCheckedOut: availability.itemsCheckedOut,
+          page,
+          pageSize,
+          hasMore,
+        },
+      })
+      return
+    }
+
+    if (reportType === "inventory") {
+      const { rows, page, pageSize, hasMore } = await getInventoryRows(url)
+      const totalCatalogValue = rows.reduce(
+        (sum, row) => sum + Number(row.catalogValue || 0),
+        0
+      )
+      const totalInventoryUnits = rows.reduce(
+        (sum, row) => sum + Number(row.inventory || 0),
+        0
+      )
+      const totalActiveBorrows = rows.reduce(
+        (sum, row) => sum + Number(row.activeBorrows || 0),
+        0
+      )
+      const totalOverdueActiveBorrows = rows.reduce(
+        (sum, row) => sum + Number(row.overdueActiveBorrows || 0),
+        0
+      )
+
+      sendJson(res, 200, {
+        ok: true,
+        reportType,
+        rows,
+        summary: {
+          totalRecords: rows.length,
+          totalCatalogValue,
+          totalInventoryUnits,
+          totalActiveBorrows,
+          totalOverdueActiveBorrows,
+          page,
+          pageSize,
+          hasMore,
         },
       })
       return

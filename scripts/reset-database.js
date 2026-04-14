@@ -6,6 +6,7 @@ const { spawnSync } = require("node:child_process")
 // Edit this list to control the order of data imports.
 const dataFiles = [
   "users.sql",
+  "report-types.sql",
   "items.sql",
   "notification-types.sql",
   "faculty-audit-action-types.sql",
@@ -13,6 +14,7 @@ const dataFiles = [
   "transactions.sql",
   "holds-fines.sql",
   "room-bookings.sql",
+  "extra-users-monthly-borrows.sql",
 ]
 const triggerFiles = [
   "borrow-limit.sql",

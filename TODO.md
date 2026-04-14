@@ -1,4 +1,5 @@
 # Git commit steps for hasTV duplicate fix
+
 - [x] Checkout branch bug_fix/Nguyen/hasTV_dup
 - [x] Re-apply the fix to manage-room.jsx (delete dup commit c3133d2)
 - [ ] Stage additional files (e.g., this TODO.md)

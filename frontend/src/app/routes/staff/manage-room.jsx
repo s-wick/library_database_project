@@ -332,7 +332,6 @@ export default function RoomManagePage() {
                 </label>
 
                 <Button type="submit" disabled={submitting}>
-
                   {submitting
                     ? isEditing
                       ? "Saving changes..."
@@ -430,7 +429,6 @@ export default function RoomManagePage() {
                           enabled={room.features.hasWhiteboard}
                         />
                       </div>
-
                     </div>
                   ))}
                 </div>

@@ -176,7 +176,7 @@ export default function MarkFacultyPage() {
     }
   }
 
-  if (authUser.role !== "admin") {
+  if (authUser.role !== "admin" && authUser.role !== "staff") {
     return (
       <div className="min-h-screen bg-background p-6">
         <div className="mx-auto max-w-2xl space-y-6">
@@ -192,7 +192,7 @@ export default function MarkFacultyPage() {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                Only system administrators can access this page.
+                Only staff members can access this page.
               </p>
             </CardContent>
           </Card>

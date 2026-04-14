@@ -236,7 +236,7 @@ async function handleGetUsers(_req, res, url) {
 
 async function handleSetUserFacultyStatus(req, res, userId) {
   try {
-    const actor = await requireStaffAuthorization(req, res, { adminOnly: true })
+    const actor = await requireStaffAuthorization(req, res)
     if (!actor) return
 
     const id = Number(userId)
@@ -303,7 +303,7 @@ async function handleSetUserFacultyStatus(req, res, userId) {
 
 async function handleBulkSetUserFacultyStatus(req, res) {
   try {
-    const actor = await requireStaffAuthorization(req, res, { adminOnly: true })
+    const actor = await requireStaffAuthorization(req, res)
     if (!actor) return
 
     const body = await parseJsonBody(req)

@@ -219,6 +219,7 @@ export default function RoomBookingPage() {
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const [availabilityError, setAvailabilityError] = useState("")
+  const [lastBookedAt, setLastBookedAt] = useState(0)
 
   const selectedRoomDetails = useMemo(
     () => rooms.find((room) => room.roomNumber === selectedRoom) || null,
@@ -564,17 +565,25 @@ export default function RoomBookingPage() {
 
   const handleBookRoom = async () => {
     setError("")
-    setSuccess("")
 
     if (!user?.id) {
+      setSuccess("")
       setError("Please sign in to book a room.")
       return
     }
 
     if (activeBooking) {
+      const bookedRecently = Date.now() - lastBookedAt < 2000
+      if (bookedRecently) {
+        return
+      }
+
+      setSuccess("")
       setError("You already have an active room booking.")
       return
     }
+
+    setSuccess("")
 
     const start = new Date(startAt)
     if (Number.isNaN(start.getTime())) {
@@ -599,6 +608,7 @@ export default function RoomBookingPage() {
       if (!res.ok) throw new Error(data.message || "Failed to book room")
 
       setSuccess("Room booked successfully.")
+      setLastBookedAt(Date.now())
       await fetchData()
       setAvailabilityRefreshKey((current) => current + 1)
     } catch (err) {

@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Field, FieldError, FieldLabel } from "@/components/ui/field"
+import { Navbar } from "@/components/navbar"
 import { API_BASE_URL } from "@/lib/api-config"
 
 function FeaturePill({ label, enabled }) {
@@ -77,8 +78,9 @@ export default function RoomManagePage() {
 
   if (authUser.role !== "admin") {
     return (
-      <div className="min-h-screen bg-background p-6">
-        <div className="mx-auto max-w-2xl space-y-6">
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="mx-auto max-w-2xl space-y-6 p-6">
           <Button asChild variant="outline">
             <Link to="/management-dashboard">
               <ArrowLeft className="mr-2 h-4 w-4" />
@@ -250,8 +252,9 @@ export default function RoomManagePage() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="mx-auto max-w-5xl space-y-6">
+    <div className="min-h-screen bg-background">
+      <Navbar />
+      <div className="mx-auto max-w-5xl space-y-6 p-6">
         <Button asChild variant="outline">
           <Link to="/management-dashboard">
             <ArrowLeft className="mr-2 h-4 w-4" />

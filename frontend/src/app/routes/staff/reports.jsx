@@ -127,13 +127,13 @@ function MetricCard({ label, value, helper }) {
 
 function AggregationTable({ columns, rows }) {
   return (
-    <div className="max-h-80 overflow-auto rounded-md border">
+    <div className="max-h-80 overflow-auto rounded-md border [scrollbar-gutter:stable]">
       <div className="min-w-max">
         <table className="w-full text-sm">
-          <thead className="sticky top-0 bg-muted/40 text-left">
+          <thead className="sticky top-0 z-20 bg-muted text-left">
             <tr>
               {columns.map((column) => (
-                <th key={column.key} className="px-3 py-2">
+                <th key={column.key} className="border-b px-3 py-2">
                   {column.label}
                 </th>
               ))}
@@ -186,7 +186,7 @@ function HorizontalBarChart({ data, valueFormatter }) {
   }
 
   return (
-    <div className="max-h-80 overflow-y-auto pr-1">
+    <div className="max-h-80 overflow-y-auto pr-4 [scrollbar-gutter:stable]">
       <div className="space-y-3">
         {data.map((item, index) => {
           const value = Number(item.value || 0)
@@ -194,7 +194,7 @@ function HorizontalBarChart({ data, valueFormatter }) {
           return (
             <div
               key={item.label}
-              className="grid grid-cols-[170px_1fr_120px] items-center gap-3"
+              className="grid grid-cols-[170px_minmax(0,1fr)_120px] items-center gap-3"
             >
               <span className="text-sm font-medium">{item.label}</span>
               <div className="h-6 rounded-md bg-muted">
@@ -206,7 +206,7 @@ function HorizontalBarChart({ data, valueFormatter }) {
                   }}
                 />
               </div>
-              <span className="text-right text-sm text-muted-foreground">
+              <span className="pr-1 text-right text-sm text-muted-foreground">
                 {valueFormatter ? valueFormatter(value) : value}
               </span>
             </div>
@@ -249,7 +249,7 @@ function StackedBarChart({ data, segments }) {
           </span>
         ))}
       </div>
-      <div className="max-h-80 overflow-y-auto pr-1">
+      <div className="max-h-80 overflow-y-auto pr-4 [scrollbar-gutter:stable]">
         <div className="space-y-3">
           {data.map((row) => {
             const total = segments.reduce(
@@ -261,7 +261,7 @@ function StackedBarChart({ data, segments }) {
             return (
               <div
                 key={row.label}
-                className="grid grid-cols-[170px_1fr_120px] items-center gap-3"
+                className="grid grid-cols-[170px_minmax(0,1fr)_120px] items-center gap-3"
               >
                 <span className="text-sm font-medium">{row.label}</span>
                 <div className="h-6 overflow-hidden rounded-md bg-muted">
@@ -284,7 +284,7 @@ function StackedBarChart({ data, segments }) {
                     })}
                   </div>
                 </div>
-                <span className="text-right text-sm text-muted-foreground">
+                <span className="pr-1 text-right text-sm text-muted-foreground">
                   {total}
                 </span>
               </div>
@@ -297,11 +297,10 @@ function StackedBarChart({ data, segments }) {
 }
 
 function CheckoutCalendarChart({ data }) {
-  const [selectedDay, setSelectedDay] = useState(undefined)
   const dataByDay = useMemo(() => {
     const map = new Map()
     data.forEach((item) => {
-      map.set(String(item.dayKey || ""), Number(item.value || 0))
+      map.set(toDayKey(item.dayKey), Number(item.value || 0))
     })
     return map
   }, [data])
@@ -318,15 +317,15 @@ function CheckoutCalendarChart({ data }) {
   }
 
   return (
-    <div className="rounded-md border bg-background p-2">
+    <div className="w-full rounded-md border bg-card p-2">
       <Calendar
         mode="single"
-        selected={selectedDay}
-        onSelect={setSelectedDay}
+        selected={undefined}
+        onSelect={() => {}}
         defaultMonth={defaultMonth}
         numberOfMonths={1}
         captionLayout="dropdown"
-        className="[--cell-size:--spacing(10)] md:[--cell-size:--spacing(12)]"
+        className="!w-full !bg-card [--cell-size:--spacing(10)] md:[--cell-size:--spacing(12)]"
         formatters={{
           formatMonthDropdown: (date) =>
             date.toLocaleString("default", { month: "long" }),
@@ -339,9 +338,9 @@ function CheckoutCalendarChart({ data }) {
             return (
               <CalendarDayButton day={day} modifiers={modifiers} {...props}>
                 {children}
-                {!modifiers.outside ? (
-                  <span className="text-[10px] leading-none text-muted-foreground">
-                    {count > 0 ? count : ""}
+                {!modifiers.outside && count > 0 ? (
+                  <span className="mt-1 inline-flex min-h-4 min-w-4 items-center justify-center rounded-full bg-emerald-600 px-1 text-[10px] leading-none font-semibold text-emerald-50 opacity-100 dark:bg-emerald-500 dark:text-emerald-950">
+                    {count}
                   </span>
                 ) : null}
               </CalendarDayButton>

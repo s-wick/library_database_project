@@ -346,7 +346,7 @@ function FinesPanel({ fines = [] }) {
                       </Badge>
                     ) : (
                       <Badge className="h-4 bg-amber-500 px-1.5 py-0 text-[10px] tracking-wider text-white uppercase hover:bg-amber-500">
-                        Check-in required
+                        Check in required
                       </Badge>
                     )
                   ) : (

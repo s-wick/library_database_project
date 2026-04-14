@@ -741,7 +741,7 @@ export default function RoomBookingPage() {
             >
               {submitting ? "Booking..." : "Book Room"}
             </Button>
-            {!!activeBooking && (
+            {!!activeBooking && !success && (
               <p className="mt-2 text-sm text-amber-600">
                 You already have an active booking and cannot book another room.
               </p>

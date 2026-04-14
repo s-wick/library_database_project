@@ -265,8 +265,8 @@ export default function MarkFacultyPage() {
             </div>
 
             {pendingOperation ? (
-              <div className="space-y-3 rounded-md border border-amber-400/50 bg-amber-50/50 p-4">
-                <p className="text-sm font-medium">
+              <div className="space-y-3 rounded-md border border-amber-400/50 bg-amber-50/50 p-4 dark:border-amber-700/50 dark:bg-amber-950/30">
+                <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
                   Review changes: you are about to{" "}
                   {pendingOperation === "mark" ? "mark" : "undo"} faculty status
                   for {selectedIds.length} user(s).

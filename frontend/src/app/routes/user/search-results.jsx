@@ -258,7 +258,7 @@ export default function SearchPage() {
 
       <div className="border-b bg-slate-50 py-6 dark:bg-slate-900/50">
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-6 md:px-10">
-          <div className="relative z-20 flex w-full flex-col items-center gap-4 md:flex-row">
+          <div className="relative z-15 flex w-full flex-col items-center gap-4 md:flex-row">
             <Field className="flex-1" orientation="horizontal">
               <Input
                 type="search"

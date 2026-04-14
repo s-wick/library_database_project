@@ -11,6 +11,7 @@ import ManageItemsPage from "./routes/staff/manage-items"
 import ReportsPage from "./routes/staff/reports"
 import CheckInPage from "./routes/staff/check-in"
 import RoomManagePage from "./routes/staff/manage-room"
+import MarkFacultyPage from "./routes/staff/mark-faculty"
 import CheckoutPage from "./routes/user/checkout"
 import ItemPage from "./routes/user/item"
 import RoomBookingPage from "./routes/user/room-booking"
@@ -166,6 +167,15 @@ export const router = createBrowserRouter([
           </RequireManagementAccess>
         ),
         handle: { title: "Manage Rooms" },
+      },
+      {
+        path: "management-dashboard/mark-faculty",
+        element: (
+          <RequireManagementAccess>
+            <MarkFacultyPage />
+          </RequireManagementAccess>
+        ),
+        handle: { title: "Mark Faculty" },
       },
       {
         path: "checkout",

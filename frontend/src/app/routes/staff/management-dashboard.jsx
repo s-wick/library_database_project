@@ -6,6 +6,7 @@ import {
   Trash2,
   FileBarChart2,
   DoorOpen,
+  GraduationCap,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Navbar } from "@/components/navbar"
@@ -55,6 +56,13 @@ const actions = [
     to: "/management-dashboard/room-manage",
     icon: DoorOpen,
     adminOnly: true,
+  },
+  {
+    title: "Mark faculty",
+    description: "Mark or undo faculty status for user accounts.",
+    to: "/management-dashboard/mark-faculty",
+    icon: GraduationCap,
+    adminOnly: false,
   },
 
   {

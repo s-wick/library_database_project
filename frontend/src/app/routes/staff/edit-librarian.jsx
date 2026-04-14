@@ -14,6 +14,13 @@ import { Calendar } from "@/components/ui/calendar"
 import { Navbar } from "@/components/navbar"
 import { API_BASE_URL } from "@/lib/api-config"
 
+function getActorHeaders(authUser) {
+  return {
+    "x-actor-id": String(authUser?.id || ""),
+    "x-actor-role": String(authUser?.role || ""),
+  }
+}
+
 function formatUsPhone(value = "") {
   const raw = String(value)
   const rawDigits = raw.replace(/\D/g, "")
@@ -94,7 +101,9 @@ export default function EditLibrarianPage() {
       setIsLoading(true)
       setError("")
       try {
-        const response = await fetch(`${API_BASE_URL}/api/staff`)
+        const response = await fetch(`${API_BASE_URL}/api/staff`, {
+          headers: getActorHeaders(authUser),
+        })
         const data = await response.json().catch(() => ({}))
         if (!response.ok) {
           setError(data.message || "Failed to load librarians.")
@@ -246,6 +255,7 @@ export default function EditLibrarianPage() {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
+          ...getActorHeaders(authUser),
         },
         body: JSON.stringify({
           firstName: form.firstName.trim(),

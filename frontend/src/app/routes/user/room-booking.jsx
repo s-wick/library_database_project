@@ -622,11 +622,13 @@ export default function RoomBookingPage() {
         </section>
 
         {activeBooking && (
-          <Card className="border-emerald-200 bg-emerald-50">
+          <Card className="rounded-md border border-emerald-200 bg-emerald-50/70 dark:border-emerald-900/50 dark:bg-emerald-950/20">
             <CardHeader>
-              <CardTitle className="text-lg">Active Booking</CardTitle>
+              <CardTitle className="text-lg text-emerald-700 dark:text-emerald-300">
+                Active Booking
+              </CardTitle>
             </CardHeader>
-            <CardContent className="text-sm text-muted-foreground">
+            <CardContent className="font-semibold text-emerald-900 dark:text-emerald-100">
               Room {activeBooking.roomNumber} on{" "}
               {new Date(activeBooking.startTime).toLocaleDateString()} from{" "}
               {new Date(activeBooking.startTime).toLocaleTimeString()} to{" "}

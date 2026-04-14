@@ -649,6 +649,30 @@ export default function ReportsPage() {
     setIsLoading(true)
     setHasGenerated(true)
     try {
+      const authUser = JSON.parse(sessionStorage.getItem("authUser") || "{}")
+      const user = JSON.parse(sessionStorage.getItem("user") || "{}")
+      const candidateId = Number(authUser?.id || user?.id || 0)
+      const accountType = String(
+        authUser?.accountType || user?.accountType || ""
+      )
+        .trim()
+        .toLowerCase()
+      const role = String(authUser?.role || user?.role || "")
+        .trim()
+        .toLowerCase()
+      const roleGroup = String(authUser?.roleGroup || user?.roleGroup || "")
+        .trim()
+        .toLowerCase()
+      const isStaffSession =
+        accountType === "staff" ||
+        role === "staff" ||
+        role === "admin" ||
+        roleGroup === "adminstaff"
+      const staffId =
+        isStaffSession && Number.isFinite(candidateId) && candidateId > 0
+          ? String(candidateId)
+          : ""
+
       const params = new URLSearchParams({
         reportType: filters.reportType,
         startDate: filters.startDate,
@@ -659,6 +683,7 @@ export default function ReportsPage() {
         overdue: filters.overdue,
         page: String(nextPage),
         pageSize: String(pageSize),
+        staffId,
       })
 
       const response = await fetch(`${API_BASE_URL}/api/reports?${params}`)

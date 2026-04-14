@@ -35,7 +35,13 @@ npm install
 
 1. Duplicate `database/.env.example` and rename it to `.env`
 2. Set `DB_*` values for your MySQL connection
-3. Set `SEED_STAFF_PASSWORD` and `SEED_USER_PASSWORD` for seeded login passwords
+3. (Optional) Set `DB_TIME_ZONE` (for example `+00:00`) to force a consistent MySQL session time zone during resets
+4. Set `SEED_STAFF_PASSWORD` and `SEED_USER_PASSWORD` for seeded login passwords
+
+`npm run db:update-dates` also supports:
+
+- `SAMPLE_DATA_TIMEZONE` (IANA zone like `America/Chicago`) to control which "today" date is used
+- `SAMPLE_DATA_TARGET_DATE` (`YYYY-MM-DD`) to pin an explicit target date
 
 This keeps seed credentials out of tracked SQL files and out of git history.
 

@@ -278,6 +278,7 @@ function main() {
     password: env.DB_PASSWORD || "",
   }
   const database = requiredEnv(env, "DB_NAME")
+  const dbTimeZone = env.DB_TIME_ZONE || process.env.DB_TIME_ZONE || "+00:00"
 
   const mysqlBin = process.env.MYSQL_PATH || "mysql"
   const baseArgs = [
@@ -289,7 +290,10 @@ function main() {
     connection.user,
     `--password=${connection.password}`,
     "--default-character-set=utf8mb4",
+    `--init-command=SET time_zone = '${dbTimeZone}'`,
   ]
+
+  console.log(`Using MySQL session time zone: ${dbTimeZone}`)
 
   runMysql({
     mysqlBin,

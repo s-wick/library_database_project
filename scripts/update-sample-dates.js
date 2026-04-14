@@ -6,6 +6,8 @@ const dataFiles = ["transactions.sql", "room-bookings.sql"]
 
 // The date the sample data currently targets.
 const baseDate = "2026-04-11"
+const targetTimeZone = process.env.SAMPLE_DATA_TIMEZONE || "UTC"
+const targetDateOverride = process.env.SAMPLE_DATA_TARGET_DATE
 
 function parseDateOnly(value) {
   const match = /^\d{4}-\d{2}-\d{2}$/.exec(value)
@@ -55,10 +57,37 @@ function addDaysToDateString(dateString, days) {
 }
 
 function resolveTodayDate() {
-  const now = new Date()
-  const year = now.getFullYear()
-  const month = String(now.getMonth() + 1).padStart(2, "0")
-  const day = String(now.getDate()).padStart(2, "0")
+  if (targetDateOverride) {
+    const parsed = parseDateOnly(targetDateOverride)
+    if (!parsed) {
+      throw new Error(
+        `Invalid SAMPLE_DATA_TARGET_DATE value: ${targetDateOverride}. Use YYYY-MM-DD.`
+      )
+    }
+
+    return targetDateOverride
+  }
+
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: targetTimeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  })
+
+  const parts = formatter.formatToParts(new Date())
+  const getPart = (type) => parts.find((part) => part.type === type)?.value
+
+  const year = getPart("year")
+  const month = getPart("month")
+  const day = getPart("day")
+
+  if (!year || !month || !day) {
+    throw new Error(
+      `Failed to resolve target date using timezone: ${targetTimeZone}`
+    )
+  }
+
   return `${year}-${month}-${day}`
 }
 
@@ -76,7 +105,7 @@ function parseFileDirectives(content) {
 
 function updateFile(filePath, baseDateValue, targetDateValue) {
   const content = fs.readFileSync(filePath, "utf8")
-  const dateTimeRegex = /'(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2})'/g
+  const dateTimeRegex = /'(\d{4}-\d{2}-\d{2}) ((?:\d|\d{2}):\d{2}:\d{2})'/g
   const nextShiftRegex = /^\s*--\s*sample-shift-days-next:\s*(-?\d+)\s*$/
 
   const baseParts = parseDateOnly(baseDateValue)
@@ -147,6 +176,9 @@ function main() {
   }
 
   const resolvedTargetDate = resolveTodayDate()
+  console.log(
+    `Updating sample dates using timezone '${targetTimeZone}' with target date ${resolvedTargetDate}`
+  )
 
   const baseDateParts = parseDateOnly(baseDate)
   const targetDateParts = parseDateOnly(resolvedTargetDate)

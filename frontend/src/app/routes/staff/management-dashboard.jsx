@@ -6,7 +6,8 @@ import {
   Trash2,
   FileBarChart2,
   DoorOpen,
-  GraduationCap,
+  UserCheck,
+  BookCheck,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Navbar } from "@/components/navbar"
@@ -68,24 +69,24 @@ const actions = [
     title: "Mark faculty",
     description: "Mark or undo faculty status for user accounts.",
     to: "/management-dashboard/mark-faculty",
-    icon: GraduationCap,
+    icon: UserCheck,
     adminOnly: false,
-    group: "People & access",
+    group: "User management",
   },
 
   {
     title: "Check in item",
     description: "Check in borrowed items.",
     to: "/management-dashboard/check-in",
-    icon: Users,
-    group: "Circulation",
+    icon: BookCheck,
+    group: "User management",
   },
 ]
 
 const groupOrder = [
   "Catalog items",
-  "Circulation",
   "People & access",
+  "User management",
   "Operations & reporting",
 ]
 
@@ -96,17 +97,17 @@ const groupStyles = {
     icon: "text-emerald-700 dark:text-emerald-300",
     title: "text-emerald-900 dark:text-emerald-100",
   },
-  Circulation: {
-    panel:
-      "border-sky-500/20 bg-sky-500/8 dark:border-sky-300/25 dark:bg-sky-300/10",
-    icon: "text-sky-700 dark:text-sky-300",
-    title: "text-sky-900 dark:text-sky-100",
-  },
   "People & access": {
     panel:
       "border-amber-500/20 bg-amber-500/8 dark:border-amber-300/25 dark:bg-amber-300/10",
     icon: "text-amber-700 dark:text-amber-300",
     title: "text-amber-900 dark:text-amber-100",
+  },
+  "User management": {
+    panel:
+      "border-sky-500/20 bg-sky-500/8 dark:border-sky-300/25 dark:bg-sky-300/10",
+    icon: "text-sky-700 dark:text-sky-300",
+    title: "text-sky-900 dark:text-sky-100",
   },
   "Operations & reporting": {
     panel:

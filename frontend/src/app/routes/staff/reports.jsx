@@ -1420,7 +1420,11 @@ export default function ReportsPage() {
                               {formatCurrency(row.revenueAmount)}
                             </td>
                             <td className="px-3 py-2">
-                              {Number(row.isPaidOff) === 1 ? "Yes" : "No"}
+                              {row.revenueSource === "Item value"
+                                ? "--"
+                                : Number(row.isPaidOff) === 1
+                                  ? "Yes"
+                                  : "No"}
                             </td>
                             <td className="px-3 py-2">
                               {row.revenueSource || "-"}

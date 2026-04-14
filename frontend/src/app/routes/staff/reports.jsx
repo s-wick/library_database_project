@@ -18,6 +18,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
+import { Navbar } from "@/components/navbar"
 import { API_BASE_URL } from "@/lib/api-config"
 
 const CHART_COLORS = ["#2563eb", "#16a34a", "#f59e0b", "#dc2626", "#7c3aed"]
@@ -533,8 +534,9 @@ export default function ReportsPage() {
       : 0
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="mx-auto max-w-6xl space-y-6">
+    <div className="min-h-screen bg-background">
+      <Navbar />
+      <div className="mx-auto max-w-6xl space-y-6 p-6">
         <Button asChild variant="outline">
           <Link to="/management-dashboard">
             <ArrowLeft className="mr-2 h-4 w-4" />

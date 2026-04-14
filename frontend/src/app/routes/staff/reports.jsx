@@ -834,7 +834,10 @@ export default function ReportsPage() {
   }
 
   function resetFilters() {
-    setFilters({ ...INITIAL_FILTERS })
+    setFilters((prev) => ({
+      ...INITIAL_FILTERS,
+      reportType: prev.reportType,
+    }))
     setRows([])
     setSummary(null)
     setError("")
@@ -897,7 +900,9 @@ export default function ReportsPage() {
               </Field>
 
               <Field>
-                <FieldLabel htmlFor="startDate">From date</FieldLabel>
+                <FieldLabel htmlFor="startDate">
+                  {isInventoryReport ? "Created from date" : "From date"}
+                </FieldLabel>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
@@ -926,7 +931,9 @@ export default function ReportsPage() {
               </Field>
 
               <Field>
-                <FieldLabel htmlFor="endDate">To date</FieldLabel>
+                <FieldLabel htmlFor="endDate">
+                  {isInventoryReport ? "Created to date" : "To date"}
+                </FieldLabel>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
@@ -961,17 +968,25 @@ export default function ReportsPage() {
 
               <Field>
                 <FieldLabel htmlFor="userType">User type</FieldLabel>
-                <select
-                  id="userType"
-                  name="userType"
-                  value={filters.userType}
-                  onChange={onChange}
-                  className="h-9 w-full rounded-md border border-input bg-card px-2.5 py-1 text-sm text-foreground"
-                >
-                  <option value="">All</option>
-                  <option value="STUDENT">Student</option>
-                  <option value="FACULTY">Faculty</option>
-                </select>
+                {isInventoryReport ? (
+                  <Input
+                    value="Not applicable for this report"
+                    disabled
+                    className="h-9"
+                  />
+                ) : (
+                  <select
+                    id="userType"
+                    name="userType"
+                    value={filters.userType}
+                    onChange={onChange}
+                    className="h-9 w-full rounded-md border border-input bg-card px-2.5 py-1 text-sm text-foreground"
+                  >
+                    <option value="">All</option>
+                    <option value="STUDENT">Student</option>
+                    <option value="FACULTY">Faculty</option>
+                  </select>
+                )}
               </Field>
 
               <Field>
@@ -1315,7 +1330,7 @@ export default function ReportsPage() {
 
               {isInventoryReport && (
                 <>
-                  <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+                  <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                     <MetricCard
                       label="Total value of catalog"
                       value={formatCurrency(summary?.totalCatalogValue || 0)}
@@ -1327,10 +1342,6 @@ export default function ReportsPage() {
                     <MetricCard
                       label="Number of currently checked out items"
                       value={Number(summary?.totalActiveBorrows || 0)}
-                    />
-                    <MetricCard
-                      label="Currently overdue checkouts"
-                      value={Number(summary?.totalOverdueActiveBorrows || 0)}
                     />
                   </div>
 
@@ -1535,6 +1546,7 @@ export default function ReportsPage() {
                       ) : isInventoryReport ? (
                         <tr>
                           <th className="px-3 py-2">Item</th>
+                          <th className="px-3 py-2">Created date</th>
                           <th className="px-3 py-2">Item type</th>
                           <th className="px-3 py-2">Units</th>
                           <th className="px-3 py-2">Unit value</th>
@@ -1569,7 +1581,7 @@ export default function ReportsPage() {
                                 : isRevenueReport
                                   ? 9
                                   : isInventoryReport
-                                    ? 8
+                                    ? 9
                                     : 10
                             }
                           >
@@ -1645,6 +1657,9 @@ export default function ReportsPage() {
                         rows.map((row) => (
                           <tr key={row.itemId} className="border-t">
                             <td className="px-3 py-2">{row.itemName || "-"}</td>
+                            <td className="px-3 py-2">
+                              {formatDate(row.createdAt)}
+                            </td>
                             <td className="px-3 py-2">
                               {formatItemTypeForDisplay(row.itemType)}
                             </td>

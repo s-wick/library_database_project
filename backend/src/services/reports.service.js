@@ -352,6 +352,7 @@ async function getInventoryRows(url) {
     `SELECT
        i.item_id AS itemId,
        i.title AS itemName,
+       i.created_at AS createdAt,
        it.item_type AS itemType,
        i.inventory AS inventory,
        i.monetary_value AS itemValue,
@@ -470,6 +471,18 @@ function buildItemOnlyFilters(url, options = {}) {
   const clauses = []
   const itemAlias = options.itemAlias || "i"
   const itemTypeAlias = options.itemTypeAlias || "it"
+
+  const startDate = String(url.searchParams.get("startDate") || "").trim()
+  if (startDate) {
+    clauses.push(`${itemAlias}.created_at >= ?`)
+    params.push(`${startDate} 00:00:00`)
+  }
+
+  const endDate = String(url.searchParams.get("endDate") || "").trim()
+  if (endDate) {
+    clauses.push(`${itemAlias}.created_at < DATE_ADD(?, INTERVAL 1 DAY)`)
+    params.push(endDate)
+  }
 
   const itemType = String(url.searchParams.get("itemType") || "").trim()
   if (itemType) {

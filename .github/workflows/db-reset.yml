@@ -10,6 +10,9 @@ on:
 jobs:
   reset-database:
     runs-on: ubuntu-latest
+    env:
+      SAMPLE_DATA_TIMEZONE: America/Chicago
+      DB_TIME_ZONE: '+00:00'
     steps:
       - name: Checkout
         uses: actions/checkout@v4

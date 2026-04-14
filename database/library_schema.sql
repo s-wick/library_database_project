@@ -337,7 +337,52 @@ CREATE TABLE `user_account` (
   `is_faculty` tinyint(1) NOT NULL DEFAULT '0',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `last_login` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`user_id`)
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `updated_by` int unsigned DEFAULT NULL,
+  PRIMARY KEY (`user_id`),
+  KEY `fk_user_updated_by` (`updated_by`),
+  CONSTRAINT `fk_user_updated_by` FOREIGN KEY (`updated_by`) REFERENCES `staff_account` (`staff_id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `user_account_faculty_audit`
+--
+
+DROP TABLE IF EXISTS `user_account_faculty_audit`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `user_account_faculty_audit` (
+  `audit_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `user_id` int unsigned NOT NULL,
+  `changed_by_staff_id` int unsigned NOT NULL,
+  `from_is_faculty` tinyint(1) NOT NULL,
+  `to_is_faculty` tinyint(1) NOT NULL,
+  `action_type_id` tinyint unsigned NOT NULL,
+  `reason` varchar(255) DEFAULT NULL,
+  `changed_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`audit_id`),
+  KEY `idx_faculty_audit_user_changed_at` (`user_id`,`changed_at`),
+  KEY `idx_faculty_audit_staff_changed_at` (`changed_by_staff_id`,`changed_at`),
+  KEY `idx_faculty_audit_action_type` (`action_type_id`),
+  CONSTRAINT `fk_faculty_audit_action_type` FOREIGN KEY (`action_type_id`) REFERENCES `user_account_faculty_audit_action_type` (`action_type_id`) ON DELETE RESTRICT,
+  CONSTRAINT `fk_faculty_audit_staff` FOREIGN KEY (`changed_by_staff_id`) REFERENCES `staff_account` (`staff_id`) ON DELETE RESTRICT,
+  CONSTRAINT `fk_faculty_audit_user` FOREIGN KEY (`user_id`) REFERENCES `user_account` (`user_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `user_account_faculty_audit_action_type`
+--
+
+DROP TABLE IF EXISTS `user_account_faculty_audit_action_type`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `user_account_faculty_audit_action_type` (
+  `action_type_id` tinyint unsigned NOT NULL AUTO_INCREMENT,
+  `action_text` varchar(30) NOT NULL,
+  PRIMARY KEY (`action_type_id`),
+  UNIQUE KEY `uq_faculty_audit_action_text` (`action_text`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -405,4 +450,4 @@ CREATE TABLE `video` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-04-13 17:10:20
+-- Dump completed on 2026-04-13 22:29:05

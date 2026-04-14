@@ -13,6 +13,12 @@ const {
 
 const MAX_PAGE_SIZE = 100
 const DEFAULT_PAGE_SIZE = 25
+const FACULTY_AUDIT_ACTIONS = {
+  mark: "Marked as faculty",
+  undo: "Undid faculty status",
+  bulkMark: "Bulk marked as faculty",
+  bulkUndo: "Bulk undid faculty status",
+}
 
 function parseBoolean(value, fallback = false) {
   if (typeof value === "boolean") return value
@@ -264,7 +270,9 @@ async function handleSetUserFacultyStatus(req, res, userId) {
       isFaculty,
       changedByStaffId: actor.staffId,
       reason,
-      action: isFaculty ? "mark" : "undo",
+      action: isFaculty
+        ? FACULTY_AUDIT_ACTIONS.mark
+        : FACULTY_AUDIT_ACTIONS.undo,
     })
 
     if (!updateResult.ok) {
@@ -324,7 +332,9 @@ async function handleBulkSetUserFacultyStatus(req, res) {
       isFaculty,
       changedByStaffId: actor.staffId,
       reason,
-      action: isFaculty ? "bulk_mark" : "bulk_undo",
+      action: isFaculty
+        ? FACULTY_AUDIT_ACTIONS.bulkMark
+        : FACULTY_AUDIT_ACTIONS.bulkUndo,
     })
 
     sendJson(res, 200, {

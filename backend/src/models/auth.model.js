@@ -294,6 +294,13 @@ async function resolveFacultyAuditActionTypeId(connection, actionText) {
   return Number(rows[0].action_type_id)
 }
 
+const FACULTY_AUDIT_ACTIONS = {
+  mark: "Marked as faculty",
+  undo: "Undid faculty status",
+  bulkMark: "Bulk marked as faculty",
+  bulkUndo: "Bulk undid faculty status",
+}
+
 async function updateUserFacultyStatusWithAudit({
   userId,
   isFaculty,
@@ -321,7 +328,9 @@ async function updateUserFacultyStatusWithAudit({
 
     const currentIsFaculty = Boolean(userRows[0].is_faculty)
     const nextIsFaculty = Boolean(isFaculty)
-    const actionText = action || (nextIsFaculty ? "mark" : "undo")
+    const actionText =
+      action ||
+      (nextIsFaculty ? FACULTY_AUDIT_ACTIONS.mark : FACULTY_AUDIT_ACTIONS.undo)
 
     if (currentIsFaculty === nextIsFaculty) {
       await connection.rollback()
@@ -419,7 +428,11 @@ async function bulkUpdateUserFacultyStatusWithAudit({
 
     const usersById = new Map(users.map((user) => [Number(user.user_id), user]))
     const nextIsFaculty = Boolean(isFaculty)
-    const actionText = action || (nextIsFaculty ? "bulk_mark" : "bulk_undo")
+    const actionText =
+      action ||
+      (nextIsFaculty
+        ? FACULTY_AUDIT_ACTIONS.bulkMark
+        : FACULTY_AUDIT_ACTIONS.bulkUndo)
     const actionTypeId = await resolveFacultyAuditActionTypeId(
       connection,
       actionText

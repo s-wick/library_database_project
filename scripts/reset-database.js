@@ -8,6 +8,7 @@ const dataFiles = [
   "users.sql",
   "items.sql",
   "notification-types.sql",
+  "faculty-audit-action-types.sql",
   "hold-reasons.sql",
   "transactions.sql",
   "holds-fines.sql",

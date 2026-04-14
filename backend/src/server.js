@@ -20,7 +20,26 @@ function writeCorsHeaders(req, res) {
     res.setHeader("Vary", "Origin")
   }
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS")
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+  const requestedHeaders = String(
+    req.headers["access-control-request-headers"] || ""
+  )
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean)
+
+  const defaultAllowedHeaders = [
+    "Content-Type",
+    "Authorization",
+    "x-actor-id",
+    "x-actor-role",
+  ]
+
+  const allowedHeaders = Array.from(
+    new Set([...defaultAllowedHeaders, ...requestedHeaders])
+  ).join(", ")
+
+  res.setHeader("Access-Control-Allow-Headers", allowedHeaders)
 }
 
 const server = http.createServer(async (req, res) => {

@@ -14,7 +14,7 @@ async function findUserAccountByEmail(email) {
 
 async function findUserAccountById(userId) {
   const rows = await query(
-    `SELECT user_id, email, first_name, middle_name, last_name, is_faculty
+    `SELECT user_id, email, first_name, middle_name, last_name, is_faculty, updated_by
      FROM user_account
      WHERE user_id = ?
      LIMIT 1`,
@@ -278,6 +278,22 @@ async function listUserAccountsPaginated({
   }
 }
 
+async function resolveFacultyAuditActionTypeId(connection, actionText) {
+  const [rows] = await connection.execute(
+    `SELECT action_type_id
+     FROM user_account_faculty_audit_action_type
+     WHERE action_text = ?
+     LIMIT 1`,
+    [actionText]
+  )
+
+  if (!rows.length) {
+    throw new Error(`Missing faculty audit action type: ${actionText}`)
+  }
+
+  return Number(rows[0].action_type_id)
+}
+
 async function updateUserFacultyStatusWithAudit({
   userId,
   isFaculty,
@@ -290,7 +306,7 @@ async function updateUserFacultyStatusWithAudit({
     await connection.beginTransaction()
 
     const [userRows] = await connection.execute(
-      `SELECT user_id, email, first_name, middle_name, last_name, is_faculty
+      `SELECT user_id, email, first_name, middle_name, last_name, is_faculty, updated_by
        FROM user_account
        WHERE user_id = ?
        LIMIT 1
@@ -305,6 +321,7 @@ async function updateUserFacultyStatusWithAudit({
 
     const currentIsFaculty = Boolean(userRows[0].is_faculty)
     const nextIsFaculty = Boolean(isFaculty)
+    const actionText = action || (nextIsFaculty ? "mark" : "undo")
 
     if (currentIsFaculty === nextIsFaculty) {
       await connection.rollback()
@@ -318,9 +335,10 @@ async function updateUserFacultyStatusWithAudit({
     await connection.execute(
       `UPDATE user_account
        SET is_faculty = ?,
-           updated_at = NOW()
+           updated_at = NOW(),
+           updated_by = ?
        WHERE user_id = ?`,
-      [nextIsFaculty ? 1 : 0, userId]
+      [nextIsFaculty ? 1 : 0, changedByStaffId, userId]
     )
 
     await connection.execute(
@@ -329,7 +347,7 @@ async function updateUserFacultyStatusWithAudit({
          changed_by_staff_id,
          from_is_faculty,
          to_is_faculty,
-         action,
+         action_type_id,
          reason
        )
        VALUES (?, ?, ?, ?, ?, ?)`,
@@ -338,13 +356,13 @@ async function updateUserFacultyStatusWithAudit({
         changedByStaffId,
         currentIsFaculty ? 1 : 0,
         nextIsFaculty ? 1 : 0,
-        action || (nextIsFaculty ? "mark" : "undo"),
+        await resolveFacultyAuditActionTypeId(connection, actionText),
         reason,
       ]
     )
 
     const [updatedRows] = await connection.execute(
-      `SELECT user_id, email, first_name, middle_name, last_name, is_faculty
+      `SELECT user_id, email, first_name, middle_name, last_name, is_faculty, updated_by
        FROM user_account
        WHERE user_id = ?
        LIMIT 1`,
@@ -392,7 +410,7 @@ async function bulkUpdateUserFacultyStatusWithAudit({
     await connection.beginTransaction()
 
     const [users] = await connection.execute(
-      `SELECT user_id, email, first_name, middle_name, last_name, is_faculty
+      `SELECT user_id, email, first_name, middle_name, last_name, is_faculty, updated_by
        FROM user_account
        WHERE user_id IN (${placeholders})
        FOR UPDATE`,
@@ -401,6 +419,11 @@ async function bulkUpdateUserFacultyStatusWithAudit({
 
     const usersById = new Map(users.map((user) => [Number(user.user_id), user]))
     const nextIsFaculty = Boolean(isFaculty)
+    const actionText = action || (nextIsFaculty ? "bulk_mark" : "bulk_undo")
+    const actionTypeId = await resolveFacultyAuditActionTypeId(
+      connection,
+      actionText
+    )
     const updatedUsers = []
     let skippedCount = 0
 
@@ -417,9 +440,10 @@ async function bulkUpdateUserFacultyStatusWithAudit({
       await connection.execute(
         `UPDATE user_account
          SET is_faculty = ?,
-             updated_at = NOW()
+             updated_at = NOW(),
+             updated_by = ?
          WHERE user_id = ?`,
-        [nextIsFaculty ? 1 : 0, id]
+        [nextIsFaculty ? 1 : 0, changedByStaffId, id]
       )
 
       await connection.execute(
@@ -428,7 +452,7 @@ async function bulkUpdateUserFacultyStatusWithAudit({
            changed_by_staff_id,
            from_is_faculty,
            to_is_faculty,
-           action,
+           action_type_id,
            reason
          )
          VALUES (?, ?, ?, ?, ?, ?)`,
@@ -437,7 +461,7 @@ async function bulkUpdateUserFacultyStatusWithAudit({
           changedByStaffId,
           currentIsFaculty ? 1 : 0,
           nextIsFaculty ? 1 : 0,
-          action || (nextIsFaculty ? "bulk_mark" : "bulk_undo"),
+          actionTypeId,
           reason,
         ]
       )
@@ -445,6 +469,7 @@ async function bulkUpdateUserFacultyStatusWithAudit({
       updatedUsers.push({
         ...existing,
         is_faculty: nextIsFaculty ? 1 : 0,
+        updated_by: changedByStaffId,
       })
     }
 

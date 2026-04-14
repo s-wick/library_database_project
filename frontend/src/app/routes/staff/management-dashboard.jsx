@@ -1,15 +1,14 @@
-import { Link, useNavigate } from "react-router-dom"
+import { Link } from "react-router-dom"
 import {
   Users,
   PackagePlus,
   Pencil,
   Trash2,
   FileBarChart2,
-  LogOut,
   DoorOpen,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
+import { Navbar } from "@/components/navbar"
 
 const actions = [
   {
@@ -67,31 +66,15 @@ const actions = [
 ]
 
 export default function ManagementDashboardPage() {
-  const navigate = useNavigate()
   const authUser = JSON.parse(sessionStorage.getItem("authUser") || "{}")
   const visibleActions = actions.filter(
     (action) => !action.adminOnly || authUser.role === "admin"
   )
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="mx-auto max-w-5xl space-y-6">
-        <div className="flex items-center justify-end">
-          <Button
-            variant="ghost"
-            onClick={() => {
-              sessionStorage.setItem("isLoggedIn", "false")
-              sessionStorage.removeItem("authToken")
-              sessionStorage.removeItem("authUser")
-              sessionStorage.removeItem("user")
-              navigate("/auth")
-            }}
-          >
-            <LogOut className="mr-2 h-4 w-4" />
-            Sign out
-          </Button>
-        </div>
-
+    <div className="min-h-screen bg-background">
+      <Navbar showBack={false} />
+      <div className="mx-auto max-w-5xl space-y-6 p-6">
         <Card>
           <CardHeader>
             <CardTitle className="text-2xl">Management dashboard</CardTitle>

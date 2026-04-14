@@ -253,3 +253,70 @@ FROM item WHERE title = 'Pride and Prejudice' LIMIT 1;
 INSERT INTO borrow (item_id, user_id, checkout_date, due_date, return_date)
 SELECT item_id, @faculty2_id, '2026-04-10 14:40:00', '2026-04-24 14:40:00', NULL
 FROM item WHERE title = 'Interstellar' LIMIT 1;
+
+-- 3) Hold request history for the same month.
+SET @reason_fulfilled = (
+  SELECT reason_id
+  FROM hold_item_closing_reasons
+  WHERE reason_text = 'Fulfilled'
+  LIMIT 1
+);
+
+SET @reason_canceled = (
+  SELECT reason_id
+  FROM hold_item_closing_reasons
+  WHERE reason_text = 'Canceled'
+  LIMIT 1
+);
+
+SET @reason_canceled_fine = (
+  SELECT reason_id
+  FROM hold_item_closing_reasons
+  WHERE reason_text = 'Canceled by fine'
+  LIMIT 1
+);
+
+-- student3 hold lifecycle
+INSERT INTO hold_item (item_id, user_id, request_datetime, close_datetime, close_reason_id)
+SELECT item_id, @student3_id, '2026-03-19 09:00:00', '2026-03-20 15:00:00', @reason_fulfilled
+FROM item WHERE title = 'Interstellar' LIMIT 1;
+
+INSERT INTO hold_item (item_id, user_id, request_datetime, close_datetime, close_reason_id)
+SELECT item_id, @student3_id, '2026-04-04 12:00:00', NULL, NULL
+FROM item WHERE title = 'The Hobbit' LIMIT 1;
+
+-- student4 hold lifecycle
+INSERT INTO hold_item (item_id, user_id, request_datetime, close_datetime, close_reason_id)
+SELECT item_id, @student4_id, '2026-03-23 11:30:00', '2026-03-25 16:45:00', @reason_canceled
+FROM item WHERE title = 'Canon EOS Rebel T7 Camera Kit' LIMIT 1;
+
+INSERT INTO hold_item (item_id, user_id, request_datetime, close_datetime, close_reason_id)
+SELECT item_id, @student4_id, '2026-04-08 13:20:00', NULL, NULL
+FROM item WHERE title = 'To Kill a Mockingbird' LIMIT 1;
+
+-- student5 hold lifecycle
+INSERT INTO hold_item (item_id, user_id, request_datetime, close_datetime, close_reason_id)
+SELECT item_id, @student5_id, '2026-03-26 10:10:00', '2026-03-28 09:35:00', @reason_fulfilled
+FROM item WHERE title = 'Shure SM58 Microphone' LIMIT 1;
+
+INSERT INTO hold_item (item_id, user_id, request_datetime, close_datetime, close_reason_id)
+SELECT item_id, @student5_id, '2026-04-10 10:45:00', NULL, NULL
+FROM item WHERE title = 'The Social Network' LIMIT 1;
+
+-- student6 hold lifecycle
+INSERT INTO hold_item (item_id, user_id, request_datetime, close_datetime, close_reason_id)
+SELECT item_id, @student6_id, '2026-03-29 14:00:00', '2026-04-01 08:30:00', @reason_canceled_fine
+FROM item WHERE title = 'Pride and Prejudice' LIMIT 1;
+
+INSERT INTO hold_item (item_id, user_id, request_datetime, close_datetime, close_reason_id)
+SELECT item_id, @student6_id, '2026-04-12 09:00:00', NULL, NULL
+FROM item WHERE title = 'Atomic Habits' LIMIT 1;
+
+-- faculty2 hold lifecycle
+INSERT INTO hold_item (item_id, user_id, request_datetime, close_datetime, close_reason_id)
+SELECT item_id, @faculty2_id, '2026-03-30 11:15:00', '2026-04-02 17:40:00', @reason_fulfilled
+FROM item WHERE title = 'Apollo 13' LIMIT 1;
+
+INSERT INTO hold_item (item_id, user_id, request_datetime, close_datetime, close_reason_id)
+SELECT item_id, @faculty2_id, '2026-04-13 10:30:00', NULL, NULL
+FROM item WHERE title = 'Educated' LIMIT 1;

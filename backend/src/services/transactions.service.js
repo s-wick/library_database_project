@@ -176,7 +176,7 @@ async function handleCheckin(req, res) {
       return
     }
 
-    if (error.message === "Invalid check-in record") {
+    if (error.message === "Invalid check in record") {
       sendJson(res, 400, {
         ok: false,
         message: "One or more selected records are invalid.",

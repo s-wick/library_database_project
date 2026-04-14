@@ -66,8 +66,8 @@ const actions = [
   },
 
   {
-    title: "Check-in book",
-    description: "Check in borrowed books and update inventory.",
+    title: "Check in item",
+    description: "Check in borrowed items.",
     to: "/management-dashboard/check-in",
     icon: Users,
   },

@@ -183,7 +183,7 @@ export default function CheckInPage() {
 
       const data = await response.json().catch(() => ({}))
       if (!response.ok) {
-        setServerError(data.message || "Unable to complete check-in.")
+        setServerError(data.message || "Unable to complete check in.")
         return
       }
 
@@ -459,8 +459,8 @@ export default function CheckInPage() {
                   {isSubmitting
                     ? "Checking in..."
                     : selectedBorrowIds.length === 1
-                      ? "Record 1 check-in"
-                      : `Record ${selectedBorrowIds.length} check-ins`}
+                      ? "Record 1 check in"
+                      : `Record ${selectedBorrowIds.length} check ins`}
                 </Button>
               </form>
             </CardContent>
@@ -482,7 +482,7 @@ export default function CheckInPage() {
               </div>
 
               <div className="flex min-h-0 flex-1 flex-col rounded-lg border bg-muted/20 p-3">
-                <p className="font-medium">Session check-in history</p>
+                <p className="font-medium">Session check in history</p>
                 {sessionCheckIns.length ? (
                   <div className="mt-4 max-h-95 space-y-4 overflow-y-auto text-muted-foreground">
                     {sessionCheckIns.map((checkIn, idx) => (
@@ -513,7 +513,7 @@ export default function CheckInPage() {
                   </div>
                 ) : (
                   <p className="mt-1 text-muted-foreground">
-                    No check-in recorded in this session yet.
+                    No check in recorded in this session yet.
                   </p>
                 )}
               </div>

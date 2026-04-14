@@ -333,6 +333,68 @@ async function getHoldsRows(url) {
   }
 }
 
+async function getInventoryRows(url) {
+  const itemFilters = buildItemOnlyFilters(url, {
+    itemAlias: "i",
+    itemTypeAlias: "it",
+  })
+  const borrowFilters = buildBorrowOnlyFilters(url, {
+    borrowAlias: "b2",
+    itemAlias: "i2",
+    userAlias: "ua2",
+  })
+  const { page, pageSize, offset } = getPagination(url)
+  const limit = pageSize + 1
+  const safeOffset = Math.max(0, Math.trunc(offset))
+  const safeLimit = Math.max(1, Math.trunc(limit))
+
+  const rows = await query(
+    `SELECT
+       i.item_id AS itemId,
+       i.title AS itemName,
+       it.item_type AS itemType,
+       i.inventory AS inventory,
+       i.monetary_value AS itemValue,
+       COALESCE(i.inventory, 0) * COALESCE(i.monetary_value, 0) AS catalogValue,
+       COALESCE(bs.totalBorrows, 0) AS totalBorrows,
+       COALESCE(bs.activeBorrows, 0) AS activeBorrows,
+       COALESCE(bs.overdueActiveBorrows, 0) AS overdueActiveBorrows
+     FROM item i
+     LEFT JOIN item_type it ON it.item_code = i.item_type_code
+     LEFT JOIN (
+       SELECT
+         b2.item_id,
+         COUNT(*) AS totalBorrows,
+         SUM(CASE WHEN b2.return_date IS NULL THEN 1 ELSE 0 END) AS activeBorrows,
+         SUM(
+           CASE
+             WHEN b2.return_date IS NULL AND b2.due_date < NOW() THEN 1
+             ELSE 0
+           END
+         ) AS overdueActiveBorrows
+       FROM borrow b2
+       INNER JOIN item i2 ON i2.item_id = b2.item_id
+       LEFT JOIN item_type it2 ON it2.item_code = i2.item_type_code
+       INNER JOIN user_account ua2 ON ua2.user_id = b2.user_id
+       ${borrowFilters.whereClause}
+       GROUP BY b2.item_id
+     ) bs ON bs.item_id = i.item_id
+     ${itemFilters.whereClause}
+     ORDER BY it.item_type ASC, i.title ASC
+     LIMIT ${safeOffset}, ${safeLimit}`,
+    [...borrowFilters.params, ...itemFilters.params]
+  )
+
+  const hasMore = rows.length > pageSize
+
+  return {
+    rows: hasMore ? rows.slice(0, pageSize) : rows,
+    page,
+    pageSize,
+    hasMore,
+  }
+}
+
 function buildBorrowOnlyFilters(url, options = {}) {
   const params = []
   const clauses = []
@@ -752,6 +814,43 @@ async function handleGetReports(_req, res, url) {
           fulfillmentRate,
           itemsInLibrary: availability.itemsInLibrary,
           itemsCheckedOut: availability.itemsCheckedOut,
+          page,
+          pageSize,
+          hasMore,
+        },
+      })
+      return
+    }
+
+    if (reportType === "inventory") {
+      const { rows, page, pageSize, hasMore } = await getInventoryRows(url)
+      const totalCatalogValue = rows.reduce(
+        (sum, row) => sum + Number(row.catalogValue || 0),
+        0
+      )
+      const totalInventoryUnits = rows.reduce(
+        (sum, row) => sum + Number(row.inventory || 0),
+        0
+      )
+      const totalActiveBorrows = rows.reduce(
+        (sum, row) => sum + Number(row.activeBorrows || 0),
+        0
+      )
+      const totalOverdueActiveBorrows = rows.reduce(
+        (sum, row) => sum + Number(row.overdueActiveBorrows || 0),
+        0
+      )
+
+      sendJson(res, 200, {
+        ok: true,
+        reportType,
+        rows,
+        summary: {
+          totalRecords: rows.length,
+          totalCatalogValue,
+          totalInventoryUnits,
+          totalActiveBorrows,
+          totalOverdueActiveBorrows,
           page,
           pageSize,
           hasMore,

@@ -17,7 +17,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import { Calendar } from "@/components/ui/calendar"
+import { Calendar, CalendarDayButton } from "@/components/ui/calendar"
 import { Navbar } from "@/components/navbar"
 import { API_BASE_URL } from "@/lib/api-config"
 
@@ -97,11 +97,20 @@ function toDateValue(date) {
   return `${year}-${month}-${day}`
 }
 
-function toDisplayDateBucket(value) {
-  if (!value) return "Unknown"
-  const d = new Date(value)
-  if (Number.isNaN(d.getTime())) return "Unknown"
-  return d.toLocaleDateString()
+function toDayKey(value) {
+  const d = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(d.getTime())) return ""
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, "0")
+  const day = String(d.getDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
+}
+
+function displayDayKey(dayKey) {
+  if (!dayKey) return "-"
+  const date = new Date(`${dayKey}T00:00:00`)
+  if (Number.isNaN(date.getTime())) return dayKey
+  return date.toLocaleDateString()
 }
 
 function MetricCard({ label, value, helper }) {
@@ -117,46 +126,86 @@ function MetricCard({ label, value, helper }) {
 }
 
 function AggregationTable({ columns, rows }) {
+  const pageSize = 10
+  const [page, setPage] = useState(1)
+  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize))
+  const startIndex = (page - 1) * pageSize
+  const pagedRows = rows.slice(startIndex, startIndex + pageSize)
+
+  useEffect(() => {
+    setPage(1)
+  }, [rows.length, columns.length])
+
   return (
-    <div className="overflow-x-auto rounded-md border">
-      <table className="w-full text-sm">
-        <thead className="bg-muted/40 text-left">
-          <tr>
-            {columns.map((column) => (
-              <th key={column.key} className="px-3 py-2">
-                {column.label}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.length === 0 ? (
+    <div className="space-y-2">
+      <div className="overflow-x-auto rounded-md border">
+        <table className="w-full text-sm">
+          <thead className="bg-muted/40 text-left">
             <tr>
-              <td
-                className="px-3 py-3 text-muted-foreground"
-                colSpan={columns.length}
-              >
-                No data.
-              </td>
+              {columns.map((column) => (
+                <th key={column.key} className="px-3 py-2">
+                  {column.label}
+                </th>
+              ))}
             </tr>
-          ) : (
-            rows.map((row, index) => (
-              <tr
-                key={`${index}-${row[columns[0].key] ?? "row"}`}
-                className="border-t"
-              >
-                {columns.map((column) => (
-                  <td key={column.key} className="px-3 py-2 align-top">
-                    {column.render
-                      ? column.render(row[column.key], row)
-                      : (row[column.key] ?? "-")}
-                  </td>
-                ))}
+          </thead>
+          <tbody>
+            {rows.length === 0 ? (
+              <tr>
+                <td
+                  className="px-3 py-3 text-muted-foreground"
+                  colSpan={columns.length}
+                >
+                  No data.
+                </td>
               </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+            ) : (
+              pagedRows.map((row, index) => (
+                <tr
+                  key={`${startIndex + index}-${row[columns[0].key] ?? "row"}`}
+                  className="border-t"
+                >
+                  {columns.map((column) => (
+                    <td key={column.key} className="px-3 py-2 align-top">
+                      {column.render
+                        ? column.render(row[column.key], row)
+                        : (row[column.key] ?? "-")}
+                    </td>
+                  ))}
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+      {rows.length > pageSize ? (
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span>
+            Showing {startIndex + 1}-
+            {Math.min(startIndex + pageSize, rows.length)} of {rows.length}
+          </span>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+              disabled={page <= 1}
+            >
+              Previous
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+              disabled={page >= totalPages}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -277,10 +326,18 @@ function StackedBarChart({ data, segments }) {
   )
 }
 
-function MiniTrendChart({ data }) {
-  const max = data.length
-    ? Math.max(...data.map((item) => Number(item.value || 0)))
-    : 0
+function CheckoutCalendarChart({ data }) {
+  const [selectedDay, setSelectedDay] = useState(undefined)
+  const dataByDay = useMemo(() => {
+    const map = new Map()
+    data.forEach((item) => {
+      map.set(String(item.dayKey || ""), Number(item.value || 0))
+    })
+    return map
+  }, [data])
+  const defaultMonth = data.length
+    ? new Date(`${data[data.length - 1].dayKey}T00:00:00`)
+    : new Date()
 
   if (!data.length) {
     return (
@@ -291,31 +348,37 @@ function MiniTrendChart({ data }) {
   }
 
   return (
-    <div className="flex h-44 items-end gap-2 overflow-x-auto rounded-md border bg-background p-3">
-      {data.map((item, index) => {
-        const value = Number(item.value || 0)
-        const height = max ? (value / max) * 100 : 0
-        return (
-          <div
-            key={`${item.label}-${index}`}
-            className="flex min-w-14 flex-col items-center gap-1"
-          >
-            <span className="text-xs text-muted-foreground">{value}</span>
-            <div className="flex h-28 w-8 items-end rounded-sm bg-muted">
-              <div
-                className="w-8 rounded-sm"
-                style={{
-                  height: `${height}%`,
-                  backgroundColor: CHART_COLORS[index % CHART_COLORS.length],
-                }}
-              />
-            </div>
-            <span className="text-center text-[11px] text-muted-foreground">
-              {item.label}
-            </span>
-          </div>
-        )
-      })}
+    <div className="rounded-md border bg-background p-2">
+      <Calendar
+        mode="single"
+        selected={selectedDay}
+        onSelect={setSelectedDay}
+        defaultMonth={defaultMonth}
+        numberOfMonths={1}
+        captionLayout="dropdown"
+        className="[--cell-size:--spacing(10)] md:[--cell-size:--spacing(12)]"
+        formatters={{
+          formatMonthDropdown: (date) =>
+            date.toLocaleString("default", { month: "long" }),
+        }}
+        components={{
+          DayButton: ({ children, modifiers, day, ...props }) => {
+            const key = toDayKey(day.date)
+            const count = dataByDay.get(key) || 0
+
+            return (
+              <CalendarDayButton day={day} modifiers={modifiers} {...props}>
+                {children}
+                {!modifiers.outside ? (
+                  <span className="text-[10px] leading-none text-muted-foreground">
+                    {count > 0 ? count : ""}
+                  </span>
+                ) : null}
+              </CalendarDayButton>
+            )
+          },
+        }}
+      />
     </div>
   )
 }
@@ -350,7 +413,7 @@ function buildBorrowedInsights(rows) {
   rows.forEach((row) => {
     const itemType = formatItemTypeForDisplay(row.itemType)
     const itemTitle = row.itemName || "Unknown"
-    const day = toDisplayDateBucket(row.checkoutDate)
+    const day = toDayKey(row.checkoutDate)
     const overdue = Number(row.isOverdue) === 1
     const checkoutDate = new Date(row.checkoutDate)
     const endDate = row.returnDate ? new Date(row.returnDate) : new Date()
@@ -397,8 +460,8 @@ function buildBorrowedInsights(rows) {
     .slice(0, 10)
 
   const trend = Array.from(trendMap.entries())
-    .map(([label, value]) => ({ label, value }))
-    .sort((a, b) => new Date(a.label) - new Date(b.label))
+    .map(([dayKey, value]) => ({ dayKey, value }))
+    .sort((a, b) => new Date(a.dayKey) - new Date(b.dayKey))
 
   const overdueCount = rows.filter((row) => Number(row.isOverdue) === 1).length
   const activeCount = rows.filter((row) => !row.returnDate).length
@@ -417,43 +480,49 @@ function buildBorrowedInsights(rows) {
 }
 
 function buildRevenueInsights(rows) {
-  const byUserTypeMap = new Map()
-  const byBorrowerMap = new Map()
+  const fineByUserTypeMap = new Map()
+  const valueByUserTypeMap = new Map()
+  const fineByBorrowerMap = new Map()
   const paidSplit = { paid: 0, unpaid: 0 }
   let totalFineOwed = 0
   let totalItemValue = 0
-  let totalRevenue = 0
 
   rows.forEach((row) => {
     const userType = formatUserTypeForDisplay(row.userType)
     const borrower = row.borrowerName || row.borrowerId || "Unknown"
-    const revenueAmount = Number(row.revenueAmount || 0)
     const fineOwed = Number(row.fineOwed || 0)
     const itemValue = Number(row.itemValue || 0)
     const isPaid = Number(row.isPaidOff) === 1
 
     totalFineOwed += fineOwed
     totalItemValue += itemValue
-    totalRevenue += revenueAmount
 
-    byUserTypeMap.set(
+    fineByUserTypeMap.set(
       userType,
-      (byUserTypeMap.get(userType) || 0) + revenueAmount
+      (fineByUserTypeMap.get(userType) || 0) + fineOwed
     )
-    byBorrowerMap.set(
+    valueByUserTypeMap.set(
+      userType,
+      (valueByUserTypeMap.get(userType) || 0) + itemValue
+    )
+    fineByBorrowerMap.set(
       borrower,
-      (byBorrowerMap.get(borrower) || 0) + revenueAmount
+      (fineByBorrowerMap.get(borrower) || 0) + fineOwed
     )
 
     if (isPaid) paidSplit.paid += 1
     else paidSplit.unpaid += 1
   })
 
-  const byUserType = Array.from(byUserTypeMap.entries())
+  const fineByUserType = Array.from(fineByUserTypeMap.entries())
     .map(([label, value]) => ({ label, value }))
     .sort((a, b) => b.value - a.value)
 
-  const byBorrower = Array.from(byBorrowerMap.entries())
+  const valueByUserType = Array.from(valueByUserTypeMap.entries())
+    .map(([label, value]) => ({ label, value }))
+    .sort((a, b) => b.value - a.value)
+
+  const fineByBorrower = Array.from(fineByBorrowerMap.entries())
     .map(([label, value]) => ({ label, value }))
     .sort((a, b) => b.value - a.value)
     .slice(0, 10)
@@ -469,16 +538,60 @@ function buildRevenueInsights(rows) {
   ]
 
   return {
-    byUserType,
-    byBorrower,
+    fineByUserType,
+    valueByUserType,
+    fineByBorrower,
     composition,
     paymentStatus,
     metrics: {
       totalFineOwed,
       totalItemValue,
-      totalRevenue,
       paidOffRatio: rows.length ? (paidSplit.paid / rows.length) * 100 : 0,
     },
+  }
+}
+
+function buildInventoryInsights(rows) {
+  const unitsByType = new Map()
+  const valueByType = new Map()
+  const activeByType = new Map()
+
+  rows.forEach((row) => {
+    const itemType = formatItemTypeForDisplay(row.itemType)
+    const units = Number(row.inventory || 0)
+    const value = Number(row.catalogValue || 0)
+    const active = Number(row.activeBorrows || 0)
+
+    unitsByType.set(itemType, (unitsByType.get(itemType) || 0) + units)
+    valueByType.set(itemType, (valueByType.get(itemType) || 0) + value)
+    activeByType.set(itemType, (activeByType.get(itemType) || 0) + active)
+  })
+
+  const inventoryByType = Array.from(unitsByType.entries())
+    .map(([label, value]) => ({ label, value }))
+    .sort((a, b) => b.value - a.value)
+
+  const valueByTypeRows = Array.from(valueByType.entries())
+    .map(([label, value]) => ({ label, value }))
+    .sort((a, b) => b.value - a.value)
+
+  const activeByTypeRows = Array.from(activeByType.entries())
+    .map(([label, value]) => ({ label, value }))
+    .sort((a, b) => b.value - a.value)
+
+  const topByValue = [...rows]
+    .map((row) => ({
+      label: row.itemName || "Unknown",
+      value: Number(row.catalogValue || 0),
+    }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 10)
+
+  return {
+    inventoryByType,
+    valueByTypeRows,
+    activeByTypeRows,
+    topByValue,
   }
 }
 
@@ -577,6 +690,7 @@ export default function ReportsPage() {
   const [isGenreOpen, setIsGenreOpen] = useState(false)
   const [genreQuery, setGenreQuery] = useState("")
   const [reportCache, setReportCache] = useState({})
+  const [rawPage, setRawPage] = useState(1)
 
   useEffect(() => {
     fetch(`${API_BASE_URL}/api/genres/search?q=`)
@@ -615,6 +729,7 @@ export default function ReportsPage() {
         setHasGenerated(cached.hasGenerated)
         setPage(cached.page)
         setPageSize(cached.pageSize)
+        setRawPage(1)
         setError(cached.error || "")
         return
       }
@@ -624,6 +739,7 @@ export default function ReportsPage() {
       setSummary(null)
       setError("")
       setPage(1)
+      setRawPage(1)
     }
 
     setFilters((prev) => {
@@ -700,6 +816,7 @@ export default function ReportsPage() {
       const nextSummary = data.summary || null
       setRows(nextRows)
       setSummary(nextSummary)
+      setRawPage(1)
       setReportCache((prev) => ({
         ...prev,
         [filters.reportType]: {
@@ -740,6 +857,7 @@ export default function ReportsPage() {
     setError("")
     setHasGenerated(false)
     setPage(1)
+    setRawPage(1)
     setGenreQuery("")
     setIsGenreOpen(false)
   }
@@ -753,10 +871,17 @@ export default function ReportsPage() {
   const borrowedInsights = useMemo(() => buildBorrowedInsights(rows), [rows])
   const revenueInsights = useMemo(() => buildRevenueInsights(rows), [rows])
   const holdsInsights = useMemo(() => buildHoldsInsights(rows), [rows])
+  const inventoryInsights = useMemo(() => buildInventoryInsights(rows), [rows])
 
   const isBorrowedReport = filters.reportType === "itemsCheckedOut"
   const isRevenueReport = filters.reportType === "revenue"
   const isHoldsReport = filters.reportType === "holds"
+  const isInventoryReport = filters.reportType === "inventory"
+
+  const rawPageSize = 12
+  const rawTotalPages = Math.max(1, Math.ceil(rows.length / rawPageSize))
+  const rawStartIndex = (rawPage - 1) * rawPageSize
+  const rawRows = rows.slice(rawStartIndex, rawStartIndex + rawPageSize)
 
   return (
     <div className="min-h-screen bg-background">
@@ -790,6 +915,7 @@ export default function ReportsPage() {
                   <option value="itemsCheckedOut">Borrowed items</option>
                   <option value="revenue">Revenue</option>
                   <option value="holds">Holds and waitlist demand</option>
+                  <option value="inventory">Inventory</option>
                 </select>
               </Field>
 
@@ -968,9 +1094,9 @@ export default function ReportsPage() {
 
               <Field>
                 <FieldLabel htmlFor="overdue">Overdue</FieldLabel>
-                {isHoldsReport ? (
+                {isHoldsReport || isInventoryReport ? (
                   <Input
-                    value="Not applicable for holds"
+                    value="Not applicable for this report"
                     disabled
                     className="h-9"
                   />
@@ -1029,14 +1155,14 @@ export default function ReportsPage() {
                     <MetricCard
                       label="Active checkouts"
                       value={borrowedInsights.metrics.activeCount}
-                      helper="Rows where return date is empty"
+                      helper="Currently checked out"
                     />
                     <MetricCard
                       label="Overdue rate"
                       value={formatPercent(
                         borrowedInsights.metrics.overdueRate
                       )}
-                      helper="Overdue rows / all rows"
+                      helper="Share of checkouts that are overdue"
                     />
                     <MetricCard
                       label="Utilization"
@@ -1047,19 +1173,19 @@ export default function ReportsPage() {
                               100
                           : 0
                       )}
-                      helper="itemsCheckedOut / itemsInLibrary"
+                      helper="Checked out vs total units"
                     />
                     <MetricCard
                       label="Average borrow days"
                       value={borrowedInsights.metrics.avgBorrowDays.toFixed(1)}
-                      helper="Average days between checkout and return/now"
+                      helper="Typical borrowing duration"
                     />
                   </div>
 
                   <div className="grid gap-4 lg:grid-cols-2">
                     <ChartBlock
                       title="Checkout volume by item type"
-                      formula="Count rows grouped by item type."
+                      formula="How many times each type is checked out in the selected period."
                       chart={
                         <HorizontalBarChart data={borrowedInsights.byType} />
                       }
@@ -1072,7 +1198,7 @@ export default function ReportsPage() {
 
                     <ChartBlock
                       title="Overdue status by item type"
-                      formula="For each item type: overdue rows and non-overdue rows."
+                      formula="For each type, compare overdue checkouts against on-time checkouts."
                       chart={
                         <StackedBarChart
                           data={borrowedInsights.overdueByType}
@@ -1092,7 +1218,7 @@ export default function ReportsPage() {
 
                     <ChartBlock
                       title="Top borrowed items"
-                      formula="Count rows grouped by item title, sorted descending."
+                      formula="Most borrowed individual items in the selected period."
                       chart={
                         <HorizontalBarChart data={borrowedInsights.topItems} />
                       }
@@ -1104,11 +1230,17 @@ export default function ReportsPage() {
                     />
 
                     <ChartBlock
-                      title="Checkout trend by day"
-                      formula="Count checkout rows per calendar day from checkout date."
-                      chart={<MiniTrendChart data={borrowedInsights.trend} />}
+                      title="Checkout activity calendar"
+                      formula="Daily checkout counts shown directly on each day."
+                      chart={
+                        <CheckoutCalendarChart data={borrowedInsights.trend} />
+                      }
                       columns={[
-                        { key: "label", label: "Date" },
+                        {
+                          key: "dayKey",
+                          label: "Date",
+                          render: (v) => displayDayKey(v),
+                        },
                         { key: "value", label: "Checkouts" },
                       ]}
                       rows={borrowedInsights.trend}
@@ -1125,35 +1257,37 @@ export default function ReportsPage() {
                       value={formatCurrency(
                         revenueInsights.metrics.totalFineOwed
                       )}
-                      helper="Sum of fineOwed"
+                      helper="Outstanding fines"
                     />
                     <MetricCard
                       label="Item value exposure"
                       value={formatCurrency(
                         revenueInsights.metrics.totalItemValue
                       )}
-                      helper="Sum of itemValue"
-                    />
-                    <MetricCard
-                      label="Revenue amount"
-                      value={formatCurrency(
-                        revenueInsights.metrics.totalRevenue
-                      )}
-                      helper="Sum of revenueAmount"
+                      helper="Value of currently associated items"
                     />
                     <MetricCard
                       label="Paid-off ratio"
                       value={formatPercent(
                         revenueInsights.metrics.paidOffRatio
                       )}
-                      helper="Paid rows / all rows"
+                      helper="Share of fine records already settled"
+                    />
+                    <MetricCard
+                      label="Average fine per record"
+                      value={formatCurrency(
+                        rows.length
+                          ? revenueInsights.metrics.totalFineOwed / rows.length
+                          : 0
+                      )}
+                      helper="Average outstanding amount per record"
                     />
                   </div>
 
                   <div className="grid gap-4 lg:grid-cols-2">
                     <ChartBlock
-                      title="Revenue composition"
-                      formula="Split total into fines owed and item value."
+                      title="Fines vs item value"
+                      formula="Keep fines and item value separate for clear interpretation."
                       chart={
                         <HorizontalBarChart
                           data={revenueInsights.composition}
@@ -1172,11 +1306,11 @@ export default function ReportsPage() {
                     />
 
                     <ChartBlock
-                      title="Revenue by user type"
-                      formula="Sum revenueAmount grouped by userType."
+                      title="Outstanding fines by user type"
+                      formula="How much unpaid fine balance each user group currently carries."
                       chart={
                         <HorizontalBarChart
-                          data={revenueInsights.byUserType}
+                          data={revenueInsights.fineByUserType}
                           valueFormatter={formatCurrency}
                         />
                       }
@@ -1184,19 +1318,39 @@ export default function ReportsPage() {
                         { key: "label", label: "User type" },
                         {
                           key: "value",
-                          label: "Revenue",
+                          label: "Fines",
                           render: (v) => formatCurrency(v),
                         },
                       ]}
-                      rows={revenueInsights.byUserType}
+                      rows={revenueInsights.fineByUserType}
                     />
 
                     <ChartBlock
-                      title="Top borrowers by outstanding amount"
-                      formula="Sum revenueAmount grouped by borrower, sorted descending."
+                      title="Item value by user type"
+                      formula="Catalog value grouped by who currently has the items."
                       chart={
                         <HorizontalBarChart
-                          data={revenueInsights.byBorrower}
+                          data={revenueInsights.valueByUserType}
+                          valueFormatter={formatCurrency}
+                        />
+                      }
+                      columns={[
+                        { key: "label", label: "User type" },
+                        {
+                          key: "value",
+                          label: "Item value",
+                          render: (v) => formatCurrency(v),
+                        },
+                      ]}
+                      rows={revenueInsights.valueByUserType}
+                    />
+
+                    <ChartBlock
+                      title="Top borrowers by fines owed"
+                      formula="Borrowers with the highest outstanding fines."
+                      chart={
+                        <HorizontalBarChart
+                          data={revenueInsights.fineByBorrower}
                           valueFormatter={formatCurrency}
                         />
                       }
@@ -1204,26 +1358,110 @@ export default function ReportsPage() {
                         { key: "label", label: "Borrower" },
                         {
                           key: "value",
-                          label: "Revenue",
+                          label: "Fines",
                           render: (v) => formatCurrency(v),
                         },
                       ]}
-                      rows={revenueInsights.byBorrower}
+                      rows={revenueInsights.fineByBorrower}
                     />
+                  </div>
+                </>
+              )}
 
+              {isInventoryReport && (
+                <>
+                  <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+                    <MetricCard
+                      label="Catalog value"
+                      value={formatCurrency(summary?.totalCatalogValue || 0)}
+                      helper="Total value of all visible items"
+                    />
+                    <MetricCard
+                      label="Inventory units"
+                      value={Number(summary?.totalInventoryUnits || 0)}
+                      helper="Total units in catalog"
+                    />
+                    <MetricCard
+                      label="Active checkouts"
+                      value={Number(summary?.totalActiveBorrows || 0)}
+                      helper="Currently checked out units"
+                    />
+                    <MetricCard
+                      label="Active overdue"
+                      value={Number(summary?.totalOverdueActiveBorrows || 0)}
+                      helper="Currently overdue checkouts"
+                    />
+                  </div>
+
+                  <div className="grid gap-4 lg:grid-cols-2">
                     <ChartBlock
-                      title="Fine payment status"
-                      formula="Count rows by isPaidOff status."
+                      title="Units by item type"
+                      formula="How many units exist in each item category."
                       chart={
                         <HorizontalBarChart
-                          data={revenueInsights.paymentStatus}
+                          data={inventoryInsights.inventoryByType}
                         />
                       }
                       columns={[
-                        { key: "label", label: "Status" },
-                        { key: "value", label: "Count" },
+                        { key: "label", label: "Item type" },
+                        { key: "value", label: "Units" },
                       ]}
-                      rows={revenueInsights.paymentStatus}
+                      rows={inventoryInsights.inventoryByType}
+                    />
+
+                    <ChartBlock
+                      title="Catalog value by item type"
+                      formula="Total monetary value for each item category."
+                      chart={
+                        <HorizontalBarChart
+                          data={inventoryInsights.valueByTypeRows}
+                          valueFormatter={formatCurrency}
+                        />
+                      }
+                      columns={[
+                        { key: "label", label: "Item type" },
+                        {
+                          key: "value",
+                          label: "Catalog value",
+                          render: (v) => formatCurrency(v),
+                        },
+                      ]}
+                      rows={inventoryInsights.valueByTypeRows}
+                    />
+
+                    <ChartBlock
+                      title="Top items by catalog value"
+                      formula="Most valuable individual items in the visible set."
+                      chart={
+                        <HorizontalBarChart
+                          data={inventoryInsights.topByValue}
+                          valueFormatter={formatCurrency}
+                        />
+                      }
+                      columns={[
+                        { key: "label", label: "Item" },
+                        {
+                          key: "value",
+                          label: "Catalog value",
+                          render: (v) => formatCurrency(v),
+                        },
+                      ]}
+                      rows={inventoryInsights.topByValue}
+                    />
+
+                    <ChartBlock
+                      title="Active checkouts by item type"
+                      formula="How currently checked out units are distributed by type."
+                      chart={
+                        <HorizontalBarChart
+                          data={inventoryInsights.activeByTypeRows}
+                        />
+                      }
+                      columns={[
+                        { key: "label", label: "Item type" },
+                        { key: "value", label: "Active checkouts" },
+                      ]}
+                      rows={inventoryInsights.activeByTypeRows}
                     />
                   </div>
                 </>
@@ -1235,17 +1473,17 @@ export default function ReportsPage() {
                     <MetricCard
                       label="Active holds"
                       value={holdsInsights.metrics.active}
-                      helper="Rows with holdStatus = ACTIVE"
+                      helper="Open hold requests"
                     />
                     <MetricCard
                       label="Fulfilled holds"
                       value={holdsInsights.metrics.fulfilled}
-                      helper="Rows with holdStatus = FULFILLED"
+                      helper="Completed hold requests"
                     />
                     <MetricCard
                       label="Canceled holds"
                       value={holdsInsights.metrics.canceled}
-                      helper="Rows with holdStatus = CANCELED"
+                      helper="Canceled hold requests"
                     />
                     <MetricCard
                       label="Average wait hours"
@@ -1264,7 +1502,7 @@ export default function ReportsPage() {
                   <div className="grid gap-4 lg:grid-cols-2">
                     <ChartBlock
                       title="Hold status distribution"
-                      formula="Count rows grouped by holdStatus."
+                      formula="How hold requests are currently split by status."
                       chart={
                         <HorizontalBarChart
                           data={holdsInsights.statusBreakdown}
@@ -1279,7 +1517,7 @@ export default function ReportsPage() {
 
                     <ChartBlock
                       title="Most requested items"
-                      formula="Count hold rows grouped by item title."
+                      formula="Items with the highest request volume."
                       chart={
                         <HorizontalBarChart
                           data={holdsInsights.topRequestedItems}
@@ -1294,7 +1532,7 @@ export default function ReportsPage() {
 
                     <ChartBlock
                       title="Average wait time by item type"
-                      formula="Average waitHours grouped by item type."
+                      formula="Average waiting time before a hold is closed."
                       chart={
                         <HorizontalBarChart
                           data={holdsInsights.averageWaitByType}
@@ -1315,7 +1553,7 @@ export default function ReportsPage() {
 
                     <ChartBlock
                       title="Closing reasons"
-                      formula="Count rows grouped by closeReason."
+                      formula="Why hold requests are being closed."
                       chart={
                         <HorizontalBarChart data={holdsInsights.closeReasons} />
                       }
@@ -1330,9 +1568,7 @@ export default function ReportsPage() {
               )}
 
               <div>
-                <p className="mb-2 text-sm font-medium">
-                  Full raw data (current filtered report rows)
-                </p>
+                <p className="mb-2 text-sm font-medium">Full report data</p>
                 <div className="overflow-x-auto rounded-md border">
                   <table className="w-full text-sm">
                     <thead className="bg-muted/40 text-left">
@@ -1357,9 +1593,19 @@ export default function ReportsPage() {
                           <th className="px-3 py-2">Borrower</th>
                           <th className="px-3 py-2">Fine owed</th>
                           <th className="px-3 py-2">Item value</th>
-                          <th className="px-3 py-2">Revenue amount</th>
                           <th className="px-3 py-2">Paid off</th>
                           <th className="px-3 py-2">Source</th>
+                        </tr>
+                      ) : isInventoryReport ? (
+                        <tr>
+                          <th className="px-3 py-2">Item</th>
+                          <th className="px-3 py-2">Item type</th>
+                          <th className="px-3 py-2">Units</th>
+                          <th className="px-3 py-2">Unit value</th>
+                          <th className="px-3 py-2">Catalog value</th>
+                          <th className="px-3 py-2">Total checkouts</th>
+                          <th className="px-3 py-2">Active checkouts</th>
+                          <th className="px-3 py-2">Active overdue</th>
                         </tr>
                       ) : (
                         <tr>
@@ -1382,14 +1628,20 @@ export default function ReportsPage() {
                           <td
                             className="px-3 py-4 text-muted-foreground"
                             colSpan={
-                              isBorrowedReport ? 9 : isRevenueReport ? 10 : 10
+                              isBorrowedReport
+                                ? 9
+                                : isRevenueReport
+                                  ? 9
+                                  : isInventoryReport
+                                    ? 8
+                                    : 10
                             }
                           >
                             No report data.
                           </td>
                         </tr>
                       ) : isBorrowedReport ? (
-                        rows.map((row) => (
+                        rawRows.map((row) => (
                           <tr
                             key={row.borrowTransactionId}
                             className="border-t"
@@ -1420,7 +1672,7 @@ export default function ReportsPage() {
                           </tr>
                         ))
                       ) : isRevenueReport ? (
-                        rows.map((row) => (
+                        rawRows.map((row) => (
                           <tr key={row.fineId} className="border-t">
                             <td className="px-3 py-2">
                               {formatDate(row.checkoutDate)}
@@ -1442,9 +1694,6 @@ export default function ReportsPage() {
                               {formatCurrency(row.itemValue)}
                             </td>
                             <td className="px-3 py-2">
-                              {formatCurrency(row.revenueAmount)}
-                            </td>
-                            <td className="px-3 py-2">
                               {row.revenueSource === "Item value"
                                 ? "--"
                                 : Number(row.isPaidOff) === 1
@@ -1456,8 +1705,35 @@ export default function ReportsPage() {
                             </td>
                           </tr>
                         ))
+                      ) : isInventoryReport ? (
+                        rawRows.map((row) => (
+                          <tr key={row.itemId} className="border-t">
+                            <td className="px-3 py-2">{row.itemName || "-"}</td>
+                            <td className="px-3 py-2">
+                              {formatItemTypeForDisplay(row.itemType)}
+                            </td>
+                            <td className="px-3 py-2">
+                              {Number(row.inventory || 0)}
+                            </td>
+                            <td className="px-3 py-2">
+                              {formatCurrency(row.itemValue)}
+                            </td>
+                            <td className="px-3 py-2">
+                              {formatCurrency(row.catalogValue)}
+                            </td>
+                            <td className="px-3 py-2">
+                              {Number(row.totalBorrows || 0)}
+                            </td>
+                            <td className="px-3 py-2">
+                              {Number(row.activeBorrows || 0)}
+                            </td>
+                            <td className="px-3 py-2">
+                              {Number(row.overdueActiveBorrows || 0)}
+                            </td>
+                          </tr>
+                        ))
                       ) : (
-                        rows.map((row) => (
+                        rawRows.map((row) => (
                           <tr key={row.holdId} className="border-t">
                             <td className="px-3 py-2">
                               {formatDateTime(row.requestDateTime)}
@@ -1494,6 +1770,41 @@ export default function ReportsPage() {
                     </tbody>
                   </table>
                 </div>
+                {rows.length > rawPageSize ? (
+                  <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
+                    <span>
+                      Showing {rawStartIndex + 1}-
+                      {Math.min(rawStartIndex + rawPageSize, rows.length)} of{" "}
+                      {rows.length}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          setRawPage((prev) => Math.max(1, prev - 1))
+                        }
+                        disabled={rawPage <= 1}
+                      >
+                        Previous
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          setRawPage((prev) =>
+                            Math.min(rawTotalPages, prev + 1)
+                          )
+                        }
+                        disabled={rawPage >= rawTotalPages}
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
               </div>
 
               <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">

@@ -17,11 +17,17 @@ import { API_BASE_URL } from "@/lib/api-config"
 const SLOT_INTERVAL_MINUTES = 60
 const SLOT_INTERVAL_MS = SLOT_INTERVAL_MINUTES * 60 * 1000
 const MAX_BOOKING_HOURS = 3
-const ADVANCE_WINDOW_MS = 24 * 60 * 60 * 1000
 const WEEKDAY_OPEN_HOUR = 9
 const WEEKDAY_CLOSE_HOUR = 19
 const WEEKEND_OPEN_HOUR = 9
 const WEEKEND_CLOSE_HOUR = 17
+
+function getBookingWindowEnd(fromDate = new Date()) {
+  const end = new Date(fromDate)
+  end.setDate(end.getDate() + 1)
+  end.setHours(23, 59, 59, 999)
+  return end
+}
 
 function roundUpToNextSlot(date) {
   const next = new Date(date)
@@ -330,7 +336,7 @@ export default function RoomBookingPage() {
     if (!selectedRoom || availabilityError) return []
 
     const fallbackStart = new Date(Date.now())
-    const fallbackEnd = new Date(Date.now() + ADVANCE_WINDOW_MS)
+    const fallbackEnd = getBookingWindowEnd(fallbackStart)
     const windowStart = availability.windowStart
       ? new Date(availability.windowStart)
       : fallbackStart
@@ -437,7 +443,7 @@ export default function RoomBookingPage() {
       : new Date(Date.now())
     const windowEnd = availability.windowEnd
       ? new Date(availability.windowEnd)
-      : new Date(Date.now() + ADVANCE_WINDOW_MS)
+      : getBookingWindowEnd(windowStart)
 
     if (
       Number.isNaN(windowStart.getTime()) ||
@@ -507,7 +513,7 @@ export default function RoomBookingPage() {
 
     const windowEnd = availability.windowEnd
       ? new Date(availability.windowEnd)
-      : new Date(Date.now() + ADVANCE_WINDOW_MS)
+      : getBookingWindowEnd(start)
 
     const nextBooking = availability.bookings
       .map((booking) => ({
@@ -626,8 +632,8 @@ export default function RoomBookingPage() {
         <section className="space-y-2">
           <h1 className="text-3xl font-bold tracking-tight">Room Booking</h1>
           <p className="text-muted-foreground">
-            Book a study room with clear limits: up to 1 day in advance, only
-            one active room booking, and a maximum of 3 hours.
+            Book a study room with clear limits: through the end of tomorrow,
+            only one active room booking, and a maximum of 3 hours.
           </p>
         </section>
 

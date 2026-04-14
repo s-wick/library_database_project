@@ -331,17 +331,8 @@ export default function RoomManagePage() {
                   <span>TV</span>
                 </label>
 
-                <label className="flex items-center gap-3 rounded-lg border p-3 text-sm">
-                  <input
-                    name="hasTv"
-                    type="checkbox"
-                    checked={form.hasTv}
-                    onChange={handleChange}
-                  />
-                  <span>Has TV</span>
-                </label>
-
                 <Button type="submit" disabled={submitting}>
+
                   {submitting
                     ? isEditing
                       ? "Saving changes..."
@@ -438,8 +429,8 @@ export default function RoomManagePage() {
                           label="Whiteboard"
                           enabled={room.features.hasWhiteboard}
                         />
-                        <FeaturePill label="TV" enabled={room.features.hasTv} />
                       </div>
+
                     </div>
                   ))}
                 </div>

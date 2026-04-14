@@ -13,7 +13,6 @@ const {
 } = require("../models/rooms.model")
 
 const MAX_BOOKING_HOURS = 3
-const MAX_ADVANCE_HOURS = 24
 const WEEKDAY_OPEN_HOUR = 9
 const WEEKDAY_CLOSE_HOUR = 19
 const WEEKEND_OPEN_HOUR = 9
@@ -28,15 +27,42 @@ function getDaySchedule(date) {
   }
 }
 
+function formatDateTimeLocalIso(value) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return null
+
+  const year = String(date.getFullYear())
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+  const hour = String(date.getHours()).padStart(2, "0")
+  const minute = String(date.getMinutes()).padStart(2, "0")
+  const second = String(date.getSeconds()).padStart(2, "0")
+
+  return `${year}-${month}-${day}T${hour}:${minute}:${second}`
+}
+
+function getBookingWindowEnd(fromDate = new Date()) {
+  const end = new Date(fromDate)
+  end.setDate(end.getDate() + 1)
+  end.setHours(23, 59, 59, 999)
+  return end
+}
+
 function formatBooking(row) {
   if (!row) return null
   const durationHours = Number(row.duration_hours || 0)
   const startTime = new Date(row.start_time)
   const endTime = new Date(startTime.getTime() + durationHours * 60 * 60 * 1000)
+
+  const formattedStartTime = formatDateTimeLocalIso(startTime)
+  const formattedEndTime = formatDateTimeLocalIso(endTime)
+
+  if (!formattedStartTime || !formattedEndTime) return null
+
   return {
     roomNumber: row.room_number,
-    startTime: startTime.toISOString(),
-    endTime: endTime.toISOString(),
+    startTime: formattedStartTime,
+    endTime: formattedEndTime,
     durationHours,
   }
 }
@@ -110,9 +136,7 @@ async function handleGetRoomAvailability(_req, res, url) {
     }
 
     const windowStart = new Date()
-    const windowEnd = new Date(
-      windowStart.getTime() + MAX_ADVANCE_HOURS * 60 * 60 * 1000
-    )
+    const windowEnd = getBookingWindowEnd(windowStart)
 
     const bookings = await getRoomBookingsInWindow(
       roomNumber,
@@ -344,9 +368,7 @@ async function handleBookRoom(req, res) {
     }
 
     const now = new Date()
-    const maxAdvance = new Date(
-      now.getTime() + MAX_ADVANCE_HOURS * 60 * 60 * 1000
-    )
+    const maxAdvance = getBookingWindowEnd(now)
 
     if (startTime <= now) {
       sendJson(res, 400, {
@@ -359,7 +381,7 @@ async function handleBookRoom(req, res) {
     if (startTime > maxAdvance) {
       sendJson(res, 400, {
         ok: false,
-        message: "Room booking can only be made up to 1 day in advance.",
+        message: "Room booking can only be made through the end of tomorrow.",
       })
       return
     }

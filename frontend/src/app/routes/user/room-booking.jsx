@@ -622,7 +622,7 @@ export default function RoomBookingPage() {
         </section>
 
         {activeBooking && (
-           <Card className="rounded-md border border-emerald-200 bg-emerald-50/70 dark:border-emerald-900/50 dark:bg-emerald-950/20">
+          <Card className="rounded-md border border-emerald-200 bg-emerald-50/70 dark:border-emerald-900/50 dark:bg-emerald-950/20">
             <CardHeader>
               <CardTitle className="text-lg text-emerald-700 dark:text-emerald-300">
                 Active Booking

@@ -43,5 +43,17 @@
   {
     "title": "The Social Network",
     "relativePath": "video/the-social-network.jpg"
+  },
+  {
+    "title": "Harry Potter and the Sorcerer's Stone",
+    "relativePath": "books/harry-potter-sorcerers-stone.jpg"
+  },
+  {
+    "title": "Harry Potter and the Chamber of Secrets",
+    "relativePath": "books/harry-potter-chamber-of-secrets.jpg"
+  },
+  {
+    "title": "Sony WH-1000XM5 Headphones",
+    "relativePath": "equipment/sony-wh-1000xm5.jpg"
   }
 ]

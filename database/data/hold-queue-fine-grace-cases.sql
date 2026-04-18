@@ -154,25 +154,25 @@ SET @qcase_stockholder_user_id = (
 
 -- Item for case 1 queue: out-of-stock book copy.
 INSERT INTO item (item_type_code, title, thumbnail_image, monetary_value, inventory, created_by)
-SELECT @book_code, 'Queue Case - Academic Statistics Handbook', NULL, 58.00, 1, @librarian_id
+SELECT @book_code, 'Harry Potter and the Sorcerer''s Stone', NULL, 24.99, 1, @librarian_id
 WHERE @book_code IS NOT NULL
   AND @librarian_id IS NOT NULL
   AND NOT EXISTS (
     SELECT 1
     FROM item i
-    WHERE i.title = 'Queue Case - Academic Statistics Handbook'
+    WHERE i.title = 'Harry Potter and the Sorcerer''s Stone'
   );
 
 SET @case1_item_id = (
  SELECT item_id
  FROM item
- WHERE title = 'Queue Case - Academic Statistics Handbook'
+ WHERE title = 'Harry Potter and the Sorcerer''s Stone'
  ORDER BY item_id DESC
  LIMIT 1
 );
 
 INSERT INTO book (item_id, author, edition, publication, publication_date)
-SELECT @case1_item_id, 'Nora Whitfield', '3rd', 'Northbridge Academic Press', '2021-08-10'
+SELECT @case1_item_id, 'J.K. Rowling', '1st', 'Scholastic', '1998-09-01'
 WHERE @case1_item_id IS NOT NULL
   AND NOT EXISTS (
     SELECT 1
@@ -182,19 +182,19 @@ WHERE @case1_item_id IS NOT NULL
 
 -- Item for case 2 queue: out-of-stock equipment.
 INSERT INTO item (item_type_code, title, thumbnail_image, monetary_value, inventory, created_by)
-SELECT @equipment_code, 'Queue Case - Sony WH-1000XM5 Headphones', NULL, 399.00, 1, @librarian_id
+SELECT @equipment_code, 'Sony WH-1000XM5 Headphones', NULL, 399.00, 1, @librarian_id
 WHERE @equipment_code IS NOT NULL
   AND @librarian_id IS NOT NULL
   AND NOT EXISTS (
     SELECT 1
     FROM item i
-    WHERE i.title = 'Queue Case - Sony WH-1000XM5 Headphones'
+    WHERE i.title = 'Sony WH-1000XM5 Headphones'
   );
 
 SET @case2_item_id = (
  SELECT item_id
  FROM item
- WHERE title = 'Queue Case - Sony WH-1000XM5 Headphones'
+ WHERE title = 'Sony WH-1000XM5 Headphones'
  ORDER BY item_id DESC
  LIMIT 1
 );
@@ -234,7 +234,7 @@ WHERE @case2_item_id IS NOT NULL
   );
 
 -- ---------------------------------------------------------------------------
--- Case 1: Active grace at front of queue (item: Queue Case - Academic Statistics Handbook)
+-- Case 1: Active grace at front of queue (item: Harry Potter and the Sorcerer's Stone)
 -- Front: qcase1.front@lib.com (unpaid fine inserted now -> grace active)
 -- Next:  qcase1.next@lib.com
 -- ---------------------------------------------------------------------------
@@ -269,7 +269,7 @@ WHERE @case1_fine_item_id IS NOT NULL
   AND @case1_front_user_id IS NOT NULL;
 
 -- ---------------------------------------------------------------------------
--- Case 2: Expired grace at front of queue (item: Queue Case - Sony WH-1000XM5 Headphones)
+-- Case 2: Expired grace at front of queue (item: Sony WH-1000XM5 Headphones)
 -- Front: qcase2.front@lib.com (grace manually moved to past; still unpaid)
 -- Next:  qcase2.next@lib.com
 -- ---------------------------------------------------------------------------
@@ -354,25 +354,25 @@ SET @case3_front_user_id = (
 );
 
 INSERT INTO item (item_type_code, title, thumbnail_image, monetary_value, inventory, created_by)
-SELECT @book_code, 'Queue Case - Grace Gate Test Book', NULL, 42.00, 1, @librarian_id
+SELECT @book_code, 'Harry Potter and the Chamber of Secrets', NULL, 26.99, 1, @librarian_id
 WHERE @book_code IS NOT NULL
   AND @librarian_id IS NOT NULL
   AND NOT EXISTS (
     SELECT 1
     FROM item i
-    WHERE i.title = 'Queue Case - Grace Gate Test Book'
+    WHERE i.title = 'Harry Potter and the Chamber of Secrets'
   );
 
 SET @case3_item_id = (
  SELECT item_id
  FROM item
- WHERE title = 'Queue Case - Grace Gate Test Book'
+ WHERE title = 'Harry Potter and the Chamber of Secrets'
  ORDER BY item_id DESC
  LIMIT 1
 );
 
 INSERT INTO book (item_id, author, edition, publication, publication_date)
-SELECT @case3_item_id, 'Maya Chen', '1st', 'Queue Testing Press', '2022-03-01'
+SELECT @case3_item_id, 'J.K. Rowling', '1st', 'Scholastic', '1999-06-02'
 WHERE @case3_item_id IS NOT NULL
   AND NOT EXISTS (
     SELECT 1

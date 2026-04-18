@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
 import {
   BookOpen,
@@ -113,6 +113,30 @@ function BorrowLimitCard({ borrowStatus }) {
 function daysUntil(dateStr) {
   const diff = new Date(dateStr) - new Date()
   return Math.ceil(diff / (1000 * 60 * 60 * 24))
+}
+
+function formatGraceCountdown(secondsRemaining) {
+  const safeSeconds = Math.max(Number(secondsRemaining || 0), 0)
+  const hours = Math.floor(safeSeconds / 3600)
+  const minutes = Math.floor((safeSeconds % 3600) / 60)
+
+  if (hours > 0) {
+    return `${hours}h ${minutes}m left`
+  }
+
+  return `${minutes}m left`
+}
+
+function formatPickupCountdown(secondsRemaining) {
+  const safeSeconds = Math.max(Number(secondsRemaining || 0), 0)
+  const hours = Math.floor(safeSeconds / 3600)
+  const minutes = Math.floor((safeSeconds % 3600) / 60)
+
+  if (hours > 0) {
+    return `${hours}h ${minutes}m left`
+  }
+
+  return `${minutes}m left`
 }
 
 function StatusBadge({ status }) {
@@ -256,12 +280,34 @@ function HoldQueue({ holdQueue = [], onCancelHold, cancelingHoldId = null }) {
               <div>
                 <p className="leading-tight font-semibold">{item.title}</p>
                 <p className="text-xs text-muted-foreground">{item.author}</p>
+                {item.status === "grace" && (
+                  <p className="mt-1 text-xs font-medium text-amber-600 dark:text-amber-400">
+                    Fine grace active:{" "}
+                    {formatGraceCountdown(item.graceSecondsRemaining)}
+                  </p>
+                )}
+                {item.status === "ready_for_pickup" && (
+                  <p className="mt-1 text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                    Ready for pickup:{" "}
+                    {formatPickupCountdown(item.pickupSecondsRemaining)}
+                  </p>
+                )}
               </div>
             </div>
             <div className="text-right">
               <p className="text-xs font-medium text-muted-foreground">
                 {item.estimatedWait}
               </p>
+              {item.status === "grace" && (
+                <Badge className="mt-1 h-4 bg-amber-500 px-1.5 py-0 text-[10px] tracking-wider text-white uppercase hover:bg-amber-500">
+                  Grace period
+                </Badge>
+              )}
+              {item.status === "ready_for_pickup" && (
+                <Badge className="mt-1 h-4 bg-emerald-600 px-1.5 py-0 text-[10px] tracking-wider text-white uppercase hover:bg-emerald-600">
+                  Ready now
+                </Badge>
+              )}
               <Button
                 variant="ghost"
                 size="sm"
@@ -469,46 +515,49 @@ export default function UserDashboard() {
 
   const apiBaseUrl = API_BASE_URL
 
-  const fetchDashboardData = async (userId) => {
-    try {
-      setLoading(true)
+  const fetchDashboardData = useCallback(
+    async (userId) => {
+      try {
+        setLoading(true)
 
-      if (!userId) {
-        setBorrowedBooks([])
-        setHoldQueue([])
-        setFines([])
-        setBorrowHistory([])
-        return
-      }
+        if (!userId) {
+          setBorrowedBooks([])
+          setHoldQueue([])
+          setFines([])
+          setBorrowHistory([])
+          return
+        }
 
-      const res = await fetch(`${apiBaseUrl}/api/dashboard?userId=${userId}`)
-      if (res.ok) {
-        const data = await res.json()
-        setBorrowedBooks(data.borrowedBooks || [])
-        setHoldQueue(data.holdQueue || [])
-        setFines(data.fines || [])
-        setBorrowHistory(data.borrowHistory || [])
-      } else {
-        setBorrowedBooks([])
-        setHoldQueue([])
-        setFines([])
-        setBorrowHistory([])
-      }
+        const res = await fetch(`${apiBaseUrl}/api/dashboard?userId=${userId}`)
+        if (res.ok) {
+          const data = await res.json()
+          setBorrowedBooks(data.borrowedBooks || [])
+          setHoldQueue(data.holdQueue || [])
+          setFines(data.fines || [])
+          setBorrowHistory(data.borrowHistory || [])
+        } else {
+          setBorrowedBooks([])
+          setHoldQueue([])
+          setFines([])
+          setBorrowHistory([])
+        }
 
-      // Fetch borrow status separately
-      const statusRes = await fetch(
-        `${apiBaseUrl}/api/borrow-status?userId=${userId}`
-      )
-      if (statusRes.ok) {
-        const statusData = await statusRes.json()
-        if (statusData.ok) setBorrowStatus(statusData)
+        // Fetch borrow status separately
+        const statusRes = await fetch(
+          `${apiBaseUrl}/api/borrow-status?userId=${userId}`
+        )
+        if (statusRes.ok) {
+          const statusData = await statusRes.json()
+          if (statusData.ok) setBorrowStatus(statusData)
+        }
+      } catch (err) {
+        console.error("Failed to fetch dashboard data", err)
+      } finally {
+        setLoading(false)
       }
-    } catch (err) {
-      console.error("Failed to fetch dashboard data", err)
-    } finally {
-      setLoading(false)
-    }
-  }
+    },
+    [apiBaseUrl]
+  )
 
   useEffect(() => {
     // Attempt to load user from local storage
@@ -534,7 +583,7 @@ export default function UserDashboard() {
     }
 
     fetchDashboardData(null)
-  }, [])
+  }, [fetchDashboardData])
 
   useEffect(() => {
     const checkAuth = () => {
@@ -687,7 +736,8 @@ export default function UserDashboard() {
                 <FinesPanel fines={fines} />
                 <p className="text-center text-xs text-muted-foreground">
                   Fines accrue at $5/day per overdue item and stop at the item
-                  value.
+                  value. Existing holds keep a 24-hour grace period before
+                  cancellation.
                 </p>
               </div>
             </TabsContent>

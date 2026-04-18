@@ -25,6 +25,10 @@ async function getActiveHolds(userId) {
     `
     SELECT h.item_id,
            h.request_datetime,
+          h.grace_started_at,
+          h.grace_expires_at,
+          h.pickup_ready_at,
+          h.pickup_expires_at,
            i.title,
            bk.author,
            (

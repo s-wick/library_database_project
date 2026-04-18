@@ -22,6 +22,8 @@ const {
   handleCheckout,
   handleCheckin,
   handleGetActiveBorrowCatalog,
+  handleGetPickupReadyCatalog,
+  handleCompleteHoldPickup,
   handleCancelHold,
   handleBorrowStatus,
 } = require("./services/transactions.service")
@@ -174,6 +176,16 @@ async function handleApiRoute(req, res, url) {
 
   if (req.method === "GET" && pathname === "/api/check-in/catalog") {
     await handleGetActiveBorrowCatalog(req, res, url)
+    return
+  }
+
+  if (req.method === "GET" && pathname === "/api/holds/pickup-ready") {
+    await handleGetPickupReadyCatalog(req, res, url)
+    return
+  }
+
+  if (req.method === "POST" && pathname === "/api/holds/pickup") {
+    await handleCompleteHoldPickup(req, res)
     return
   }
 

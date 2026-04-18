@@ -1,28 +1,25 @@
 DELIMITER ;;
 
--- When an item is returned, give the next eligible hold user the item automatically.
+-- When an item is returned, mark the next eligible hold as ready for pickup.
 CREATE TRIGGER auto_checkout_holds
 AFTER UPDATE ON borrow
 FOR EACH ROW
 BEGIN
-	-- Track the current hold being inspected and helper values used during reassignment.
 	DECLARE v_done TINYINT(1) DEFAULT 0;
 	DECLARE v_hold_user_id INT UNSIGNED DEFAULT NULL;
 	DECLARE v_hold_request_datetime DATETIME DEFAULT NULL;
-	DECLARE v_is_faculty TINYINT(1) DEFAULT 0;
-	DECLARE v_borrow_limit INT DEFAULT 3;
-	DECLARE v_active_count INT DEFAULT 0;
 	DECLARE v_has_unpaid_fine INT DEFAULT 0;
-	DECLARE v_checkout_ts DATETIME DEFAULT NULL;
+	DECLARE v_hold_grace_expires_at DATETIME DEFAULT NULL;
+	DECLARE v_hold_pickup_expires_at DATETIME DEFAULT NULL;
+	DECLARE v_grace_started_type_id INT UNSIGNED DEFAULT NULL;
+	DECLARE v_pickup_ready_type_id INT UNSIGNED DEFAULT NULL;
 	DECLARE v_removed_hold_type_id INT UNSIGNED DEFAULT NULL;
-	DECLARE v_checked_out_type_id INT UNSIGNED DEFAULT NULL;
 	DECLARE v_close_reason_fine_id INT UNSIGNED DEFAULT NULL;
-	DECLARE v_close_reason_fulfilled_id INT UNSIGNED DEFAULT NULL;
+	DECLARE v_close_reason_pickup_expired_id INT UNSIGNED DEFAULT NULL;
 	DECLARE v_item_title VARCHAR(100) DEFAULT NULL;
 
-	-- Process open holds for this item from oldest to newest.
 	DECLARE hold_cursor CURSOR FOR
-		SELECT h.user_id, h.request_datetime
+		SELECT h.user_id, h.request_datetime, h.grace_expires_at, h.pickup_expires_at
 		FROM hold_item h
 		WHERE h.item_id = NEW.item_id
 			AND h.close_datetime IS NULL
@@ -32,11 +29,16 @@ BEGIN
 
 	-- Only react when a borrow transitions from active to returned.
 	IF NEW.return_date IS NOT NULL AND OLD.return_date IS NULL THEN
-		-- Load text/id values once so they can be reused throughout the loop.
 		SELECT title
 			INTO v_item_title
 			FROM item
 		 WHERE item_id = NEW.item_id
+		 LIMIT 1;
+
+		SELECT notification_type_id
+			INTO v_grace_started_type_id
+			FROM user_notification_type
+		 WHERE notification_type_text = 'Hold grace started'
 		 LIMIT 1;
 
 		SELECT notification_type_id
@@ -46,34 +48,40 @@ BEGIN
 		 LIMIT 1;
 
 		SELECT notification_type_id
-			INTO v_checked_out_type_id
+			INTO v_pickup_ready_type_id
 			FROM user_notification_type
-		 WHERE notification_type_text = 'Checked out item'
+		 WHERE notification_type_text = 'Hold ready for pickup'
 		 LIMIT 1;
 
 		SELECT reason_id
 			INTO v_close_reason_fine_id
 			FROM hold_item_closing_reasons
-		 WHERE reason_text = 'Canceled by fine'
+		 WHERE reason_text = 'Canceled - fine grace period expired'
 		 LIMIT 1;
 
 		SELECT reason_id
-			INTO v_close_reason_fulfilled_id
+			INTO v_close_reason_pickup_expired_id
 			FROM hold_item_closing_reasons
-		 WHERE reason_text = 'Fulfilled'
+		 WHERE reason_text = 'Canceled - pickup window expired'
 		 LIMIT 1;
+
+		IF v_close_reason_pickup_expired_id IS NULL THEN
+			SELECT reason_id
+				INTO v_close_reason_pickup_expired_id
+				FROM hold_item_closing_reasons
+			 WHERE reason_text = 'Canceled'
+			 LIMIT 1;
+		END IF;
 
 		OPEN hold_cursor;
 
 		hold_loop: LOOP
-			-- Pull the next waiting hold request for this item.
-			FETCH hold_cursor INTO v_hold_user_id, v_hold_request_datetime;
+			FETCH hold_cursor INTO v_hold_user_id, v_hold_request_datetime, v_hold_grace_expires_at, v_hold_pickup_expires_at;
 
 			IF v_done = 1 THEN
 				LEAVE hold_loop;
 			END IF;
 
-			-- Users with unpaid fines lose their hold instead of receiving the item.
 			SELECT COUNT(*)
 				INTO v_has_unpaid_fine
 				FROM fined_for f
@@ -81,6 +89,93 @@ BEGIN
 				 AND COALESCE(f.amount, 0) > COALESCE(f.amount_paid, 0);
 
 			IF v_has_unpaid_fine > 0 THEN
+				IF v_hold_grace_expires_at IS NULL THEN
+					UPDATE hold_item
+						 SET grace_started_at = NOW(),
+								 grace_expires_at = DATE_ADD(NOW(), INTERVAL 24 HOUR),
+								 pickup_ready_at = NOW(),
+								 pickup_expires_at = DATE_ADD(NOW(), INTERVAL 72 HOUR)
+					 WHERE item_id = NEW.item_id
+						 AND user_id = v_hold_user_id
+						 AND request_datetime = v_hold_request_datetime
+						 AND close_datetime IS NULL
+						 AND grace_expires_at IS NULL;
+
+					IF v_grace_started_type_id IS NOT NULL THEN
+						INSERT INTO user_notification (
+							user_id,
+							item_id,
+							notification_type,
+							message
+						)
+						VALUES (
+							v_hold_user_id,
+							NEW.item_id,
+							v_grace_started_type_id,
+							CONCAT(
+								'Your hold for "',
+								COALESCE(v_item_title, NEW.item_id),
+								'" entered a 24-hour grace period because your account has unpaid fines. ',
+								'Pay within 24 hours to keep this hold active.'
+							)
+						);
+					END IF;
+
+					IF v_pickup_ready_type_id IS NOT NULL THEN
+						INSERT INTO user_notification (
+							user_id,
+							item_id,
+							notification_type,
+							message
+						)
+						VALUES (
+							v_hold_user_id,
+							NEW.item_id,
+							v_pickup_ready_type_id,
+							CONCAT(
+								'Your hold for "',
+								COALESCE(v_item_title, NEW.item_id),
+								'" is ready for pickup, but you must pay your overdue fines before pickup can be completed.'
+							)
+						);
+					END IF;
+
+					LEAVE hold_loop;
+				END IF;
+
+				IF v_hold_grace_expires_at > NOW() THEN
+					UPDATE hold_item
+						 SET pickup_ready_at = NOW(),
+								 pickup_expires_at = DATE_ADD(NOW(), INTERVAL 72 HOUR)
+					 WHERE item_id = NEW.item_id
+						 AND user_id = v_hold_user_id
+						 AND request_datetime = v_hold_request_datetime
+						 AND close_datetime IS NULL
+						 AND pickup_expires_at IS NULL;
+
+					IF v_pickup_ready_type_id IS NOT NULL
+						 AND v_hold_pickup_expires_at IS NULL THEN
+						INSERT INTO user_notification (
+							user_id,
+							item_id,
+							notification_type,
+							message
+						)
+						VALUES (
+							v_hold_user_id,
+							NEW.item_id,
+							v_pickup_ready_type_id,
+							CONCAT(
+								'Your hold for "',
+								COALESCE(v_item_title, NEW.item_id),
+								'" is ready for pickup, but you must pay your overdue fines before pickup can be completed.'
+							)
+						);
+					END IF;
+
+					LEAVE hold_loop;
+				END IF;
+
 				IF v_removed_hold_type_id IS NOT NULL THEN
 					INSERT INTO user_notification (
 						user_id,
@@ -95,14 +190,18 @@ BEGIN
 						CONCAT(
 							'Your hold for "',
 							COALESCE(v_item_title, NEW.item_id),
-							'" was removed because your account has unpaid fines.'
+							'" was removed because your 24-hour fine grace period expired.'
 						)
 					);
 				END IF;
 
 				UPDATE hold_item
 					 SET close_datetime = NOW(),
-							 close_reason_id = v_close_reason_fine_id
+							 close_reason_id = v_close_reason_fine_id,
+							 grace_started_at = NULL,
+							 grace_expires_at = NULL,
+							 pickup_ready_at = NULL,
+							 pickup_expires_at = NULL
 				 WHERE item_id = NEW.item_id
 					 AND user_id = v_hold_user_id
 					 AND request_datetime = v_hold_request_datetime
@@ -111,37 +210,57 @@ BEGIN
 				ITERATE hold_loop;
 			END IF;
 
-			-- Faculty receive a higher checkout limit and longer loan period.
-			SELECT COALESCE(ua.is_faculty, 0)
-				INTO v_is_faculty
-				FROM user_account ua
-			 WHERE ua.user_id = v_hold_user_id
-			 LIMIT 1;
+			IF v_hold_pickup_expires_at IS NOT NULL THEN
+				IF v_hold_pickup_expires_at > NOW() THEN
+					LEAVE hold_loop;
+				END IF;
 
-			SET v_borrow_limit = IF(v_is_faculty = 1, 6, 3);
+				IF v_removed_hold_type_id IS NOT NULL THEN
+					INSERT INTO user_notification (
+						user_id,
+						item_id,
+						notification_type,
+						message
+					)
+					VALUES (
+						v_hold_user_id,
+						NEW.item_id,
+						v_removed_hold_type_id,
+						CONCAT(
+							'Your hold for "',
+							COALESCE(v_item_title, NEW.item_id),
+							'" was canceled because the 72-hour pickup window expired.'
+						)
+					);
+				END IF;
 
-			SELECT COUNT(*)
-				INTO v_active_count
-				FROM borrow b
-			 WHERE b.user_id = v_hold_user_id
-				 AND b.return_date IS NULL;
+				UPDATE hold_item
+					 SET close_datetime = NOW(),
+							 close_reason_id = v_close_reason_pickup_expired_id,
+							 grace_started_at = NULL,
+							 grace_expires_at = NULL,
+							 pickup_ready_at = NULL,
+							 pickup_expires_at = NULL
+				 WHERE item_id = NEW.item_id
+					 AND user_id = v_hold_user_id
+					 AND request_datetime = v_hold_request_datetime
+					 AND close_datetime IS NULL;
 
-			-- Skip this hold if the user is already at their active borrow limit.
-			IF v_active_count >= v_borrow_limit THEN
 				ITERATE hold_loop;
 			END IF;
 
-			-- Create the new checkout for the first eligible user in line.
-			SET v_checkout_ts = NOW();
-			INSERT INTO borrow (item_id, user_id, checkout_date, due_date)
-			VALUES (
-				NEW.item_id,
-				v_hold_user_id,
-				v_checkout_ts,
-				DATE_ADD(v_checkout_ts, INTERVAL IF(v_is_faculty = 1, 14, 7) DAY)
-			);
+			UPDATE hold_item
+				 SET pickup_ready_at = NOW(),
+						 pickup_expires_at = DATE_ADD(NOW(), INTERVAL 72 HOUR),
+						 grace_started_at = NULL,
+						 grace_expires_at = NULL
+			 WHERE item_id = NEW.item_id
+				 AND user_id = v_hold_user_id
+				 AND request_datetime = v_hold_request_datetime
+				 AND close_datetime IS NULL
+				 AND pickup_expires_at IS NULL;
 
-			IF v_checked_out_type_id IS NOT NULL THEN
+			IF v_pickup_ready_type_id IS NOT NULL THEN
 				INSERT INTO user_notification (
 					user_id,
 					item_id,
@@ -151,28 +270,14 @@ BEGIN
 				VALUES (
 					v_hold_user_id,
 					NEW.item_id,
-					v_checked_out_type_id,
+					v_pickup_ready_type_id,
 					CONCAT(
 						'Your hold for "',
 						COALESCE(v_item_title, NEW.item_id),
-						'" has been checked out to your account. It is due on ',
-						DATE_FORMAT(
-							DATE_ADD(v_checkout_ts, INTERVAL IF(v_is_faculty = 1, 14, 7) DAY),
-							'%Y-%m-%d'
-						),
-						'.'
+						'" is ready for pickup. Please collect it within 72 hours.'
 					)
 				);
 			END IF;
-
-			-- Close the hold once it has been fulfilled by the automatic checkout.
-			UPDATE hold_item
-				 SET close_datetime = NOW(),
-						 close_reason_id = v_close_reason_fulfilled_id
-			 WHERE item_id = NEW.item_id
-				 AND user_id = v_hold_user_id
-				 AND request_datetime = v_hold_request_datetime
-				 AND close_datetime IS NULL;
 
 			LEAVE hold_loop;
 		END LOOP;

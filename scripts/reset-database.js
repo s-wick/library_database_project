@@ -15,6 +15,7 @@ const dataFiles = [
   "holds-fines.sql",
   "room-bookings.sql",
   "extra-users-monthly-borrows.sql",
+  "hold-queue-fine-grace-cases.sql",
 ]
 const triggerFiles = [
   "borrow-limit.sql",
@@ -375,33 +376,31 @@ function main() {
         }
       }
     }
+  }
 
-    if (fileName === "items.sql") {
-      const thumbnailMap = loadThumbnailMap()
-      updateThumbnails({
-        mysqlBin,
-        baseArgs,
-        database,
-        rootDir,
-        map: thumbnailMap,
-      })
+  const thumbnailMap = loadThumbnailMap()
+  updateThumbnails({
+    mysqlBin,
+    baseArgs,
+    database,
+    rootDir,
+    map: thumbnailMap,
+  })
 
-      const quotedTitles = thumbnailMap
-        .map((entry) => `'${escapeSqlString(entry.title)}'`)
-        .join(", ")
-      const nullCount = runMysqlQuery({
-        mysqlBin,
-        args: [...baseArgs, database],
-        query: `SELECT COUNT(*) FROM item WHERE title IN (${quotedTitles}) AND thumbnail_image IS NULL;`,
-        label: "Thumbnail validation",
-      })
+  const quotedTitles = thumbnailMap
+    .map((entry) => `'${escapeSqlString(entry.title)}'`)
+    .join(", ")
+  const nullCount = runMysqlQuery({
+    mysqlBin,
+    args: [...baseArgs, database],
+    query: `SELECT COUNT(*) FROM item WHERE title IN (${quotedTitles}) AND thumbnail_image IS NULL;`,
+    label: "Thumbnail validation",
+  })
 
-      if (Number(nullCount) > 0) {
-        throw new Error(
-          "Thumbnail images failed to load. Check that the image files exist and are readable from database/data/images, then rerun db:reset."
-        )
-      }
-    }
+  if (Number(nullCount) > 0) {
+    throw new Error(
+      "Thumbnail images failed to load. Check that the image files exist and are readable from database/data/images, then rerun db:reset."
+    )
   }
 
   console.log("Database reset complete.")

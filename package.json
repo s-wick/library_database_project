@@ -9,6 +9,7 @@
     "dev:frontend": "npm run dev --prefix frontend",
     "dev:backend": "npm run dev --prefix backend",
     "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "user-tabs": "node scripts/open-user-tabs.js",
     "db:dump": "node scripts/dump-database.js",
     "db:import": "node scripts/import-database.js",
     "db:reset": "node scripts/reset-database.js",
@@ -21,6 +22,7 @@
   },
   "devDependencies": {
     "concurrently": "^8.0.0",
+    "playwright": "^1.56.1",
     "simple-git-hooks": "^2.13.1"
   }
 }

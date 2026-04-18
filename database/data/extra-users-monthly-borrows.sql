@@ -272,7 +272,7 @@ SET @reason_canceled = (
 SET @reason_canceled_fine = (
   SELECT reason_id
   FROM hold_item_closing_reasons
-  WHERE reason_text = 'Canceled by fine'
+  WHERE reason_text = 'Canceled - fine grace period expired'
   LIMIT 1
 );
 

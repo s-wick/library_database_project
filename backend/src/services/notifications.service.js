@@ -3,6 +3,9 @@ const {
   getNotificationsByUserId,
   acknowledgeNotification,
 } = require("../models/notifications.model")
+const {
+  processExpiredPickupHoldsForUser,
+} = require("../models/transactions.model")
 
 function toIsoString(value) {
   if (!value) return null
@@ -17,6 +20,8 @@ async function handleGetNotifications(_req, res, url) {
       sendJson(res, 400, { ok: false, message: "userId is required" })
       return
     }
+
+    await processExpiredPickupHoldsForUser(Number(userId))
 
     const notifications = await getNotificationsByUserId(userId)
 

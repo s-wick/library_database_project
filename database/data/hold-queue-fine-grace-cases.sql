@@ -311,3 +311,15 @@ UPDATE hold_item
   AND user_id = @case2_front_user_id
    AND request_datetime = '2026-04-14 08:00:00'
    AND close_datetime IS NULL;
+
+-- Fire queue reassignment logic for case 2 by returning the active stockholder borrow.
+-- Expected outcome:
+-- 1) qcase2.front hold is closed (grace expired + unpaid fine)
+-- 2) qcase2.next receives a "Hold ready for pickup" notification
+UPDATE borrow
+   SET return_date = NOW()
+ WHERE item_id = @case2_item_id
+   AND user_id = @qcase_stockholder_user_id
+   AND return_date IS NULL
+ ORDER BY checkout_date ASC
+ LIMIT 1;

@@ -6,13 +6,13 @@
     "backend"
   ],
   "scripts": {
+    "install:all": "npm install && npm install --prefix frontend && npm install --prefix backend",
     "dev:frontend": "npm run dev --prefix frontend",
     "dev:backend": "npm run dev --prefix backend",
     "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
     "user-tabs": "node scripts/open-user-tabs.js",
     "db:dump": "node scripts/dump-database.js",
-    "db:reset": "node scripts/reset-database.js",
-    "db:update-dates": "node scripts/update-sample-dates.js",
+    "db:reset": "node scripts/update-sample-dates.js && node scripts/reset-database.js",
     "format": "prettier --write .",
     "lint": "npm run lint --prefix frontend && npm run lint --prefix backend"
   },

@@ -209,9 +209,9 @@ async function handleSignin(req, res) {
 
     if (accountType === "staff") {
       if (!account.is_admin && hasRetirementReached(account.is_retired)) {
-        sendJson(res, 403, {
+        sendJson(res, 401, {
           ok: false,
-          message: "This librarian account is retired.",
+          message: "Invalid credentials.",
         })
         return
       }

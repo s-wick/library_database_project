@@ -103,17 +103,141 @@ SET @case2_next_user_id = (
 );
 
 -- ---------------------------------------------------------------------------
--- Case 1: Active grace at front of queue (item: Hidden Figures)
--- Front: qcase1.front@lib.com (unpaid fine inserted now -> grace active)
--- Next:  qcase1.next@lib.com
+-- Dedicated out-of-stock items for queue testing
 -- ---------------------------------------------------------------------------
+
+SET @librarian_id = (
+ SELECT staff_id
+ FROM staff_account
+ WHERE email = 'librarian.staff@lib.com'
+ LIMIT 1
+);
+
+SET @book_code = (
+ SELECT item_code
+ FROM item_type
+ WHERE item_type = 'Book'
+ LIMIT 1
+);
+
+SET @equipment_code = (
+ SELECT item_code
+ FROM item_type
+ WHERE item_type = 'Rental Equipment'
+ LIMIT 1
+);
+
+-- User that keeps the queue-case items checked out so inventory is effectively out-of-stock.
+INSERT INTO user_account (email, password, first_name, middle_name, last_name, is_faculty)
+SELECT
+  'qcase.stockholder@lib.com',
+  src.password,
+  'QueueCase',
+  NULL,
+  'Stockholder',
+  0
+FROM user_account src
+WHERE src.email = 'student3.user@lib.com'
+  AND NOT EXISTS (
+    SELECT 1
+    FROM user_account u
+    WHERE u.email = 'qcase.stockholder@lib.com'
+  )
+LIMIT 1;
+
+SET @qcase_stockholder_user_id = (
+ SELECT user_id
+ FROM user_account
+ WHERE email = 'qcase.stockholder@lib.com'
+ LIMIT 1
+);
+
+-- Item for case 1 queue: out-of-stock book copy.
+INSERT INTO item (item_type_code, title, thumbnail_image, monetary_value, inventory, created_by)
+SELECT @book_code, 'Queue Case - Academic Statistics Handbook', NULL, 58.00, 1, @librarian_id
+WHERE @book_code IS NOT NULL
+  AND @librarian_id IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1
+    FROM item i
+    WHERE i.title = 'Queue Case - Academic Statistics Handbook'
+  );
 
 SET @case1_item_id = (
  SELECT item_id
  FROM item
- WHERE title = 'Hidden Figures'
+ WHERE title = 'Queue Case - Academic Statistics Handbook'
+ ORDER BY item_id DESC
  LIMIT 1
 );
+
+INSERT INTO book (item_id, author, edition, publication, publication_date)
+SELECT @case1_item_id, 'Nora Whitfield', '3rd', 'Northbridge Academic Press', '2021-08-10'
+WHERE @case1_item_id IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1
+    FROM book b
+    WHERE b.item_id = @case1_item_id
+  );
+
+-- Item for case 2 queue: out-of-stock equipment.
+INSERT INTO item (item_type_code, title, thumbnail_image, monetary_value, inventory, created_by)
+SELECT @equipment_code, 'Queue Case - Sony WH-1000XM5 Headphones', NULL, 399.00, 1, @librarian_id
+WHERE @equipment_code IS NOT NULL
+  AND @librarian_id IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1
+    FROM item i
+    WHERE i.title = 'Queue Case - Sony WH-1000XM5 Headphones'
+  );
+
+SET @case2_item_id = (
+ SELECT item_id
+ FROM item
+ WHERE title = 'Queue Case - Sony WH-1000XM5 Headphones'
+ ORDER BY item_id DESC
+ LIMIT 1
+);
+
+INSERT INTO rental_equipment (item_id)
+SELECT @case2_item_id
+WHERE @case2_item_id IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1
+    FROM rental_equipment re
+    WHERE re.item_id = @case2_item_id
+  );
+
+-- Keep both queue items actively borrowed by another user so stock becomes zero.
+INSERT INTO borrow (item_id, user_id, checkout_date, due_date, return_date)
+SELECT @case1_item_id, @qcase_stockholder_user_id, '2026-04-14 08:30:00', '2026-04-21 08:30:00', NULL
+WHERE @case1_item_id IS NOT NULL
+  AND @qcase_stockholder_user_id IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1
+    FROM borrow b
+    WHERE b.item_id = @case1_item_id
+      AND b.user_id = @qcase_stockholder_user_id
+      AND b.return_date IS NULL
+  );
+
+INSERT INTO borrow (item_id, user_id, checkout_date, due_date, return_date)
+SELECT @case2_item_id, @qcase_stockholder_user_id, '2026-04-14 08:40:00', '2026-04-21 08:40:00', NULL
+WHERE @case2_item_id IS NOT NULL
+  AND @qcase_stockholder_user_id IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1
+    FROM borrow b
+    WHERE b.item_id = @case2_item_id
+      AND b.user_id = @qcase_stockholder_user_id
+      AND b.return_date IS NULL
+  );
+
+-- ---------------------------------------------------------------------------
+-- Case 1: Active grace at front of queue (item: Queue Case - Academic Statistics Handbook)
+-- Front: qcase1.front@lib.com (unpaid fine inserted now -> grace active)
+-- Next:  qcase1.next@lib.com
+-- ---------------------------------------------------------------------------
 
 SET @case1_fine_item_id = (
  SELECT item_id
@@ -145,17 +269,10 @@ WHERE @case1_fine_item_id IS NOT NULL
   AND @case1_front_user_id IS NOT NULL;
 
 -- ---------------------------------------------------------------------------
--- Case 2: Expired grace at front of queue (item: The Martian)
+-- Case 2: Expired grace at front of queue (item: Queue Case - Sony WH-1000XM5 Headphones)
 -- Front: qcase2.front@lib.com (grace manually moved to past; still unpaid)
 -- Next:  qcase2.next@lib.com
 -- ---------------------------------------------------------------------------
-
-SET @case2_item_id = (
- SELECT item_id
- FROM item
- WHERE title = 'The Martian'
- LIMIT 1
-);
 
 SET @case2_fine_item_id = (
  SELECT item_id

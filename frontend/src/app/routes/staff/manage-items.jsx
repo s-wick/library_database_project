@@ -20,6 +20,9 @@ import { Navbar } from "@/components/navbar"
 import { API_BASE_URL } from "@/lib/api-config"
 
 function getEditPayload(item, values) {
+  const itemType = String(item.standard_type || "")
+    .trim()
+    .toLowerCase()
   const base = {
     title: values.title,
     monetaryValue: values.monetaryValue,
@@ -31,7 +34,7 @@ function getEditPayload(item, values) {
     base.thumbnailImage = values.thumbnailImage
   }
 
-  if (item.item_type_code === 1) {
+  if (itemType === "book") {
     return {
       ...base,
       author: values.author,
@@ -41,14 +44,14 @@ function getEditPayload(item, values) {
     }
   }
 
-  if (item.item_type_code === 2) {
+  if (itemType === "video") {
     return {
       ...base,
       videoLengthSeconds: values.videoLengthSeconds,
     }
   }
 
-  if (item.item_type_code === 3) {
+  if (itemType === "audiobook") {
     return {
       ...base,
       audioLengthSeconds: values.audioLengthSeconds,
@@ -380,7 +383,9 @@ export default function ManageItemsPage() {
                           {selected.monetary_value}
                         </p>
 
-                        {selected.item_type_code === 1 && (
+                        {String(selected.standard_type || "")
+                          .trim()
+                          .toLowerCase() === "book" && (
                           <>
                             <p>
                               <span className="font-medium">Author:</span>{" "}
@@ -405,14 +410,18 @@ export default function ManageItemsPage() {
                           </>
                         )}
 
-                        {selected.item_type_code === 2 && (
+                        {String(selected.standard_type || "")
+                          .trim()
+                          .toLowerCase() === "video" && (
                           <p>
                             <span className="font-medium">Video length:</span>{" "}
                             {selected.video_length_seconds || 0} seconds
                           </p>
                         )}
 
-                        {selected.item_type_code === 3 && (
+                        {String(selected.standard_type || "")
+                          .trim()
+                          .toLowerCase() === "audiobook" && (
                           <p>
                             <span className="font-medium">Audio length:</span>{" "}
                             {selected.audio_length_seconds || 0} seconds
@@ -600,7 +609,7 @@ export default function ManageItemsPage() {
                         />
                       </Field>
                       <Field>
-                        <FieldLabel>Computed stock</FieldLabel>
+                        <FieldLabel>Items in stock</FieldLabel>
                         <Input
                           value={String(form.stock ?? "")}
                           readOnly
@@ -730,7 +739,9 @@ export default function ManageItemsPage() {
                         </div>
                       </div>
 
-                      {selected.item_type_code === 1 && (
+                      {String(selected.standard_type || "")
+                        .trim()
+                        .toLowerCase() === "book" && (
                         <>
                           <Field>
                             <FieldLabel>Author</FieldLabel>
@@ -788,7 +799,9 @@ export default function ManageItemsPage() {
                         </>
                       )}
 
-                      {selected.item_type_code === 2 && (
+                      {String(selected.standard_type || "")
+                        .trim()
+                        .toLowerCase() === "video" && (
                         <Field>
                           <FieldLabel>Video length (seconds)</FieldLabel>
                           <Input
@@ -805,7 +818,9 @@ export default function ManageItemsPage() {
                         </Field>
                       )}
 
-                      {selected.item_type_code === 3 && (
+                      {String(selected.standard_type || "")
+                        .trim()
+                        .toLowerCase() === "audiobook" && (
                         <Field>
                           <FieldLabel>Audio length (seconds)</FieldLabel>
                           <Input

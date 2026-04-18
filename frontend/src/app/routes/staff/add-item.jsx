@@ -183,30 +183,54 @@ export default function AddItemPage() {
     itemType === "BOOK" || itemType === "AUDIO" || itemType === "VIDEO"
 
   useEffect(() => {
-    const types = [
-      { itemCode: 1, itemType: "BOOK" },
-      { itemCode: 2, itemType: "VIDEO" },
-      { itemCode: 3, itemType: "AUDIO" },
-      { itemCode: 4, itemType: "RENTAL_EQUIPMENT" },
-    ]
+    Promise.all([
+      fetch(`${apiBaseUrl}/api/lookups`)
+        .then((response) => response.json())
+        .catch(() => null),
+      fetch(`${apiBaseUrl}/api/genres/search?q=`)
+        .then((response) => response.json())
+        .catch(() => null),
+    ])
+      .then(([lookupData, genreData]) => {
+        const types = Array.isArray(lookupData?.lookups?.itemTypes)
+          ? lookupData.lookups.itemTypes
+          : []
+        const nextTypes = types
+          .map((entry) =>
+            String(entry?.key || "")
+              .trim()
+              .toUpperCase()
+          )
+          .filter(Boolean)
 
-    setItemTypes(types)
-    setGenres([])
-    setItemType(types[0].itemType)
-    setForm({
-      ...defaultForm(types[0].itemType),
-      genres: [],
-    })
+        setItemTypes(nextTypes)
 
-    fetch(`${apiBaseUrl}/api/genres/search?q=`)
-      .then((response) => response.json())
-      .then((data) => {
-        if (data?.ok && Array.isArray(data.genres)) {
-          setGenres(data.genres)
+        if (nextTypes.length) {
+          const firstType = nextTypes[0]
+          setItemType(firstType)
+          setForm({
+            ...defaultForm(firstType),
+            genres: [],
+          })
+          setError("")
+        } else {
+          setItemType("")
+          setForm({})
+          setError("No item types are configured.")
+        }
+
+        if (genreData?.ok && Array.isArray(genreData.genres)) {
+          setGenres(genreData.genres)
+        } else {
+          setGenres([])
         }
       })
       .catch(() => {
+        setItemTypes([])
         setGenres([])
+        setItemType("")
+        setForm({})
+        setError("Failed to load item type lookups.")
       })
   }, [apiBaseUrl])
 
@@ -396,8 +420,8 @@ export default function AddItemPage() {
                   className="h-9 w-full rounded-md border border-input bg-card px-2.5 py-1 text-sm text-foreground"
                 >
                   {itemTypes.map((type) => (
-                    <option key={type.itemCode} value={type.itemType}>
-                      {formatItemTypeLabel(type.itemType)}
+                    <option key={type} value={type}>
+                      {formatItemTypeLabel(type)}
                     </option>
                   ))}
                 </select>

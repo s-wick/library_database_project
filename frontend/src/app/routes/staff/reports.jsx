@@ -22,6 +22,20 @@ import { Navbar } from "@/components/navbar"
 import { API_BASE_URL } from "@/lib/api-config"
 
 const CHART_COLORS = ["#0f766e", "#0369a1", "#b45309", "#be123c", "#4f46e5"]
+const REPORT_TYPE_LABELS = {
+  itemsCheckedOut: "Borrowed items",
+  revenue: "Revenue",
+  holds: "Holds and waitlist demand",
+  inventory: "Inventory",
+  finesOwed: "Fines owed",
+  userDemographics: "User demographics",
+}
+const SUPPORTED_REPORT_TYPES = new Set([
+  "itemsCheckedOut",
+  "revenue",
+  "holds",
+  "inventory",
+])
 const INITIAL_FILTERS = {
   reportType: "itemsCheckedOut",
   startDate: "",
@@ -659,12 +673,8 @@ function buildHoldsInsights(rows) {
 }
 
 export default function ReportsPage() {
-  const [itemTypes] = useState([
-    { itemCode: 1, itemType: "BOOK" },
-    { itemCode: 2, itemType: "VIDEO" },
-    { itemCode: 3, itemType: "AUDIO" },
-    { itemCode: 4, itemType: "RENTAL_EQUIPMENT" },
-  ])
+  const [itemTypes, setItemTypes] = useState([])
+  const [reportTypes, setReportTypes] = useState([])
   const [genres, setGenres] = useState([])
   const [filters, setFilters] = useState({ ...INITIAL_FILTERS })
   const [rows, setRows] = useState([])
@@ -679,14 +689,43 @@ export default function ReportsPage() {
   const [reportCache, setReportCache] = useState({})
 
   useEffect(() => {
-    fetch(`${API_BASE_URL}/api/genres/search?q=`)
-      .then((response) => response.json())
-      .then((data) => {
-        if (data?.ok && Array.isArray(data.genres)) {
-          setGenres(data.genres)
+    Promise.all([
+      fetch(`${API_BASE_URL}/api/lookups`)
+        .then((response) => response.json())
+        .catch(() => null),
+      fetch(`${API_BASE_URL}/api/genres/search?q=`)
+        .then((response) => response.json())
+        .catch(() => null),
+    ])
+      .then(([lookupData, genreData]) => {
+        const typeValues = Array.isArray(lookupData?.lookups?.itemTypes)
+          ? lookupData.lookups.itemTypes
+              .map((entry) =>
+                String(entry?.key || "")
+                  .trim()
+                  .toUpperCase()
+              )
+              .filter(Boolean)
+          : []
+        setItemTypes(typeValues)
+
+        const reportValues = Array.isArray(lookupData?.lookups?.reportTypes)
+          ? lookupData.lookups.reportTypes
+              .map((entry) => String(entry?.value || "").trim())
+              .filter((value) => SUPPORTED_REPORT_TYPES.has(value))
+              .filter(Boolean)
+          : []
+        setReportTypes(reportValues)
+
+        if (genreData?.ok && Array.isArray(genreData.genres)) {
+          setGenres(genreData.genres)
+        } else {
+          setGenres([])
         }
       })
       .catch(() => {
+        setItemTypes([])
+        setReportTypes([])
         setGenres([])
       })
   }, [])
@@ -892,10 +931,15 @@ export default function ReportsPage() {
                   onChange={onChange}
                   className="h-9 w-full rounded-md border border-input bg-card px-2.5 py-1 text-sm text-foreground"
                 >
-                  <option value="itemsCheckedOut">Borrowed items</option>
-                  <option value="revenue">Revenue</option>
-                  <option value="holds">Holds and waitlist demand</option>
-                  <option value="inventory">Inventory</option>
+                  {reportTypes.length === 0 ? (
+                    <option value="itemsCheckedOut">Borrowed items</option>
+                  ) : (
+                    reportTypes.map((type) => (
+                      <option key={type} value={type}>
+                        {REPORT_TYPE_LABELS[type] || type}
+                      </option>
+                    ))
+                  )}
                 </select>
               </Field>
 
@@ -1000,8 +1044,8 @@ export default function ReportsPage() {
                 >
                   <option value="">All</option>
                   {itemTypes.map((type) => (
-                    <option key={type.itemCode} value={type.itemType}>
-                      {formatItemTypeForDisplay(type.itemType)}
+                    <option key={type} value={type}>
+                      {formatItemTypeForDisplay(type)}
                     </option>
                   ))}
                 </select>

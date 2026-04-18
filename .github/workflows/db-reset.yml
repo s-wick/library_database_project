@@ -39,8 +39,5 @@ jobs:
           SEED_USER_PASSWORD=${{ secrets.SEED_USER_PASSWORD }}
           EOF
 
-      - name: Update sample dates
-        run: npm run db:update-dates
-
       - name: Reset database
         run: npm run db:reset

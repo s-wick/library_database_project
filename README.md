@@ -1,6 +1,6 @@
 # Library Database Project
 
-This is a fullstack project that emulates a library cataloging system. It was built for COSC 3380.
+This is a fullstack project that emulates a library cataloging system.
 
 ## Getting started
 
@@ -9,6 +9,7 @@ This is a fullstack project that emulates a library cataloging system. It was bu
 - [NodeJS](https://nodejs.org/en)
 - [git](https://git-scm.com/)
 - [Visual Studio Code](https://code.visualstudio.com/download) (recommended but not required)
+- [MySQL](https://dev.mysql.com/downloads/mysql/) (or another compatible SQL server, but some scripts may require modification)
 
 ### Setting up your workspace
 
@@ -27,7 +28,9 @@ npm run install:all
 > Make sure to never push this file up to the remote repository, as it contains credentials and other sensitive data.
 
 3. Run `npm run dev` to run both frontend and backend concurrently
-4. Open `http://localhost:5173` in your browser to view the frontend
+4. Enure your MySQL server is running
+5. If you do not have a full snapshot of the database, run `npm run db:reset` to import the schema and sample data
+6. Open `http://localhost:5173` in your browser to view the frontend
 
 ## Database reset workflow
 
@@ -52,3 +55,4 @@ This keeps seed credentials out of tracked SQL files and out of git history.
 - [React](https://react.dev/)
 - [Vite](https://vite.dev/)
 - [shadcn](https://ui.shadcn.com/)
+- [MySQL](https://www.mysql.com/)

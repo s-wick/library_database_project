@@ -155,7 +155,19 @@ const ACCOUNT_MAP = {
   },
 }
 
-const DEFAULT_SELECTION = ["student1"]
+const DEFAULT_SELECTION = [
+  "student1",
+  "student2",
+  "faculty",
+  "librarian",
+  "admin",
+  // "qcase1.front",
+  // "qcase1.next",
+  // "qcase2.front",
+  // "qcase2.next",
+  // "qcase3.front",
+  // "qcase.stockholder",
+]
 
 function printAccountList() {
   console.log("Available users:")

@@ -1,31 +1,55 @@
 const { query } = require("../database")
 
-const ITEM_TYPE_CODE_MAP = {
-  book: 1,
-  audio: 2,
-  audiobook: 2,
-  video: 3,
-  equipment: 4,
-  rental_equipment: 4,
-}
-
-const STANDARD_TYPE_BY_CODE = {
-  1: "Book",
-  2: "Audiobook",
-  3: "Video",
-  4: "Equipment",
-}
-
-function normalizeItemTypeCode(type) {
-  const normalized = String(type || "")
+function normalizeLookupValue(value) {
+  return String(value || "")
     .trim()
     .toLowerCase()
-  return ITEM_TYPE_CODE_MAP[normalized] || null
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+}
+
+function toStandardType(itemTypeText) {
+  const normalized = normalizeLookupValue(itemTypeText)
+  if (normalized === "book") return "Book"
+  if (normalized === "audio" || normalized === "audiobook") {
+    return "Audiobook"
+  }
+  if (normalized === "video") return "Video"
+  if (normalized === "rental equipment" || normalized === "equipment") {
+    return "Equipment"
+  }
+
+  return String(itemTypeText || "Item").trim() || "Item"
+}
+
+async function normalizeItemTypeCode(type) {
+  const normalizedInput = normalizeLookupValue(type)
+  if (!normalizedInput || normalizedInput === "all") return null
+
+  const aliasMap = {
+    audiobook: "audio",
+    equipment: "rental equipment",
+    rental_equipment: "rental equipment",
+  }
+  const targetValue = aliasMap[normalizedInput] || normalizedInput
+
+  const rows = await query(
+    `SELECT item_code, item_type
+     FROM item_type`
+  )
+
+  const match = rows.find((row) => {
+    const rowType = normalizeLookupValue(row.item_type)
+    return rowType === targetValue
+  })
+
+  return match ? Number(match.item_code) : null
 }
 
 function mapItemRow(row) {
-  const standardType = STANDARD_TYPE_BY_CODE[row.item_type_code] || "Item"
-  const creator = row.item_type_code === 1 ? row.author || "" : ""
+  const normalizedItemType = normalizeLookupValue(row.item_type)
+  const standardType = toStandardType(row.item_type)
+  const creator = normalizedItemType === "book" ? row.author || "" : ""
   const genres = String(row.genres_csv || "")
     .split(",")
     .map((value) => value.trim())
@@ -49,16 +73,16 @@ function mapItemRow(row) {
     audio_length_seconds: row.audio_length_seconds,
     video_length_seconds: row.video_length_seconds,
     duration:
-      row.item_type_code === 3
+      normalizedItemType === "audio"
         ? row.audio_length_seconds
-        : row.item_type_code === 2
+        : normalizedItemType === "video"
           ? row.video_length_seconds
           : null,
   }
 }
 
 async function searchItems({ queryText = "", itemType = "All", limit = 50 }) {
-  const typeCode = normalizeItemTypeCode(itemType)
+  const typeCode = await normalizeItemTypeCode(itemType)
   const trimmedQuery = String(queryText || "").trim()
   const likeQuery = `%${trimmedQuery}%`
   const parsedLimit = Number.parseInt(limit, 10)
@@ -96,6 +120,7 @@ async function searchItems({ queryText = "", itemType = "All", limit = 50 }) {
     `SELECT
        i.item_id,
        i.item_type_code,
+       it.item_type,
        i.title,
        i.monetary_value,
        i.thumbnail_image,
@@ -122,6 +147,7 @@ async function searchItems({ queryText = "", itemType = "All", limit = 50 }) {
        LIMIT ${safeLimit}
      ) recent
      INNER JOIN item i ON i.item_id = recent.item_id
+    LEFT JOIN item_type it ON it.item_code = i.item_type_code
      LEFT JOIN book b ON b.item_id = i.item_id
      LEFT JOIN audio a ON a.item_id = i.item_id
      LEFT JOIN video v ON v.item_id = i.item_id
@@ -153,6 +179,7 @@ async function getItemById(itemId) {
     `SELECT
        i.item_id,
        i.item_type_code,
+       it.item_type,
        i.title,
        i.monetary_value,
        i.thumbnail_image,
@@ -168,6 +195,7 @@ async function getItemById(itemId) {
        a.audio_length_seconds,
        v.video_length_seconds
      FROM item i
+    LEFT JOIN item_type it ON it.item_code = i.item_type_code
      LEFT JOIN book b ON b.item_id = i.item_id
      LEFT JOIN audio a ON a.item_id = i.item_id
      LEFT JOIN video v ON v.item_id = i.item_id

@@ -609,7 +609,7 @@ export default function ManageItemsPage() {
                         />
                       </Field>
                       <Field>
-                        <FieldLabel>Computed stock</FieldLabel>
+                        <FieldLabel>Items in stock</FieldLabel>
                         <Input
                           value={String(form.stock ?? "")}
                           readOnly

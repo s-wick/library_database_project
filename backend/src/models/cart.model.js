@@ -1,5 +1,26 @@
 const { query } = require("../database")
 
+function normalizeType(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+}
+
+function toStandardType(itemTypeText) {
+  const normalized = normalizeType(itemTypeText)
+  if (normalized === "book") return "Book"
+  if (normalized === "audio" || normalized === "audiobook") {
+    return "Audiobook"
+  }
+  if (normalized === "video") return "Video"
+  if (normalized === "rental equipment" || normalized === "equipment") {
+    return "Equipment"
+  }
+  return String(itemTypeText || "Item").trim() || "Item"
+}
+
 async function getCartRowsByUserId(userId) {
   return query(
     `SELECT c.cart_id, c.user_id, c.item_id, c.added_to_cart
@@ -13,7 +34,7 @@ async function getStandardItemForCart(itemId) {
   const rows = await query(
     `SELECT
        i.item_id,
-       i.item_type_code,
+       it.item_type,
        i.title,
        i.thumbnail_image,
        i.inventory,
@@ -23,6 +44,7 @@ async function getStandardItemForCart(itemId) {
        ) AS stock,
        b.author
      FROM item i
+    LEFT JOIN item_type it ON it.item_code = i.item_type_code
      LEFT JOIN book b ON b.item_id = i.item_id
      LEFT JOIN (
        SELECT
@@ -40,19 +62,13 @@ async function getStandardItemForCart(itemId) {
   if (!rows.length) return null
 
   const row = rows[0]
-  const standardType =
-    row.item_type_code === 1
-      ? "Book"
-      : row.item_type_code === 2
-        ? "Video"
-        : row.item_type_code === 3
-          ? "Audiobook"
-          : "Equipment"
+  const normalizedType = normalizeType(row.item_type)
+  const standardType = toStandardType(row.item_type)
 
   return {
     item_id: row.item_id,
     title: row.title,
-    creator: row.item_type_code === 1 ? row.author || "" : "",
+    creator: normalizedType === "book" ? row.author || "" : "",
     standard_type: standardType,
     thumbnail_image: row.thumbnail_image,
     inventory: Number(row.inventory || 0),

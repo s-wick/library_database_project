@@ -47,6 +47,7 @@ const {
   handleSetUserFacultyStatus,
   handleBulkSetUserFacultyStatus,
 } = require("./services/staff.service")
+const { handleGetLookups } = require("./services/lookups.service")
 
 async function handleApiRoute(req, res, url) {
   const { pathname } = url
@@ -83,6 +84,11 @@ async function handleApiRoute(req, res, url) {
 
   if (req.method === "GET" && pathname === "/api/reports") {
     await handleGetReports(req, res, url)
+    return
+  }
+
+  if (req.method === "GET" && pathname === "/api/lookups") {
+    await handleGetLookups(req, res)
     return
   }
 

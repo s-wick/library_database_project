@@ -8,6 +8,14 @@ const {
   normalizeItemTypeCode,
 } = require("../models/items.model")
 
+function normalizeItemTypeName(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+}
+
 function parseNullableNumber(value, fallback = 0) {
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : fallback
@@ -228,7 +236,8 @@ async function handleSearchGenres(_req, res, url) {
 async function handleCreateItem(req, res) {
   try {
     const body = await parseJsonBody(req)
-    const itemTypeCode = normalizeItemTypeCode(body.itemType)
+    const itemTypeCode = await normalizeItemTypeCode(body.itemType)
+    const itemTypeName = normalizeItemTypeName(body.itemType)
 
     if (!itemTypeCode) {
       sendJson(res, 400, { ok: false, message: "Invalid itemType." })
@@ -244,10 +253,11 @@ async function handleCreateItem(req, res) {
       return
     }
 
-    const isBook = itemTypeCode === 1
-    const isAudio = itemTypeCode === 2
-    const isVideo = itemTypeCode === 3
-    const isEquipment = itemTypeCode === 4
+    const isBook = itemTypeName === "book"
+    const isAudio = itemTypeName === "audio" || itemTypeName === "audiobook"
+    const isVideo = itemTypeName === "video"
+    const isEquipment =
+      itemTypeName === "rental equipment" || itemTypeName === "equipment"
 
     const title = isBook
       ? String(body.title || "").trim()
@@ -416,8 +426,9 @@ async function handleUpdateItem(req, res, id) {
     }
 
     const existingRows = await query(
-      `SELECT item_id, item_type_code
+      `SELECT i.item_id, i.item_type_code, it.item_type
        FROM item
+       LEFT JOIN item_type it ON it.item_code = i.item_type_code
        WHERE item_id = ?
        LIMIT 1`,
       [itemId]
@@ -428,10 +439,10 @@ async function handleUpdateItem(req, res, id) {
       return
     }
 
-    const itemTypeCode = existingRows[0].item_type_code
-    const isBook = itemTypeCode === 1
-    const isAudio = itemTypeCode === 2
-    const isVideo = itemTypeCode === 3
+    const itemTypeName = normalizeItemTypeName(existingRows[0].item_type)
+    const isBook = itemTypeName === "book"
+    const isAudio = itemTypeName === "audio" || itemTypeName === "audiobook"
+    const isVideo = itemTypeName === "video"
 
     const itemSet = []
     const itemParams = []

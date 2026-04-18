@@ -323,3 +323,137 @@ UPDATE borrow
    AND return_date IS NULL
  ORDER BY checkout_date ASC
  LIMIT 1;
+
+-- ---------------------------------------------------------------------------
+-- Case 3: User is in active grace when stock returns (must NOT become pickup-ready)
+-- Then fine is paid and a later return makes the hold pickup-ready.
+-- ---------------------------------------------------------------------------
+
+INSERT INTO user_account (email, password, first_name, middle_name, last_name, is_faculty)
+SELECT
+  'qcase3.front@lib.com',
+  src.password,
+  'CaseThree',
+  NULL,
+  'Front',
+  0
+FROM user_account src
+WHERE src.email = 'student3.user@lib.com'
+  AND NOT EXISTS (
+    SELECT 1
+    FROM user_account u
+    WHERE u.email = 'qcase3.front@lib.com'
+  )
+LIMIT 1;
+
+SET @case3_front_user_id = (
+ SELECT user_id
+ FROM user_account
+ WHERE email = 'qcase3.front@lib.com'
+ LIMIT 1
+);
+
+INSERT INTO item (item_type_code, title, thumbnail_image, monetary_value, inventory, created_by)
+SELECT @book_code, 'Queue Case - Grace Gate Test Book', NULL, 42.00, 1, @librarian_id
+WHERE @book_code IS NOT NULL
+  AND @librarian_id IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1
+    FROM item i
+    WHERE i.title = 'Queue Case - Grace Gate Test Book'
+  );
+
+SET @case3_item_id = (
+ SELECT item_id
+ FROM item
+ WHERE title = 'Queue Case - Grace Gate Test Book'
+ ORDER BY item_id DESC
+ LIMIT 1
+);
+
+INSERT INTO book (item_id, author, edition, publication, publication_date)
+SELECT @case3_item_id, 'Maya Chen', '1st', 'Queue Testing Press', '2022-03-01'
+WHERE @case3_item_id IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1
+    FROM book b
+    WHERE b.item_id = @case3_item_id
+  );
+
+-- Start out-of-stock with stockholder active borrow.
+INSERT INTO borrow (item_id, user_id, checkout_date, due_date, return_date)
+SELECT @case3_item_id, @qcase_stockholder_user_id, '2026-04-14 09:00:00', '2026-04-21 09:00:00', NULL
+WHERE @case3_item_id IS NOT NULL
+  AND @qcase_stockholder_user_id IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1
+    FROM borrow b
+    WHERE b.item_id = @case3_item_id
+      AND b.user_id = @qcase_stockholder_user_id
+      AND b.return_date IS NULL
+  );
+
+-- Front user holds item while stock is unavailable.
+INSERT INTO hold_item (item_id, user_id, request_datetime)
+SELECT @case3_item_id, @case3_front_user_id, '2026-04-16 10:00:00'
+WHERE @case3_item_id IS NOT NULL
+  AND @case3_front_user_id IS NOT NULL;
+
+-- Create unpaid fine so this user is blocked and should enter grace.
+SET @case3_fine_item_id = (
+ SELECT item_id
+ FROM item
+ WHERE title = 'Apollo 13'
+ LIMIT 1
+);
+
+SET @case3_checkout_ts = '2026-04-15 10:00:00';
+
+INSERT INTO borrow (item_id, user_id, checkout_date, due_date, return_date)
+SELECT @case3_fine_item_id, @case3_front_user_id, @case3_checkout_ts, '2026-04-16 10:00:00', '2026-04-17 10:00:00'
+WHERE @case3_fine_item_id IS NOT NULL
+  AND @case3_front_user_id IS NOT NULL;
+
+INSERT INTO fined_for (item_id, user_id, checkout_date, amount, amount_paid)
+SELECT @case3_fine_item_id, @case3_front_user_id, @case3_checkout_ts, 9.50, 0.00
+WHERE @case3_fine_item_id IS NOT NULL
+  AND @case3_front_user_id IS NOT NULL;
+
+-- First return event while user still has unpaid fine.
+-- Expected: hold enters grace (no pickup-ready assignment yet).
+UPDATE borrow
+   SET return_date = NOW()
+ WHERE item_id = @case3_item_id
+   AND user_id = @qcase_stockholder_user_id
+   AND return_date IS NULL
+ ORDER BY checkout_date ASC
+ LIMIT 1;
+
+-- User pays fine while grace is active.
+UPDATE fined_for
+   SET amount_paid = amount
+ WHERE item_id = @case3_fine_item_id
+   AND user_id = @case3_front_user_id
+   AND checkout_date = @case3_checkout_ts;
+
+-- Recreate out-of-stock and trigger another return event.
+-- Expected: now that fine is paid, hold becomes pickup-ready and user gets notification.
+INSERT INTO borrow (item_id, user_id, checkout_date, due_date, return_date)
+SELECT @case3_item_id, @qcase_stockholder_user_id, '2026-04-18 09:30:00', '2026-04-25 09:30:00', NULL
+WHERE @case3_item_id IS NOT NULL
+  AND @qcase_stockholder_user_id IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1
+    FROM borrow b
+    WHERE b.item_id = @case3_item_id
+      AND b.user_id = @qcase_stockholder_user_id
+      AND b.checkout_date = '2026-04-18 09:30:00'
+  );
+
+UPDATE borrow
+   SET return_date = NOW()
+ WHERE item_id = @case3_item_id
+   AND user_id = @qcase_stockholder_user_id
+   AND checkout_date = '2026-04-18 09:30:00'
+   AND return_date IS NULL
+ LIMIT 1;

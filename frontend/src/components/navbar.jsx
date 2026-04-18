@@ -27,6 +27,29 @@ function formatShortDate(value) {
   })
 }
 
+function getNotificationTone(type) {
+  const normalized = String(type || "").toLowerCase()
+
+  if (normalized === "hold grace started") {
+    return {
+      messageClass: "text-amber-700 dark:text-amber-300",
+      typeClass: "text-amber-600 dark:text-amber-400",
+    }
+  }
+
+  if (normalized === "removed hold") {
+    return {
+      messageClass: "text-red-700 dark:text-red-300",
+      typeClass: "text-red-600 dark:text-red-400",
+    }
+  }
+
+  return {
+    messageClass: "text-foreground",
+    typeClass: "text-muted-foreground",
+  }
+}
+
 async function acknowledgeNotification({ notificationId, userId }) {
   const response = await fetch(`${API_BASE_URL}/api/notifications/ack`, {
     method: "POST",
@@ -230,36 +253,46 @@ export function Navbar({ showBack = true }) {
                     You are all caught up.
                   </div>
                 )}
-              {notifications.map((notification) => (
-                <DropdownMenuItem
-                  key={notification.notificationId}
-                  className="flex flex-col items-start gap-1 px-3 py-2"
-                  onSelect={(event) => event.preventDefault()}
-                >
-                  <div className="flex w-full items-start justify-between gap-3">
-                    <div className="text-sm font-medium text-foreground">
-                      {notification.message}
+              {notifications.map((notification) => {
+                const tone = getNotificationTone(notification.type)
+
+                return (
+                  <DropdownMenuItem
+                    key={notification.notificationId}
+                    className="flex flex-col items-start gap-1 px-3 py-2"
+                    onSelect={(event) => event.preventDefault()}
+                  >
+                    <div className="flex w-full items-start justify-between gap-3">
+                      <div
+                        className={`text-sm font-medium ${tone.messageClass}`}
+                      >
+                        {notification.message}
+                      </div>
+                      <button
+                        type="button"
+                        className="rounded p-1 text-muted-foreground transition hover:text-foreground"
+                        onClick={(event) => {
+                          event.preventDefault()
+                          event.stopPropagation()
+                          handleAcknowledge(notification.notificationId)
+                        }}
+                        aria-label="Acknowledge notification"
+                        disabled={acknowledging.has(
+                          notification.notificationId
+                        )}
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      className="rounded p-1 text-muted-foreground transition hover:text-foreground"
-                      onClick={(event) => {
-                        event.preventDefault()
-                        event.stopPropagation()
-                        handleAcknowledge(notification.notificationId)
-                      }}
-                      aria-label="Acknowledge notification"
-                      disabled={acknowledging.has(notification.notificationId)}
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                  <div className="flex w-full items-center justify-between text-xs text-muted-foreground">
-                    <span>{notification.type}</span>
-                    <span>{formatShortDate(notification.createdAt)}</span>
-                  </div>
-                </DropdownMenuItem>
-              ))}
+                    <div className="flex w-full items-center justify-between text-xs text-muted-foreground">
+                      <span className={tone.typeClass}>
+                        {notification.type}
+                      </span>
+                      <span>{formatShortDate(notification.createdAt)}</span>
+                    </div>
+                  </DropdownMenuItem>
+                )
+              })}
             </DropdownMenuContent>
           </DropdownMenu>
         )}

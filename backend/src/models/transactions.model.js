@@ -5,14 +5,12 @@ class ItemNotFoundError extends Error {}
 class ActiveBorrowNotFoundError extends Error {}
 
 const NOTIFICATION_TYPES = {
-  holdRemoved: "Removed hold",
   holdAssigned: "Checked out item",
 }
 
 const HOLD_CLOSE_REASONS = {
   fulfilled: "Fulfilled",
   canceled: "Canceled",
-  canceledByFine: "Canceled by fine",
 }
 
 function normalizeCheckoutDateKey(checkoutDate) {
@@ -368,50 +366,7 @@ async function processUserHoldsOnLogin(userId) {
   const hasUnpaidFine = Number(fineRows[0]?.cnt || 0) > 0
 
   if (hasUnpaidFine) {
-    const holdRemovedTypeId = await getNotificationTypeId(
-      NOTIFICATION_TYPES.holdRemoved
-    )
-    const closeReasonFineId = await getHoldCloseReasonId(
-      HOLD_CLOSE_REASONS.canceledByFine
-    )
-    const holds = await query(
-      `SELECT h.item_id, h.request_datetime, i.title
-       FROM hold_item h
-       INNER JOIN item i ON i.item_id = h.item_id
-       WHERE h.user_id = ?
-         AND h.close_datetime IS NULL`,
-      [userId]
-    )
-
-    if (holds.length) {
-      for (const hold of holds) {
-        await query(
-          `INSERT INTO user_notification (
-             user_id,
-             item_id,
-             notification_type,
-             message
-           )
-           VALUES (?, ?, ?, ?)`,
-          [
-            userId,
-            hold.item_id,
-            holdRemovedTypeId,
-            `Your hold for "${hold.title}" was removed because your account has unpaid fines.`,
-          ]
-        )
-      }
-
-      await query(
-        `UPDATE hold_item
-         SET close_datetime = NOW(),
-             close_reason_id = ?
-         WHERE user_id = ?
-           AND close_datetime IS NULL`,
-        [closeReasonFineId, userId]
-      )
-    }
-
+    // Grace-period trigger logic owns hold cancellation when fines are unpaid.
     return
   }
 

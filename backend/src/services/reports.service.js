@@ -291,9 +291,11 @@ async function getHoldsRows(url) {
        CONCAT(ua.first_name, ' ', ua.last_name) AS userName,
        ua.email AS userEmail,
        hi.request_datetime AS requestDateTime,
+       hi.grace_expires_at AS graceExpiresAt,
        hi.close_datetime AS closeDateTime,
        COALESCE(hcr.reason_text, 'ACTIVE') AS closeReason,
        CASE
+         WHEN hi.close_datetime IS NULL AND hi.grace_expires_at IS NOT NULL THEN 'GRACE'
          WHEN hi.close_datetime IS NULL THEN 'ACTIVE'
          WHEN hcr.reason_text = 'Fulfilled' THEN 'FULFILLED'
          ELSE 'CANCELED'
@@ -800,6 +802,9 @@ async function handleGetReports(_req, res, url) {
       const totalActiveHolds = rows.filter(
         (row) => String(row.holdStatus) === "ACTIVE"
       ).length
+      const totalGraceHolds = rows.filter(
+        (row) => String(row.holdStatus) === "GRACE"
+      ).length
       const totalFulfilledHolds = rows.filter(
         (row) => String(row.holdStatus) === "FULFILLED"
       ).length
@@ -821,6 +826,7 @@ async function handleGetReports(_req, res, url) {
         summary: {
           totalRecords: rows.length,
           totalActiveHolds,
+          totalGraceHolds,
           totalFulfilledHolds,
           totalCanceledHolds,
           averageWaitHours,

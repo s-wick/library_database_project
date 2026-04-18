@@ -172,10 +172,13 @@ CREATE TABLE `hold_item` (
   `item_id` int unsigned NOT NULL,
   `user_id` int unsigned NOT NULL,
   `request_datetime` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `grace_started_at` datetime DEFAULT NULL,
+  `grace_expires_at` datetime DEFAULT NULL,
   `close_datetime` datetime DEFAULT NULL,
   `close_reason_id` int unsigned DEFAULT NULL,
   PRIMARY KEY (`item_id`,`user_id`,`request_datetime`),
   KEY `user_id` (`user_id`),
+  KEY `idx_hold_user_open_grace` (`user_id`,`close_datetime`,`grace_expires_at`),
   KEY `close_reason_id` (`close_reason_id`),
   CONSTRAINT `hold_item_ibfk_1` FOREIGN KEY (`item_id`) REFERENCES `item` (`item_id`),
   CONSTRAINT `hold_item_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `user_account` (`user_id`),
@@ -192,7 +195,7 @@ DROP TABLE IF EXISTS `hold_item_closing_reasons`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `hold_item_closing_reasons` (
   `reason_id` int unsigned NOT NULL AUTO_INCREMENT,
-  `reason_text` varchar(30) NOT NULL,
+  `reason_text` varchar(50) NOT NULL,
   PRIMARY KEY (`reason_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -450,4 +453,4 @@ CREATE TABLE `video` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-04-14  1:45:00
+-- Dump completed on 2026-04-18  2:35:59

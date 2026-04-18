@@ -13,7 +13,9 @@ BEGIN
 	DECLARE v_borrow_limit INT DEFAULT 3;
 	DECLARE v_active_count INT DEFAULT 0;
 	DECLARE v_has_unpaid_fine INT DEFAULT 0;
+	DECLARE v_hold_grace_expires_at DATETIME DEFAULT NULL;
 	DECLARE v_checkout_ts DATETIME DEFAULT NULL;
+	DECLARE v_grace_started_type_id INT UNSIGNED DEFAULT NULL;
 	DECLARE v_removed_hold_type_id INT UNSIGNED DEFAULT NULL;
 	DECLARE v_checked_out_type_id INT UNSIGNED DEFAULT NULL;
 	DECLARE v_close_reason_fine_id INT UNSIGNED DEFAULT NULL;
@@ -22,7 +24,7 @@ BEGIN
 
 	-- Process open holds for this item from oldest to newest.
 	DECLARE hold_cursor CURSOR FOR
-		SELECT h.user_id, h.request_datetime
+		SELECT h.user_id, h.request_datetime, h.grace_expires_at
 		FROM hold_item h
 		WHERE h.item_id = NEW.item_id
 			AND h.close_datetime IS NULL
@@ -40,6 +42,12 @@ BEGIN
 		 LIMIT 1;
 
 		SELECT notification_type_id
+			INTO v_grace_started_type_id
+			FROM user_notification_type
+		 WHERE notification_type_text = 'Hold grace started'
+		 LIMIT 1;
+
+		SELECT notification_type_id
 			INTO v_removed_hold_type_id
 			FROM user_notification_type
 		 WHERE notification_type_text = 'Removed hold'
@@ -54,8 +62,16 @@ BEGIN
 		SELECT reason_id
 			INTO v_close_reason_fine_id
 			FROM hold_item_closing_reasons
-		 WHERE reason_text = 'Canceled by fine'
+		 WHERE reason_text = 'Canceled by fine (grace expired)'
 		 LIMIT 1;
+
+		IF v_close_reason_fine_id IS NULL THEN
+			SELECT reason_id
+				INTO v_close_reason_fine_id
+				FROM hold_item_closing_reasons
+			 WHERE reason_text = 'Canceled by fine'
+			 LIMIT 1;
+		END IF;
 
 		SELECT reason_id
 			INTO v_close_reason_fulfilled_id
@@ -67,7 +83,7 @@ BEGIN
 
 		hold_loop: LOOP
 			-- Pull the next waiting hold request for this item.
-			FETCH hold_cursor INTO v_hold_user_id, v_hold_request_datetime;
+			FETCH hold_cursor INTO v_hold_user_id, v_hold_request_datetime, v_hold_grace_expires_at;
 
 			IF v_done = 1 THEN
 				LEAVE hold_loop;
@@ -81,6 +97,43 @@ BEGIN
 				 AND COALESCE(f.amount, 0) > COALESCE(f.amount_paid, 0);
 
 			IF v_has_unpaid_fine > 0 THEN
+				IF v_hold_grace_expires_at IS NULL THEN
+					IF v_grace_started_type_id IS NOT NULL THEN
+						INSERT INTO user_notification (
+							user_id,
+							item_id,
+							notification_type,
+							message
+						)
+						VALUES (
+							v_hold_user_id,
+							NEW.item_id,
+							v_grace_started_type_id,
+							CONCAT(
+								'Your hold for "',
+								COALESCE(v_item_title, NEW.item_id),
+								'" entered a 24-hour grace period because your account has unpaid fines. ',
+								'Pay within 24 hours to keep this hold active.'
+							)
+						);
+					END IF;
+
+					UPDATE hold_item
+						 SET grace_started_at = NOW(),
+								 grace_expires_at = DATE_ADD(NOW(), INTERVAL 24 HOUR)
+					 WHERE item_id = NEW.item_id
+						 AND user_id = v_hold_user_id
+						 AND request_datetime = v_hold_request_datetime
+						 AND close_datetime IS NULL
+						 AND grace_expires_at IS NULL;
+
+					ITERATE hold_loop;
+				END IF;
+
+				IF v_hold_grace_expires_at > NOW() THEN
+					ITERATE hold_loop;
+				END IF;
+
 				IF v_removed_hold_type_id IS NOT NULL THEN
 					INSERT INTO user_notification (
 						user_id,
@@ -95,14 +148,16 @@ BEGIN
 						CONCAT(
 							'Your hold for "',
 							COALESCE(v_item_title, NEW.item_id),
-							'" was removed because your account has unpaid fines.'
+							'" was removed because your 24-hour fine grace period expired.'
 						)
 					);
 				END IF;
 
 				UPDATE hold_item
 					 SET close_datetime = NOW(),
-							 close_reason_id = v_close_reason_fine_id
+							 close_reason_id = v_close_reason_fine_id,
+							 grace_started_at = NULL,
+							 grace_expires_at = NULL
 				 WHERE item_id = NEW.item_id
 					 AND user_id = v_hold_user_id
 					 AND request_datetime = v_hold_request_datetime
@@ -168,7 +223,9 @@ BEGIN
 			-- Close the hold once it has been fulfilled by the automatic checkout.
 			UPDATE hold_item
 				 SET close_datetime = NOW(),
-						 close_reason_id = v_close_reason_fulfilled_id
+						 close_reason_id = v_close_reason_fulfilled_id,
+						 grace_started_at = NULL,
+						 grace_expires_at = NULL
 			 WHERE item_id = NEW.item_id
 				 AND user_id = v_hold_user_id
 				 AND request_datetime = v_hold_request_datetime

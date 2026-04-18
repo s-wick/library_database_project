@@ -115,6 +115,18 @@ function daysUntil(dateStr) {
   return Math.ceil(diff / (1000 * 60 * 60 * 24))
 }
 
+function formatGraceCountdown(secondsRemaining) {
+  const safeSeconds = Math.max(Number(secondsRemaining || 0), 0)
+  const hours = Math.floor(safeSeconds / 3600)
+  const minutes = Math.floor((safeSeconds % 3600) / 60)
+
+  if (hours > 0) {
+    return `${hours}h ${minutes}m left`
+  }
+
+  return `${minutes}m left`
+}
+
 function StatusBadge({ status }) {
   if (status === "overdue")
     return (
@@ -256,12 +268,23 @@ function HoldQueue({ holdQueue = [], onCancelHold, cancelingHoldId = null }) {
               <div>
                 <p className="leading-tight font-semibold">{item.title}</p>
                 <p className="text-xs text-muted-foreground">{item.author}</p>
+                {item.status === "grace" && (
+                  <p className="mt-1 text-xs font-medium text-amber-600 dark:text-amber-400">
+                    Fine grace active:{" "}
+                    {formatGraceCountdown(item.graceSecondsRemaining)}
+                  </p>
+                )}
               </div>
             </div>
             <div className="text-right">
               <p className="text-xs font-medium text-muted-foreground">
                 {item.estimatedWait}
               </p>
+              {item.status === "grace" && (
+                <Badge className="mt-1 h-4 bg-amber-500 px-1.5 py-0 text-[10px] tracking-wider text-white uppercase hover:bg-amber-500">
+                  Grace period
+                </Badge>
+              )}
               <Button
                 variant="ghost"
                 size="sm"
@@ -687,7 +710,8 @@ export default function UserDashboard() {
                 <FinesPanel fines={fines} />
                 <p className="text-center text-xs text-muted-foreground">
                   Fines accrue at $5/day per overdue item and stop at the item
-                  value.
+                  value. Existing holds keep a 24-hour grace period before
+                  cancellation.
                 </p>
               </div>
             </TabsContent>

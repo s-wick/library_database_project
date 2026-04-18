@@ -57,16 +57,36 @@ async function handleGetDashboard(_req, res, url) {
       status: getBorrowStatus(book.due_date),
     }))
 
-    const formattedHolds = holds.map((hold) => ({
-      id: `${hold.item_id}-${new Date(hold.request_datetime).toISOString()}`,
-      itemId: hold.item_id,
-      requestDate: toMysqlDateTime(hold.request_datetime),
-      title: hold.title || "Unknown Item",
-      author: hold.author || "",
-      status: "active",
-      queuePosition: Number(hold.queue_position) || 1,
-      estimatedWait: `${Math.max((Number(hold.queue_position) || 1) - 1, 0) * 3 + 1} days`,
-    }))
+    const nowMs = Date.now()
+
+    const formattedHolds = holds.map((hold) => {
+      const graceExpiresAt = hold.grace_expires_at
+        ? new Date(hold.grace_expires_at)
+        : null
+      const graceExpiresAtIso =
+        graceExpiresAt && !Number.isNaN(graceExpiresAt.getTime())
+          ? graceExpiresAt.toISOString()
+          : null
+      const graceSecondsRemaining = graceExpiresAtIso
+        ? Math.max(Math.floor((graceExpiresAt.getTime() - nowMs) / 1000), 0)
+        : null
+
+      return {
+        id: `${hold.item_id}-${new Date(hold.request_datetime).toISOString()}`,
+        itemId: hold.item_id,
+        requestDate: toMysqlDateTime(hold.request_datetime),
+        title: hold.title || "Unknown Item",
+        author: hold.author || "",
+        status: graceExpiresAtIso ? "grace" : "active",
+        graceStartedAt: hold.grace_started_at
+          ? new Date(hold.grace_started_at).toISOString()
+          : null,
+        graceExpiresAt: graceExpiresAtIso,
+        graceSecondsRemaining,
+        queuePosition: Number(hold.queue_position) || 1,
+        estimatedWait: `${Math.max((Number(hold.queue_position) || 1) - 1, 0) * 3 + 1} days`,
+      }
+    })
 
     const formattedFines = finesData.map((fine) => {
       const amount = Number(fine.amount || 0)

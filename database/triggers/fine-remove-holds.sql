@@ -29,14 +29,6 @@ BEGIN
 		 WHERE reason_text = 'Canceled by fine (grace expired)'
 		 LIMIT 1;
 
-		IF v_close_reason_id IS NULL THEN
-			SELECT reason_id
-				INTO v_close_reason_id
-				FROM hold_item_closing_reasons
-			 WHERE reason_text = 'Canceled by fine'
-			 LIMIT 1;
-		END IF;
-
 		-- Close open holds whose grace window has already expired.
 		IF v_removed_notification_type_id IS NOT NULL THEN
 			INSERT INTO user_notification (
@@ -139,14 +131,6 @@ BEGIN
 			FROM hold_item_closing_reasons
 		 WHERE reason_text = 'Canceled by fine (grace expired)'
 		 LIMIT 1;
-
-		IF v_close_reason_id IS NULL THEN
-			SELECT reason_id
-				INTO v_close_reason_id
-				FROM hold_item_closing_reasons
-			 WHERE reason_text = 'Canceled by fine'
-			 LIMIT 1;
-		END IF;
 
 		IF v_removed_notification_type_id IS NOT NULL THEN
 			INSERT INTO user_notification (

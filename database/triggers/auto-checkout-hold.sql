@@ -59,14 +59,6 @@ BEGIN
 		 WHERE reason_text = 'Canceled by fine (grace expired)'
 		 LIMIT 1;
 
-		IF v_close_reason_fine_id IS NULL THEN
-			SELECT reason_id
-				INTO v_close_reason_fine_id
-				FROM hold_item_closing_reasons
-			 WHERE reason_text = 'Canceled by fine'
-			 LIMIT 1;
-		END IF;
-
 		SELECT reason_id
 			INTO v_close_reason_pickup_expired_id
 			FROM hold_item_closing_reasons

@@ -199,6 +199,42 @@ async function signin(apiBaseUrl, account, password) {
   return data.user
 }
 
+async function openLoggedInTab({
+  context,
+  existingPage,
+  frontendUrl,
+  apiBaseUrl,
+  account,
+  userPassword,
+  staffPassword,
+}) {
+  const password =
+    account.accountType === "staff" ? staffPassword : userPassword
+  const user = await signin(apiBaseUrl, account, password)
+
+  const page = existingPage || (await context.newPage())
+  await page.goto(`${frontendUrl}/auth`, { waitUntil: "domcontentloaded" })
+  await page.evaluate(
+    (payload) => {
+      sessionStorage.setItem("isLoggedIn", "true")
+      sessionStorage.setItem("authToken", "")
+      sessionStorage.setItem("authUser", JSON.stringify(payload.user))
+      sessionStorage.setItem("user", JSON.stringify(payload.user))
+    },
+    { user }
+  )
+
+  const targetPath =
+    user.accountType === "staff" || user.roleGroup === "adminStaff"
+      ? "/management-dashboard"
+      : "/"
+  await page.goto(`${frontendUrl}${targetPath}`, {
+    waitUntil: "domcontentloaded",
+  })
+
+  return user
+}
+
 async function main() {
   const rootDir = path.resolve(__dirname, "..")
   const envPath = path.join(rootDir, "database", ".env")
@@ -246,49 +282,45 @@ async function main() {
     )
   }
 
-  const context = await playwright.firefox.launchPersistentContext(
-    path.join(rootDir, ".tmp", "tabs-users-profile"),
-    {
-      headless: false,
-      viewport: { width: 1420, height: 900 },
-    }
-  )
+  const accounts = requested.map((key) => ACCOUNT_MAP[key])
 
+  let context = null
   try {
-    for (const key of requested) {
-      const account = ACCOUNT_MAP[key]
-      const password =
-        account.accountType === "staff" ? staffPassword : userPassword
-      const user = await signin(apiBaseUrl, account, password)
+    context = await playwright.firefox.launchPersistentContext(
+      path.join(rootDir, ".tmp", "tabs-users-profile"),
+      {
+        headless: false,
+        viewport: { width: 1420, height: 900 },
+      }
+    )
 
-      const page = await context.newPage()
-      await page.goto(`${frontendUrl}/auth`, { waitUntil: "domcontentloaded" })
-      await page.evaluate(
-        (payload) => {
-          sessionStorage.setItem("isLoggedIn", "true")
-          sessionStorage.setItem("authToken", "")
-          sessionStorage.setItem("authUser", JSON.stringify(payload.user))
-          sessionStorage.setItem("user", JSON.stringify(payload.user))
-        },
-        { user }
-      )
+    const existingPages = context.pages()
+    const firstReusablePage = existingPages.length > 0 ? existingPages[0] : null
 
-      const targetPath =
-        user.accountType === "staff" || user.roleGroup === "adminStaff"
-          ? "/management-dashboard"
-          : "/"
-      await page.goto(`${frontendUrl}${targetPath}`, {
-        waitUntil: "domcontentloaded",
+    for (let index = 0; index < accounts.length; index += 1) {
+      const account = accounts[index]
+      await openLoggedInTab({
+        context,
+        existingPage: index === 0 ? firstReusablePage : null,
+        frontendUrl,
+        apiBaseUrl,
+        account,
+        userPassword,
+        staffPassword,
       })
-      await page.bringToFront()
-
       console.log(`Opened tab for ${account.label} (${account.email})`)
     }
 
+    const [firstPage] = context.pages()
+    if (firstPage) await firstPage.bringToFront()
+
     console.log("")
-    console.log("Tabs are ready. Close the browser window when done.")
+    console.log("Tabs are ready in one Firefox window.")
+    console.log("Close that window when done.")
   } catch (error) {
-    await context.close()
+    if (context) {
+      await context.close()
+    }
     throw error
   }
 }

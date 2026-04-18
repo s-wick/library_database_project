@@ -315,8 +315,7 @@ async function main() {
     if (firstPage) await firstPage.bringToFront()
 
     console.log("")
-    console.log("Tabs are ready in one Firefox window.")
-    console.log("Close that window when done.")
+    console.log("Close all windows when done.")
   } catch (error) {
     if (context) {
       await context.close()

@@ -430,6 +430,109 @@ async function assignNextPickupReadyHold(itemId) {
     (await getHoldCloseReasonId(HOLD_CLOSE_REASONS.canceled))
 
   for (const hold of holdRows) {
+    const hasFine = await hasOutstandingFines(hold.user_id)
+    if (hasFine) {
+      if (!hold.grace_expires_at) {
+        await query(
+          `UPDATE hold_item
+           SET grace_started_at = NOW(),
+               grace_expires_at = DATE_ADD(NOW(), INTERVAL 24 HOUR),
+               pickup_ready_at = NOW(),
+               pickup_expires_at = DATE_ADD(NOW(), INTERVAL 72 HOUR)
+           WHERE item_id = ?
+             AND user_id = ?
+             AND request_datetime = ?
+             AND close_datetime IS NULL
+             AND grace_expires_at IS NULL`,
+          [hold.item_id, hold.user_id, hold.request_datetime]
+        )
+
+        await query(
+          `INSERT INTO user_notification (user_id, item_id, notification_type, message)
+           VALUES (?, ?, ?, ?)`,
+          [
+            hold.user_id,
+            hold.item_id,
+            holdGraceStartedTypeId,
+            `Your hold for "${hold.title}" entered a 24-hour grace period because your account has unpaid fines. Pay within 24 hours to keep this hold active.`,
+          ]
+        )
+
+        await query(
+          `INSERT INTO user_notification (user_id, item_id, notification_type, message)
+           VALUES (?, ?, ?, ?)`,
+          [
+            hold.user_id,
+            hold.item_id,
+            holdReadyTypeId,
+            `Your hold for "${hold.title}" is ready for pickup, but you must pay your overdue fines before pickup can be completed.`,
+          ]
+        )
+
+        return false
+      }
+
+      const graceExpiresAt = new Date(hold.grace_expires_at)
+      if (
+        !Number.isNaN(graceExpiresAt.getTime()) &&
+        graceExpiresAt > new Date()
+      ) {
+        const updateResult = await query(
+          `UPDATE hold_item
+           SET pickup_ready_at = NOW(),
+               pickup_expires_at = DATE_ADD(NOW(), INTERVAL 72 HOUR)
+           WHERE item_id = ?
+             AND user_id = ?
+             AND request_datetime = ?
+             AND close_datetime IS NULL
+             AND pickup_expires_at IS NULL`,
+          [hold.item_id, hold.user_id, hold.request_datetime]
+        )
+
+        if (Number(updateResult.affectedRows || 0) > 0) {
+          await query(
+            `INSERT INTO user_notification (user_id, item_id, notification_type, message)
+             VALUES (?, ?, ?, ?)`,
+            [
+              hold.user_id,
+              hold.item_id,
+              holdReadyTypeId,
+              `Your hold for "${hold.title}" is ready for pickup, but you must pay your overdue fines before pickup can be completed.`,
+            ]
+          )
+        }
+
+        return false
+      }
+
+      await query(
+        `UPDATE hold_item
+         SET close_datetime = NOW(),
+             close_reason_id = ?,
+             grace_started_at = NULL,
+             grace_expires_at = NULL,
+             pickup_ready_at = NULL,
+             pickup_expires_at = NULL
+         WHERE item_id = ?
+           AND user_id = ?
+           AND request_datetime = ?
+           AND close_datetime IS NULL`,
+        [fineExpiredReasonId, hold.item_id, hold.user_id, hold.request_datetime]
+      )
+
+      await query(
+        `INSERT INTO user_notification (user_id, item_id, notification_type, message)
+         VALUES (?, ?, ?, ?)`,
+        [
+          hold.user_id,
+          hold.item_id,
+          holdRemovedTypeId,
+          `Your hold for "${hold.title}" was removed because your 24-hour fine grace period expired.`,
+        ]
+      )
+      continue
+    }
+
     const pickupExpiresAt = hold.pickup_expires_at
       ? new Date(hold.pickup_expires_at)
       : null
@@ -470,72 +573,6 @@ async function assignNextPickupReadyHold(itemId) {
         ]
       )
 
-      continue
-    }
-
-    const hasFine = await hasOutstandingFines(hold.user_id)
-    if (hasFine) {
-      if (!hold.grace_expires_at) {
-        await query(
-          `UPDATE hold_item
-           SET grace_started_at = NOW(),
-               grace_expires_at = DATE_ADD(NOW(), INTERVAL 24 HOUR),
-               pickup_ready_at = NULL,
-               pickup_expires_at = NULL
-           WHERE item_id = ?
-             AND user_id = ?
-             AND request_datetime = ?
-             AND close_datetime IS NULL
-             AND grace_expires_at IS NULL`,
-          [hold.item_id, hold.user_id, hold.request_datetime]
-        )
-
-        await query(
-          `INSERT INTO user_notification (user_id, item_id, notification_type, message)
-           VALUES (?, ?, ?, ?)`,
-          [
-            hold.user_id,
-            hold.item_id,
-            holdGraceStartedTypeId,
-            `Your hold for "${hold.title}" entered a 24-hour grace period because your account has unpaid fines. Pay within 24 hours to keep this hold active.`,
-          ]
-        )
-        return false
-      }
-
-      const graceExpiresAt = new Date(hold.grace_expires_at)
-      if (
-        !Number.isNaN(graceExpiresAt.getTime()) &&
-        graceExpiresAt > new Date()
-      ) {
-        return false
-      }
-
-      await query(
-        `UPDATE hold_item
-         SET close_datetime = NOW(),
-             close_reason_id = ?,
-             grace_started_at = NULL,
-             grace_expires_at = NULL,
-             pickup_ready_at = NULL,
-             pickup_expires_at = NULL
-         WHERE item_id = ?
-           AND user_id = ?
-           AND request_datetime = ?
-           AND close_datetime IS NULL`,
-        [fineExpiredReasonId, hold.item_id, hold.user_id, hold.request_datetime]
-      )
-
-      await query(
-        `INSERT INTO user_notification (user_id, item_id, notification_type, message)
-         VALUES (?, ?, ?, ?)`,
-        [
-          hold.user_id,
-          hold.item_id,
-          holdRemovedTypeId,
-          `Your hold for "${hold.title}" was removed because your 24-hour fine grace period expired.`,
-        ]
-      )
       continue
     }
 
@@ -698,6 +735,15 @@ async function getPickupReadyCatalog(searchTerm = "") {
             DATE_FORMAT(h.request_datetime, '%Y-%m-%d %H:%i:%s') AS requestDate,
             h.pickup_ready_at AS pickupReadyAt,
             h.pickup_expires_at AS pickupExpiresAt,
+            CASE
+              WHEN EXISTS (
+                SELECT 1
+                FROM fined_for f
+                WHERE f.user_id = h.user_id
+                  AND COALESCE(f.amount_paid, 0) < COALESCE(f.amount, 0)
+              ) THEN 1
+              ELSE 0
+            END AS blockedByFines,
             i.title AS itemTitle,
             CONCAT_WS(' ', ua.first_name, ua.middle_name, ua.last_name) AS userName,
             ua.email AS userEmail,
@@ -714,6 +760,7 @@ async function getPickupReadyCatalog(searchTerm = "") {
     ...row,
     itemId: Number(row.itemId),
     userId: Number(row.userId),
+    blockedByFines: Number(row.blockedByFines || 0) === 1,
   }))
 }
 

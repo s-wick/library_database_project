@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
 import {
   BookOpen,
@@ -515,46 +515,49 @@ export default function UserDashboard() {
 
   const apiBaseUrl = API_BASE_URL
 
-  const fetchDashboardData = async (userId) => {
-    try {
-      setLoading(true)
+  const fetchDashboardData = useCallback(
+    async (userId) => {
+      try {
+        setLoading(true)
 
-      if (!userId) {
-        setBorrowedBooks([])
-        setHoldQueue([])
-        setFines([])
-        setBorrowHistory([])
-        return
-      }
+        if (!userId) {
+          setBorrowedBooks([])
+          setHoldQueue([])
+          setFines([])
+          setBorrowHistory([])
+          return
+        }
 
-      const res = await fetch(`${apiBaseUrl}/api/dashboard?userId=${userId}`)
-      if (res.ok) {
-        const data = await res.json()
-        setBorrowedBooks(data.borrowedBooks || [])
-        setHoldQueue(data.holdQueue || [])
-        setFines(data.fines || [])
-        setBorrowHistory(data.borrowHistory || [])
-      } else {
-        setBorrowedBooks([])
-        setHoldQueue([])
-        setFines([])
-        setBorrowHistory([])
-      }
+        const res = await fetch(`${apiBaseUrl}/api/dashboard?userId=${userId}`)
+        if (res.ok) {
+          const data = await res.json()
+          setBorrowedBooks(data.borrowedBooks || [])
+          setHoldQueue(data.holdQueue || [])
+          setFines(data.fines || [])
+          setBorrowHistory(data.borrowHistory || [])
+        } else {
+          setBorrowedBooks([])
+          setHoldQueue([])
+          setFines([])
+          setBorrowHistory([])
+        }
 
-      // Fetch borrow status separately
-      const statusRes = await fetch(
-        `${apiBaseUrl}/api/borrow-status?userId=${userId}`
-      )
-      if (statusRes.ok) {
-        const statusData = await statusRes.json()
-        if (statusData.ok) setBorrowStatus(statusData)
+        // Fetch borrow status separately
+        const statusRes = await fetch(
+          `${apiBaseUrl}/api/borrow-status?userId=${userId}`
+        )
+        if (statusRes.ok) {
+          const statusData = await statusRes.json()
+          if (statusData.ok) setBorrowStatus(statusData)
+        }
+      } catch (err) {
+        console.error("Failed to fetch dashboard data", err)
+      } finally {
+        setLoading(false)
       }
-    } catch (err) {
-      console.error("Failed to fetch dashboard data", err)
-    } finally {
-      setLoading(false)
-    }
-  }
+    },
+    [apiBaseUrl]
+  )
 
   useEffect(() => {
     // Attempt to load user from local storage
@@ -580,7 +583,7 @@ export default function UserDashboard() {
     }
 
     fetchDashboardData(null)
-  }, [])
+  }, [fetchDashboardData])
 
   useEffect(() => {
     const checkAuth = () => {

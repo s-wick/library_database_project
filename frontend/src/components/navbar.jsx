@@ -111,13 +111,12 @@ export function Navbar({ showBack = true }) {
       return undefined
     }
 
-    const controller = new AbortController()
-    const loadNotifications = async () => {
+    const loadNotifications = async (signal) => {
       try {
         setNotificationsStatus("loading")
         const response = await fetch(
           `${API_BASE_URL}/api/notifications?userId=${userProfile.id}`,
-          { signal: controller.signal }
+          { signal }
         )
         const data = await response.json().catch(() => ({}))
 
@@ -136,8 +135,13 @@ export function Navbar({ showBack = true }) {
       }
     }
 
-    loadNotifications()
-    return () => controller.abort()
+    const controller = new AbortController()
+
+    loadNotifications(controller.signal)
+
+    return () => {
+      controller.abort()
+    }
   }, [isLoggedIn, isStaff, userProfile?.id])
 
   const handleAcknowledge = async (notificationId) => {

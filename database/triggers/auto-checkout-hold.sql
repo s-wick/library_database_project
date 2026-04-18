@@ -90,6 +90,134 @@ BEGIN
 				LEAVE hold_loop;
 			END IF;
 
+			SELECT COUNT(*)
+				INTO v_has_unpaid_fine
+				FROM fined_for f
+			 WHERE f.user_id = v_hold_user_id
+				 AND COALESCE(f.amount, 0) > COALESCE(f.amount_paid, 0);
+
+			IF v_has_unpaid_fine > 0 THEN
+				IF v_hold_grace_expires_at IS NULL THEN
+					UPDATE hold_item
+						 SET grace_started_at = NOW(),
+								 grace_expires_at = DATE_ADD(NOW(), INTERVAL 24 HOUR),
+								 pickup_ready_at = NOW(),
+								 pickup_expires_at = DATE_ADD(NOW(), INTERVAL 72 HOUR)
+					 WHERE item_id = NEW.item_id
+						 AND user_id = v_hold_user_id
+						 AND request_datetime = v_hold_request_datetime
+						 AND close_datetime IS NULL
+						 AND grace_expires_at IS NULL;
+
+					IF v_grace_started_type_id IS NOT NULL THEN
+						INSERT INTO user_notification (
+							user_id,
+							item_id,
+							notification_type,
+							message
+						)
+						VALUES (
+							v_hold_user_id,
+							NEW.item_id,
+							v_grace_started_type_id,
+							CONCAT(
+								'Your hold for "',
+								COALESCE(v_item_title, NEW.item_id),
+								'" entered a 24-hour grace period because your account has unpaid fines. ',
+								'Pay within 24 hours to keep this hold active.'
+							)
+						);
+					END IF;
+
+					IF v_pickup_ready_type_id IS NOT NULL THEN
+						INSERT INTO user_notification (
+							user_id,
+							item_id,
+							notification_type,
+							message
+						)
+						VALUES (
+							v_hold_user_id,
+							NEW.item_id,
+							v_pickup_ready_type_id,
+							CONCAT(
+								'Your hold for "',
+								COALESCE(v_item_title, NEW.item_id),
+								'" is ready for pickup, but you must pay your overdue fines before pickup can be completed.'
+							)
+						);
+					END IF;
+
+					LEAVE hold_loop;
+				END IF;
+
+				IF v_hold_grace_expires_at > NOW() THEN
+					UPDATE hold_item
+						 SET pickup_ready_at = NOW(),
+								 pickup_expires_at = DATE_ADD(NOW(), INTERVAL 72 HOUR)
+					 WHERE item_id = NEW.item_id
+						 AND user_id = v_hold_user_id
+						 AND request_datetime = v_hold_request_datetime
+						 AND close_datetime IS NULL
+						 AND pickup_expires_at IS NULL;
+
+					IF v_pickup_ready_type_id IS NOT NULL
+						 AND v_hold_pickup_expires_at IS NULL THEN
+						INSERT INTO user_notification (
+							user_id,
+							item_id,
+							notification_type,
+							message
+						)
+						VALUES (
+							v_hold_user_id,
+							NEW.item_id,
+							v_pickup_ready_type_id,
+							CONCAT(
+								'Your hold for "',
+								COALESCE(v_item_title, NEW.item_id),
+								'" is ready for pickup, but you must pay your overdue fines before pickup can be completed.'
+							)
+						);
+					END IF;
+
+					LEAVE hold_loop;
+				END IF;
+
+				IF v_removed_hold_type_id IS NOT NULL THEN
+					INSERT INTO user_notification (
+						user_id,
+						item_id,
+						notification_type,
+						message
+					)
+					VALUES (
+						v_hold_user_id,
+						NEW.item_id,
+						v_removed_hold_type_id,
+						CONCAT(
+							'Your hold for "',
+							COALESCE(v_item_title, NEW.item_id),
+							'" was removed because your 24-hour fine grace period expired.'
+						)
+					);
+				END IF;
+
+				UPDATE hold_item
+					 SET close_datetime = NOW(),
+							 close_reason_id = v_close_reason_fine_id,
+							 grace_started_at = NULL,
+							 grace_expires_at = NULL,
+							 pickup_ready_at = NULL,
+							 pickup_expires_at = NULL
+				 WHERE item_id = NEW.item_id
+					 AND user_id = v_hold_user_id
+					 AND request_datetime = v_hold_request_datetime
+					 AND close_datetime IS NULL;
+
+				ITERATE hold_loop;
+			END IF;
+
 			IF v_hold_pickup_expires_at IS NOT NULL THEN
 				IF v_hold_pickup_expires_at > NOW() THEN
 					LEAVE hold_loop;
@@ -117,86 +245,6 @@ BEGIN
 				UPDATE hold_item
 					 SET close_datetime = NOW(),
 							 close_reason_id = v_close_reason_pickup_expired_id,
-							 grace_started_at = NULL,
-							 grace_expires_at = NULL,
-							 pickup_ready_at = NULL,
-							 pickup_expires_at = NULL
-				 WHERE item_id = NEW.item_id
-					 AND user_id = v_hold_user_id
-					 AND request_datetime = v_hold_request_datetime
-					 AND close_datetime IS NULL;
-
-				ITERATE hold_loop;
-			END IF;
-
-			SELECT COUNT(*)
-				INTO v_has_unpaid_fine
-				FROM fined_for f
-			 WHERE f.user_id = v_hold_user_id
-				 AND COALESCE(f.amount, 0) > COALESCE(f.amount_paid, 0);
-
-			IF v_has_unpaid_fine > 0 THEN
-				IF v_hold_grace_expires_at IS NULL THEN
-					IF v_grace_started_type_id IS NOT NULL THEN
-						INSERT INTO user_notification (
-							user_id,
-							item_id,
-							notification_type,
-							message
-						)
-						VALUES (
-							v_hold_user_id,
-							NEW.item_id,
-							v_grace_started_type_id,
-							CONCAT(
-								'Your hold for "',
-								COALESCE(v_item_title, NEW.item_id),
-								'" entered a 24-hour grace period because your account has unpaid fines. ',
-								'Pay within 24 hours to keep this hold active.'
-							)
-						);
-					END IF;
-
-					UPDATE hold_item
-						 SET grace_started_at = NOW(),
-								 grace_expires_at = DATE_ADD(NOW(), INTERVAL 24 HOUR),
-								 pickup_ready_at = NULL,
-								 pickup_expires_at = NULL
-					 WHERE item_id = NEW.item_id
-						 AND user_id = v_hold_user_id
-						 AND request_datetime = v_hold_request_datetime
-						 AND close_datetime IS NULL
-						 AND grace_expires_at IS NULL;
-
-					LEAVE hold_loop;
-				END IF;
-
-				IF v_hold_grace_expires_at > NOW() THEN
-					LEAVE hold_loop;
-				END IF;
-
-				IF v_removed_hold_type_id IS NOT NULL THEN
-					INSERT INTO user_notification (
-						user_id,
-						item_id,
-						notification_type,
-						message
-					)
-					VALUES (
-						v_hold_user_id,
-						NEW.item_id,
-						v_removed_hold_type_id,
-						CONCAT(
-							'Your hold for "',
-							COALESCE(v_item_title, NEW.item_id),
-							'" was removed because your 24-hour fine grace period expired.'
-						)
-					);
-				END IF;
-
-				UPDATE hold_item
-					 SET close_datetime = NOW(),
-							 close_reason_id = v_close_reason_fine_id,
 							 grace_started_at = NULL,
 							 grace_expires_at = NULL,
 							 pickup_ready_at = NULL,

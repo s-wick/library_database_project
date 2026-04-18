@@ -430,11 +430,11 @@ UPDATE borrow
  LIMIT 1;
 
 -- User pays fine while grace is active.
-UPDATE fined_for
-   SET amount_paid = amount
- WHERE item_id = @case3_fine_item_id
-   AND user_id = @case3_front_user_id
-   AND checkout_date = @case3_checkout_ts;
+-- UPDATE fined_for
+--    SET amount_paid = amount
+--  WHERE item_id = @case3_fine_item_id
+--    AND user_id = @case3_front_user_id
+--    AND checkout_date = @case3_checkout_ts;
 
 -- Recreate out-of-stock and trigger another return event.
 -- Expected: now that fine is paid, hold becomes pickup-ready and user gets notification.

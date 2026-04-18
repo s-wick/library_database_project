@@ -117,6 +117,13 @@ export default function HoldPickupsPage() {
       return
     }
 
+    if (selectedRow.blockedByFines) {
+      setFieldError(
+        "This user must pay overdue fines before pickup can be completed."
+      )
+      return
+    }
+
     setFieldError("")
     setIsSubmitting(true)
 
@@ -215,6 +222,7 @@ export default function HoldPickupsPage() {
                       <TableHead className="w-[56px]"></TableHead>
                       <TableHead>Item</TableHead>
                       <TableHead>User</TableHead>
+                      <TableHead>Status</TableHead>
                       <TableHead>Ready at</TableHead>
                       <TableHead>Expires</TableHead>
                     </TableRow>
@@ -259,6 +267,17 @@ export default function HoldPickupsPage() {
                                 {row.userEmail} · {row.userType}
                               </div>
                             </TableCell>
+                            <TableCell className="align-top">
+                              {row.blockedByFines ? (
+                                <span className="inline-flex rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
+                                  Pay fines first
+                                </span>
+                              ) : (
+                                <span className="inline-flex rounded-full bg-emerald-600/15 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                                  Pickup allowed
+                                </span>
+                              )}
+                            </TableCell>
                             <TableCell>
                               {formatDateTime(row.pickupReadyAt)}
                             </TableCell>
@@ -271,7 +290,7 @@ export default function HoldPickupsPage() {
                     ) : (
                       <TableRow>
                         <TableCell
-                          colSpan={5}
+                          colSpan={6}
                           className="py-8 text-center text-sm text-muted-foreground"
                         >
                           {isLoading
@@ -308,6 +327,11 @@ export default function HoldPickupsPage() {
                         <p className="text-xs text-muted-foreground">
                           Request: {formatDateTime(selectedRow.requestDate)}
                         </p>
+                        {selectedRow.blockedByFines ? (
+                          <p className="text-xs font-medium text-amber-700 dark:text-amber-300">
+                            Pickup is blocked until overdue fines are paid.
+                          </p>
+                        ) : null}
                       </div>
                     ) : (
                       <p className="text-muted-foreground">
@@ -342,7 +366,15 @@ export default function HoldPickupsPage() {
                   </div>
                 ) : null}
 
-                <Button type="submit" disabled={isSubmitting || !rows.length}>
+                <Button
+                  type="submit"
+                  disabled={
+                    isSubmitting ||
+                    !rows.length ||
+                    !selectedRow ||
+                    selectedRow.blockedByFines
+                  }
+                >
                   {isSubmitting ? "Completing..." : "Mark as picked up"}
                 </Button>
               </form>

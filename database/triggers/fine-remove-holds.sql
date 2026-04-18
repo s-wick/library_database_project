@@ -26,7 +26,7 @@ BEGIN
 		SELECT reason_id
 			INTO v_close_reason_id
 			FROM hold_item_closing_reasons
-		 WHERE reason_text = 'Canceled by fine (grace expired)'
+		 WHERE reason_text = 'Canceled - fine grace period expired'
 		 LIMIT 1;
 
 		-- Close open holds whose grace window has already expired.
@@ -129,7 +129,7 @@ BEGIN
 		SELECT reason_id
 			INTO v_close_reason_id
 			FROM hold_item_closing_reasons
-		 WHERE reason_text = 'Canceled by fine (grace expired)'
+		 WHERE reason_text = 'Canceled - fine grace period expired'
 		 LIMIT 1;
 
 		IF v_removed_notification_type_id IS NOT NULL THEN

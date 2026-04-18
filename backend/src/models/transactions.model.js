@@ -18,7 +18,7 @@ const NOTIFICATION_TYPES = {
 const HOLD_CLOSE_REASONS = {
   fulfilled: "Fulfilled",
   canceled: "Canceled",
-  canceledByFineGraceExpired: "Canceled by fine (grace expired)",
+  canceledByFineGraceExpired: "Canceled - fine grace period expired",
   canceledByPickupExpiry: "Canceled - pickup window expired",
 }
 

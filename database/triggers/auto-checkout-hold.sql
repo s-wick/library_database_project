@@ -56,7 +56,7 @@ BEGIN
 		SELECT reason_id
 			INTO v_close_reason_fine_id
 			FROM hold_item_closing_reasons
-		 WHERE reason_text = 'Canceled by fine (grace expired)'
+		 WHERE reason_text = 'Canceled - fine grace period expired'
 		 LIMIT 1;
 
 		SELECT reason_id

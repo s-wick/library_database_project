@@ -1,0 +1,196 @@
+-- Hold queue cases where queue front user has outstanding fines.
+-- Case 1: Grace period still active.
+-- Case 2: Grace period expired but still unpaid (not yet processed by fine update path).
+-- Users are intentionally disjoint across cases:
+-- - Case 1 uses qcase1-front + qcase1-next
+-- - Case 2 uses qcase2-front + qcase2-next
+
+-- Fresh accounts dedicated to queue/grace testing so no pre-existing fines interfere.
+INSERT INTO user_account (email, password, first_name, middle_name, last_name, is_faculty)
+SELECT
+  'qcase1.front@lib.com',
+  src.password,
+  'CaseOne',
+  NULL,
+  'Front',
+  0
+FROM user_account src
+WHERE src.email = 'student3.user@lib.com'
+  AND NOT EXISTS (
+    SELECT 1
+    FROM user_account u
+    WHERE u.email = 'qcase1.front@lib.com'
+  )
+LIMIT 1;
+
+INSERT INTO user_account (email, password, first_name, middle_name, last_name, is_faculty)
+SELECT
+  'qcase1.next@lib.com',
+  src.password,
+  'CaseOne',
+  NULL,
+  'Next',
+  0
+FROM user_account src
+WHERE src.email = 'student3.user@lib.com'
+  AND NOT EXISTS (
+    SELECT 1
+    FROM user_account u
+    WHERE u.email = 'qcase1.next@lib.com'
+  )
+LIMIT 1;
+
+INSERT INTO user_account (email, password, first_name, middle_name, last_name, is_faculty)
+SELECT
+  'qcase2.front@lib.com',
+  src.password,
+  'CaseTwo',
+  NULL,
+  'Front',
+  1
+FROM user_account src
+WHERE src.email = 'faculty.user@lib.com'
+  AND NOT EXISTS (
+    SELECT 1
+    FROM user_account u
+    WHERE u.email = 'qcase2.front@lib.com'
+  )
+LIMIT 1;
+
+INSERT INTO user_account (email, password, first_name, middle_name, last_name, is_faculty)
+SELECT
+  'qcase2.next@lib.com',
+  src.password,
+  'CaseTwo',
+  NULL,
+  'Next',
+  0
+FROM user_account src
+WHERE src.email = 'student3.user@lib.com'
+  AND NOT EXISTS (
+    SELECT 1
+    FROM user_account u
+    WHERE u.email = 'qcase2.next@lib.com'
+  )
+LIMIT 1;
+
+SET @case1_front_user_id = (
+ SELECT user_id
+ FROM user_account
+ WHERE email = 'qcase1.front@lib.com'
+ LIMIT 1
+);
+
+SET @case1_next_user_id = (
+ SELECT user_id
+ FROM user_account
+ WHERE email = 'qcase1.next@lib.com'
+ LIMIT 1
+);
+
+SET @case2_front_user_id = (
+ SELECT user_id
+ FROM user_account
+ WHERE email = 'qcase2.front@lib.com'
+ LIMIT 1
+);
+
+SET @case2_next_user_id = (
+ SELECT user_id
+ FROM user_account
+ WHERE email = 'qcase2.next@lib.com'
+ LIMIT 1
+);
+
+-- ---------------------------------------------------------------------------
+-- Case 1: Active grace at front of queue (item: Hidden Figures)
+-- Front: qcase1.front@lib.com (unpaid fine inserted now -> grace active)
+-- Next:  qcase1.next@lib.com
+-- ---------------------------------------------------------------------------
+
+SET @case1_item_id = (
+ SELECT item_id
+ FROM item
+ WHERE title = 'Hidden Figures'
+ LIMIT 1
+);
+
+SET @case1_fine_item_id = (
+ SELECT item_id
+ FROM item
+ WHERE title = 'Apollo 13'
+ LIMIT 1
+);
+
+SET @case1_checkout_ts = '2026-04-15 09:00:00';
+
+INSERT INTO hold_item (item_id, user_id, request_datetime)
+SELECT @case1_item_id, @case1_front_user_id, '2026-04-16 09:00:00'
+WHERE @case1_item_id IS NOT NULL
+  AND @case1_front_user_id IS NOT NULL;
+
+INSERT INTO hold_item (item_id, user_id, request_datetime)
+SELECT @case1_item_id, @case1_next_user_id, '2026-04-16 09:05:00'
+WHERE @case1_item_id IS NOT NULL
+  AND @case1_next_user_id IS NOT NULL;
+
+INSERT INTO borrow (item_id, user_id, checkout_date, due_date, return_date)
+SELECT @case1_fine_item_id, @case1_front_user_id, @case1_checkout_ts, '2026-04-16 09:00:00', '2026-04-17 09:00:00'
+WHERE @case1_fine_item_id IS NOT NULL
+  AND @case1_front_user_id IS NOT NULL;
+
+INSERT INTO fined_for (item_id, user_id, checkout_date, amount, amount_paid)
+SELECT @case1_fine_item_id, @case1_front_user_id, @case1_checkout_ts, 11.25, 0.00
+WHERE @case1_fine_item_id IS NOT NULL
+  AND @case1_front_user_id IS NOT NULL;
+
+-- ---------------------------------------------------------------------------
+-- Case 2: Expired grace at front of queue (item: The Martian)
+-- Front: qcase2.front@lib.com (grace manually moved to past; still unpaid)
+-- Next:  qcase2.next@lib.com
+-- ---------------------------------------------------------------------------
+
+SET @case2_item_id = (
+ SELECT item_id
+ FROM item
+ WHERE title = 'The Martian'
+ LIMIT 1
+);
+
+SET @case2_fine_item_id = (
+ SELECT item_id
+ FROM item
+ WHERE title = 'The Hobbit'
+ LIMIT 1
+);
+
+SET @case2_checkout_ts = '2026-04-13 14:00:00';
+
+INSERT INTO hold_item (item_id, user_id, request_datetime)
+SELECT @case2_item_id, @case2_front_user_id, '2026-04-14 08:00:00'
+WHERE @case2_item_id IS NOT NULL
+  AND @case2_front_user_id IS NOT NULL;
+
+INSERT INTO hold_item (item_id, user_id, request_datetime)
+SELECT @case2_item_id, @case2_next_user_id, '2026-04-14 08:05:00'
+WHERE @case2_item_id IS NOT NULL
+  AND @case2_next_user_id IS NOT NULL;
+
+INSERT INTO borrow (item_id, user_id, checkout_date, due_date, return_date)
+SELECT @case2_fine_item_id, @case2_front_user_id, @case2_checkout_ts, '2026-04-14 14:00:00', '2026-04-15 14:00:00'
+WHERE @case2_fine_item_id IS NOT NULL
+  AND @case2_front_user_id IS NOT NULL;
+
+INSERT INTO fined_for (item_id, user_id, checkout_date, amount, amount_paid)
+SELECT @case2_fine_item_id, @case2_front_user_id, @case2_checkout_ts, 13.75, 0.00
+WHERE @case2_fine_item_id IS NOT NULL
+  AND @case2_front_user_id IS NOT NULL;
+
+-- Keep hold open but mark grace as expired to emulate "past grace" state.
+UPDATE hold_item
+   SET grace_started_at = DATE_SUB(NOW(), INTERVAL 30 HOUR),
+       grace_expires_at = DATE_SUB(NOW(), INTERVAL 6 HOUR)
+ WHERE item_id = @case2_item_id
+  AND user_id = @case2_front_user_id
+   AND request_datetime = '2026-04-14 08:00:00'
+   AND close_datetime IS NULL;

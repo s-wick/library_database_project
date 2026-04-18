@@ -15,6 +15,7 @@ const dataFiles = [
   "holds-fines.sql",
   "room-bookings.sql",
   "extra-users-monthly-borrows.sql",
+  "hold-queue-fine-grace-cases.sql",
 ]
 const triggerFiles = [
   "borrow-limit.sql",

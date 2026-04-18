@@ -5,4 +5,5 @@ VALUES
   ('Fulfilled'),
   ('Canceled'),
   ('Canceled by fine'),
-  ('Canceled by fine (grace expired)');
+  ('Canceled by fine (grace expired)'),
+  ('Canceled - pickup window expired');

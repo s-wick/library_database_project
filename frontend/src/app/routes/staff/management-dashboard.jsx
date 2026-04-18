@@ -81,6 +81,13 @@ const actions = [
     icon: BookCheck,
     group: "User management",
   },
+  {
+    title: "Hold pickups",
+    description: "Mark pickup-ready holds as collected and checked out.",
+    to: "/management-dashboard/hold-pickups",
+    icon: BookCheck,
+    group: "User management",
+  },
 ]
 
 const groupOrder = [

@@ -127,6 +127,18 @@ function formatGraceCountdown(secondsRemaining) {
   return `${minutes}m left`
 }
 
+function formatPickupCountdown(secondsRemaining) {
+  const safeSeconds = Math.max(Number(secondsRemaining || 0), 0)
+  const hours = Math.floor(safeSeconds / 3600)
+  const minutes = Math.floor((safeSeconds % 3600) / 60)
+
+  if (hours > 0) {
+    return `${hours}h ${minutes}m left`
+  }
+
+  return `${minutes}m left`
+}
+
 function StatusBadge({ status }) {
   if (status === "overdue")
     return (
@@ -274,6 +286,12 @@ function HoldQueue({ holdQueue = [], onCancelHold, cancelingHoldId = null }) {
                     {formatGraceCountdown(item.graceSecondsRemaining)}
                   </p>
                 )}
+                {item.status === "ready_for_pickup" && (
+                  <p className="mt-1 text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                    Ready for pickup:{" "}
+                    {formatPickupCountdown(item.pickupSecondsRemaining)}
+                  </p>
+                )}
               </div>
             </div>
             <div className="text-right">
@@ -283,6 +301,11 @@ function HoldQueue({ holdQueue = [], onCancelHold, cancelingHoldId = null }) {
               {item.status === "grace" && (
                 <Badge className="mt-1 h-4 bg-amber-500 px-1.5 py-0 text-[10px] tracking-wider text-white uppercase hover:bg-amber-500">
                   Grace period
+                </Badge>
+              )}
+              {item.status === "ready_for_pickup" && (
+                <Badge className="mt-1 h-4 bg-emerald-600 px-1.5 py-0 text-[10px] tracking-wider text-white uppercase hover:bg-emerald-600">
+                  Ready now
                 </Badge>
               )}
               <Button

@@ -5,6 +5,9 @@ const {
   getUnpaidFines,
   getBorrowHistory,
 } = require("../models/dashboard.model")
+const {
+  processExpiredPickupHoldsForUser,
+} = require("../models/transactions.model")
 
 function toDateString(value) {
   if (!value) return null
@@ -42,6 +45,8 @@ async function handleGetDashboard(_req, res, url) {
       return
     }
 
+    await processExpiredPickupHoldsForUser(Number(userId))
+
     const [borrowedBooks, holds, finesData, borrowHistory] = await Promise.all([
       getBorrowedBooks(userId),
       getActiveHolds(userId),
@@ -63,13 +68,29 @@ async function handleGetDashboard(_req, res, url) {
       const graceExpiresAt = hold.grace_expires_at
         ? new Date(hold.grace_expires_at)
         : null
+      const pickupExpiresAt = hold.pickup_expires_at
+        ? new Date(hold.pickup_expires_at)
+        : null
       const graceExpiresAtIso =
         graceExpiresAt && !Number.isNaN(graceExpiresAt.getTime())
           ? graceExpiresAt.toISOString()
           : null
+      const pickupExpiresAtIso =
+        pickupExpiresAt && !Number.isNaN(pickupExpiresAt.getTime())
+          ? pickupExpiresAt.toISOString()
+          : null
       const graceSecondsRemaining = graceExpiresAtIso
         ? Math.max(Math.floor((graceExpiresAt.getTime() - nowMs) / 1000), 0)
         : null
+      const pickupSecondsRemaining = pickupExpiresAtIso
+        ? Math.max(Math.floor((pickupExpiresAt.getTime() - nowMs) / 1000), 0)
+        : null
+      let holdStatus = "active"
+      if (pickupExpiresAtIso) {
+        holdStatus = "ready_for_pickup"
+      } else if (graceExpiresAtIso) {
+        holdStatus = "grace"
+      }
 
       return {
         id: `${hold.item_id}-${new Date(hold.request_datetime).toISOString()}`,
@@ -77,12 +98,17 @@ async function handleGetDashboard(_req, res, url) {
         requestDate: toMysqlDateTime(hold.request_datetime),
         title: hold.title || "Unknown Item",
         author: hold.author || "",
-        status: graceExpiresAtIso ? "grace" : "active",
+        status: holdStatus,
         graceStartedAt: hold.grace_started_at
           ? new Date(hold.grace_started_at).toISOString()
           : null,
         graceExpiresAt: graceExpiresAtIso,
         graceSecondsRemaining,
+        pickupReadyAt: hold.pickup_ready_at
+          ? new Date(hold.pickup_ready_at).toISOString()
+          : null,
+        pickupExpiresAt: pickupExpiresAtIso,
+        pickupSecondsRemaining,
         queuePosition: Number(hold.queue_position) || 1,
         estimatedWait: `${Math.max((Number(hold.queue_position) || 1) - 1, 0) * 3 + 1} days`,
       }

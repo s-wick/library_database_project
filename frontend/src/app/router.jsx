@@ -10,6 +10,7 @@ import AddItemPage from "./routes/staff/add-item"
 import ManageItemsPage from "./routes/staff/manage-items"
 import ReportsPage from "./routes/staff/reports"
 import CheckInPage from "./routes/staff/check-in"
+import HoldPickupsPage from "./routes/staff/hold-pickups"
 import RoomManagePage from "./routes/staff/manage-room"
 import MarkFacultyPage from "./routes/staff/mark-faculty"
 import CheckoutPage from "./routes/user/checkout"
@@ -158,6 +159,15 @@ export const router = createBrowserRouter([
           </RequireManagementAccess>
         ),
         handle: { title: "Check In" },
+      },
+      {
+        path: "management-dashboard/hold-pickups",
+        element: (
+          <RequireManagementAccess>
+            <HoldPickupsPage />
+          </RequireManagementAccess>
+        ),
+        handle: { title: "Hold Pickups" },
       },
       {
         path: "management-dashboard/room-manage",

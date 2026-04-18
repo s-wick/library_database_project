@@ -65,7 +65,9 @@ BEGIN
 
 		UPDATE hold_item
 			 SET close_datetime = NOW(),
-					 close_reason_id = v_close_reason_id
+					 close_reason_id = v_close_reason_id,
+					 pickup_ready_at = NULL,
+					 pickup_expires_at = NULL
 		 WHERE user_id = NEW.user_id
 			 AND close_datetime IS NULL
 			 AND grace_expires_at IS NOT NULL
@@ -100,7 +102,9 @@ BEGIN
 		-- Start grace only once for each currently open hold.
 		UPDATE hold_item
 			 SET grace_started_at = NOW(),
-					 grace_expires_at = DATE_ADD(NOW(), INTERVAL 24 HOUR)
+					 grace_expires_at = DATE_ADD(NOW(), INTERVAL 24 HOUR),
+					 pickup_ready_at = NULL,
+					 pickup_expires_at = NULL
 		 WHERE user_id = NEW.user_id
 			 AND close_datetime IS NULL
 			 AND grace_expires_at IS NULL;
@@ -171,7 +175,9 @@ BEGIN
 
 		UPDATE hold_item
 			 SET close_datetime = NOW(),
-					 close_reason_id = v_close_reason_id
+					 close_reason_id = v_close_reason_id,
+					 pickup_ready_at = NULL,
+					 pickup_expires_at = NULL
 		 WHERE user_id = NEW.user_id
 			 AND close_datetime IS NULL
 			 AND grace_expires_at IS NOT NULL
@@ -204,7 +210,9 @@ BEGIN
 
 		UPDATE hold_item
 			 SET grace_started_at = NOW(),
-					 grace_expires_at = DATE_ADD(NOW(), INTERVAL 24 HOUR)
+					 grace_expires_at = DATE_ADD(NOW(), INTERVAL 24 HOUR),
+					 pickup_ready_at = NULL,
+					 pickup_expires_at = NULL
 		 WHERE user_id = NEW.user_id
 			 AND close_datetime IS NULL
 			 AND grace_expires_at IS NULL;

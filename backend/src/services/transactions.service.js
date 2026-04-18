@@ -6,12 +6,18 @@ const {
   createHold,
   cancelHold,
   getActiveBorrowCatalog,
+  getPickupReadyCatalog,
+  completeHoldPickupTransaction,
   getUserAccountById,
   getActiveBorrowCount,
   hasOutstandingFines,
   OutOfStockError,
   ItemNotFoundError,
   ActiveBorrowNotFoundError,
+  HoldPickupNotReadyError,
+  HoldPickupExpiredError,
+  OutstandingFinesError,
+  BorrowLimitReachedError,
 } = require("../models/transactions.model")
 const { getCartRowsByUserId } = require("../models/cart.model")
 const { deleteCartItem } = require("../models/cart.model")
@@ -210,6 +216,119 @@ async function handleGetActiveBorrowCatalog(_req, res, url) {
   }
 }
 
+async function handleGetPickupReadyCatalog(_req, res, url) {
+  try {
+    const search = url.searchParams.get("q") || ""
+    const rows = await getPickupReadyCatalog(search)
+
+    sendJson(res, 200, {
+      ok: true,
+      rows,
+    })
+  } catch (error) {
+    sendJson(res, 500, {
+      ok: false,
+      message: "Failed to fetch pickup-ready holds",
+      error: error.message,
+    })
+  }
+}
+
+async function handleCompleteHoldPickup(req, res) {
+  try {
+    const body = await parseJsonBody(req)
+    const itemId = Number(body.itemId)
+    const userId = Number(body.userId)
+    const requestDate = body.requestDate
+      ? String(body.requestDate).trim()
+      : null
+    const pickupDate = body.pickupDate || null
+
+    if (!itemId || !userId) {
+      sendJson(res, 400, {
+        ok: false,
+        message: "itemId and userId are required",
+      })
+      return
+    }
+
+    const data = await completeHoldPickupTransaction(
+      itemId,
+      userId,
+      requestDate,
+      pickupDate
+    )
+
+    sendJson(res, 200, {
+      ok: true,
+      message: "Pickup completed and item checked out.",
+      data,
+    })
+  } catch (error) {
+    if (error instanceof HoldPickupNotReadyError) {
+      sendJson(res, 404, {
+        ok: false,
+        message: "No pickup-ready hold was found for this user and item.",
+      })
+      return
+    }
+
+    if (error instanceof HoldPickupExpiredError) {
+      sendJson(res, 409, {
+        ok: false,
+        message: "Pickup window has expired for this hold.",
+      })
+      return
+    }
+
+    if (error instanceof OutstandingFinesError) {
+      sendJson(res, 403, {
+        ok: false,
+        message: "User has outstanding fines and cannot complete pickup.",
+      })
+      return
+    }
+
+    if (error instanceof BorrowLimitReachedError) {
+      sendJson(res, 400, {
+        ok: false,
+        message: "User already reached the active borrow limit.",
+      })
+      return
+    }
+
+    if (error instanceof ItemNotFoundError) {
+      sendJson(res, 404, {
+        ok: false,
+        message: "Item not found",
+      })
+      return
+    }
+
+    if (error instanceof OutOfStockError) {
+      sendJson(res, 409, {
+        ok: false,
+        message: "Item is currently not available.",
+      })
+      return
+    }
+
+    if (error.message === "Invalid pickup date") {
+      sendJson(res, 400, {
+        ok: false,
+        message: "pickupDate must be a valid date and time.",
+      })
+      return
+    }
+
+    sendJson(res, 500, {
+      ok: false,
+      message: "Failed to complete hold pickup",
+      error: error.message,
+    })
+  }
+}
+
 async function handleHold(req, res) {
   try {
     const body = await parseJsonBody(req)
@@ -377,6 +496,8 @@ module.exports = {
   handleBorrow,
   handleCheckin,
   handleGetActiveBorrowCatalog,
+  handleGetPickupReadyCatalog,
+  handleCompleteHoldPickup,
   handleHold,
   handleCancelHold,
   handleBorrowStatus,

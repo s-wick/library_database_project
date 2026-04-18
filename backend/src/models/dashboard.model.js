@@ -27,6 +27,8 @@ async function getActiveHolds(userId) {
            h.request_datetime,
           h.grace_started_at,
           h.grace_expires_at,
+          h.pickup_ready_at,
+          h.pickup_expires_at,
            i.title,
            bk.author,
            (

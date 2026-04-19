@@ -170,16 +170,19 @@ export default function ManageItemsPage() {
   const startIndex = (currentPage - 1) * pageSize
   const pagedItems = (items || []).slice(startIndex, startIndex + pageSize)
 
-async function handleWithdraw() {
+  async function handleWithdraw() {
     if (!selected) return
 
     setIsSubmitting(true)
     setError("")
     setSuccess("")
     try {
-      const response = await fetch(`${API_BASE_URL}/api/items/${selected.item_id}/withdraw`, {
-        method: "POST",
-      })
+      const response = await fetch(
+        `${API_BASE_URL}/api/items/${selected.item_id}/withdraw`,
+        {
+          method: "POST",
+        }
+      )
       const data = await response.json().catch(() => ({}))
       if (!response.ok) {
         setError(data.message || "Failed to withdraw item.")
@@ -458,25 +461,26 @@ async function handleWithdraw() {
                       </div>
 
                       <Dialog>
-<DialogTrigger asChild>
-                          <Button 
-                            variant="destructive" 
+                        <DialogTrigger asChild>
+                          <Button
+                            variant="destructive"
                             disabled={isSubmitting || selected?.is_withdrawn}
                             onClick={handleWithdraw}
                           >
-                            {selected?.is_withdrawn 
-                              ? "Already Withdrawn" 
-                              : "Withdraw Item (Leaves Catalog)"
-                            }
+                            {selected?.is_withdrawn
+                              ? "Already Withdrawn"
+                              : "Withdraw Item (Leaves Catalog)"}
                           </Button>
                         </DialogTrigger>
                         <DialogContent>
                           <DialogHeader>
                             <DialogTitle>Delete item</DialogTitle>
-                        <DialogDescription>
-                          Withdraw "{selected.title}" from catalog? Item will be hidden from user search until fully returned. 
-                          {selected?.is_withdrawn && "Already withdrawn."}
-                        </DialogDescription>
+                            <DialogDescription>
+                              Withdraw "{selected.title}" from catalog? Item
+                              will be hidden from user search until fully
+                              returned.
+                              {selected?.is_withdrawn && "Already withdrawn."}
+                            </DialogDescription>
                           </DialogHeader>
                           <DialogFooter>
                             <Button

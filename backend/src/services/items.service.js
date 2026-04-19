@@ -699,9 +699,9 @@ async function handleWithdrawItem(req, res, id) {
     }
 
     if (existingItem[0].is_withdrawn) {
-      sendJson(res, 409, { 
-        ok: false, 
-        message: "Item is already withdrawn from catalog." 
+      sendJson(res, 409, {
+        ok: false,
+        message: "Item is already withdrawn from catalog.",
       })
       return
     }
@@ -720,9 +720,9 @@ async function handleWithdrawItem(req, res, id) {
       return
     }
 
-    sendJson(res, 200, { 
-      ok: true, 
-      message: "Item withdrawn from catalog successfully." 
+    sendJson(res, 200, {
+      ok: true,
+      message: "Item withdrawn from catalog successfully.",
     })
   } catch (error) {
     sendJson(res, 500, {
@@ -752,16 +752,23 @@ async function handleDeleteItem(_req, res, id) {
 
     try {
       await query(`DELETE FROM assigned_genres WHERE item_id = ?`, [itemId])
-      const result = await query(`DELETE FROM item WHERE item_id = ? AND is_withdrawn = 1`, [itemId])
+      const result = await query(
+        `DELETE FROM item WHERE item_id = ? AND is_withdrawn = 1`,
+        [itemId]
+      )
       if (!result.affectedRows) {
-        sendJson(res, 404, { ok: false, message: "Withdrawn item not found or has active references." })
+        sendJson(res, 404, {
+          ok: false,
+          message: "Withdrawn item not found or has active references.",
+        })
         return
       }
     } catch (error) {
       if (error.code === "ER_ROW_IS_REFERENCED_2") {
         sendJson(res, 409, {
           ok: false,
-          message: "Cannot permanently delete - item referenced by history records.",
+          message:
+            "Cannot permanently delete - item referenced by history records.",
         })
         return
       }

@@ -116,7 +116,9 @@ async function handleApiRoute(req, res, url) {
   }
 
   if (
-    (req.method === "PUT" || req.method === "DELETE" || req.method === "POST") &&
+    (req.method === "PUT" ||
+      req.method === "DELETE" ||
+      req.method === "POST") &&
     pathname.startsWith("/api/items/")
   ) {
     const parts = pathname.split("/").filter(Boolean)

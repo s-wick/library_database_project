@@ -148,7 +148,7 @@ export default function CheckoutPage() {
       user?.accountType === "staff" || user?.roleGroup === "adminStaff"
 
     if (!isLoggedIn) {
-      navigate("/")
+      navigate(`/auth?returnTo=${encodeURIComponent("/checkout")}`)
       return
     }
 
@@ -221,6 +221,7 @@ export default function CheckoutPage() {
       const userStr = sessionStorage.getItem("user")
       if (!userStr) {
         setCheckoutError("You must be logged in to checkout.")
+        navigate(`/auth?returnTo=${encodeURIComponent("/checkout")}`)
         setIsCheckingOut(false)
         return
       }

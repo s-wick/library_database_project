@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react"
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { CheckCircle2, XCircle, DoorOpen } from "lucide-react"
 import { Navbar } from "@/components/navbar"
 import { Button } from "@/components/ui/button"
@@ -230,6 +230,7 @@ function CalendarWithTimeSlider({
 }
 
 export default function RoomBookingPage() {
+  const navigate = useNavigate()
   const apiBaseUrl = API_BASE_URL
 
   const [rooms, setRooms] = useState([])
@@ -258,6 +259,23 @@ export default function RoomBookingPage() {
   const [availabilityRefreshKey, setAvailabilityRefreshKey] = useState(0)
   const [loading, setLoading] = useState(true)
   const [availabilityLoading, setAvailabilityLoading] = useState(false)
+
+  useEffect(() => {
+    const isLoggedIn = sessionStorage.getItem("isLoggedIn") === "true"
+    const userStr = sessionStorage.getItem("user")
+    const user = userStr ? JSON.parse(userStr) : null
+    const isStaff =
+      user?.accountType === "staff" || user?.roleGroup === "adminStaff"
+
+    if (!isLoggedIn) {
+      navigate(`/auth?returnTo=${encodeURIComponent("/rooms")}`)
+      return
+    }
+
+    if (isStaff) {
+      navigate("/management-dashboard")
+    }
+  }, [navigate])
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")

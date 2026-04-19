@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react"
-import { Link, useNavigate } from "react-router-dom"
+import { Link, useLocation, useNavigate } from "react-router-dom"
 import { AlertTriangle, Image as ImageIcon, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -53,6 +53,7 @@ function HoldBlockedModal({ open, onClose }) {
 
 export function ItemCard({ item }) {
   const navigate = useNavigate()
+  const location = useLocation()
   const { cartItems, addToCart } = useCart()
   const [open, setOpen] = useState(false)
   const [isPlacingHold, setIsPlacingHold] = useState(false)
@@ -104,7 +105,11 @@ export function ItemCard({ item }) {
   const handleAddToCart = () => {
     const isLoggedIn = sessionStorage.getItem("isLoggedIn") === "true"
     if (!isLoggedIn) {
-      navigate("/auth")
+      navigate(
+        `/auth?returnTo=${encodeURIComponent(
+          location.pathname + location.search
+        )}&userOnly=true`
+      )
       return
     }
     addToCart(item)
@@ -114,14 +119,22 @@ export function ItemCard({ item }) {
   const handlePlaceHold = async () => {
     const isLoggedIn = sessionStorage.getItem("isLoggedIn") === "true"
     if (!isLoggedIn) {
-      navigate("/auth")
+      navigate(
+        `/auth?returnTo=${encodeURIComponent(
+          location.pathname + location.search
+        )}&userOnly=true`
+      )
       return
     }
 
     const userStr = sessionStorage.getItem("user")
     const user = userStr ? JSON.parse(userStr) : null
     if (!user?.id) {
-      navigate("/auth")
+      navigate(
+        `/auth?returnTo=${encodeURIComponent(
+          location.pathname + location.search
+        )}`
+      )
       return
     }
 

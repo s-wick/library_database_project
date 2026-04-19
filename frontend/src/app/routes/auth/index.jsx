@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react"
 import { ArrowLeft } from "lucide-react"
-import { Link, useNavigate } from "react-router-dom"
+import { Link, useLocation, useNavigate } from "react-router-dom"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -26,6 +26,7 @@ const emptyForm = {
 
 export default function AuthPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [selectedRole, setSelectedRole] = useState("user")
   const [mode, setMode] = useState("signin")
   const [form, setForm] = useState(emptyForm)
@@ -37,6 +38,26 @@ export default function AuthPage() {
 
   const isSignUp = mode === "signup"
   const apiBaseUrl = API_BASE_URL
+  const returnTo = useMemo(
+    () => new URLSearchParams(location.search).get("returnTo") || "",
+    [location.search]
+  )
+  const userOnlyParam = useMemo(
+    () => new URLSearchParams(location.search).get("userOnly") === "true",
+    [location.search]
+  )
+  const isUserOnlyAction = useMemo(() => {
+    if (userOnlyParam) return true
+    if (!returnTo) return false
+    return ["/checkout", "/rooms", "/item"].some((path) =>
+      returnTo.startsWith(path)
+    )
+  }, [returnTo, userOnlyParam])
+
+  const visibleRoles = useMemo(
+    () => (isUserOnlyAction ? roles.filter((role) => role.id === "user") : roles),
+    [isUserOnlyAction]
+  )
 
   const submitLabel = useMemo(() => {
     if (isSignUp) return "Create account"
@@ -168,7 +189,9 @@ export default function AuthPage() {
           )
           sessionStorage.setItem("user", JSON.stringify(signinData?.user || {}))
           await syncCartWithServer()
-          navigate("/")
+          const destination =
+            returnTo && returnTo.startsWith("/") ? returnTo : "/"
+          navigate(destination, { replace: true })
         } else {
           setErrors({
             general:
@@ -183,14 +206,15 @@ export default function AuthPage() {
 
         await syncCartWithServer()
 
-        if (
-          data?.user?.accountType === "staff" ||
-          data?.user?.roleGroup === "adminStaff"
-        ) {
-          navigate("/management-dashboard")
-        } else {
-          navigate("/")
-        }
+        const destination =
+          returnTo && returnTo.startsWith("/")
+            ? returnTo
+            : data?.user?.accountType === "staff" ||
+              data?.user?.roleGroup === "adminStaff"
+            ? "/management-dashboard"
+            : "/"
+
+        navigate(destination, { replace: true })
       }
     } catch {
       setErrors({
@@ -225,12 +249,12 @@ export default function AuthPage() {
               onValueChange={setSelectedRole}
               className="w-full"
             >
-              <TabsList className="grid w-full grid-cols-2">
-                {roles.map((role) => (
+              <TabsList className={`grid w-full ${visibleRoles.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
+                {visibleRoles.map((role) => (
                   <TabsTrigger
                     key={role.id}
                     value={role.id}
-                    disabled={isSignUp && role.id === "staff"}
+                    disabled={visibleRoles.length === 1 || (isSignUp && role.id === "staff")}
                   >
                     {role.label}
                   </TabsTrigger>

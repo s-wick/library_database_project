@@ -200,9 +200,16 @@ export function Navbar({ showBack = true }) {
       </div>
 
       <div className="flex items-center gap-3">
-        {isLoggedIn && !isStaff && (
+        {!isStaff && (
           <Button variant="ghost" size="icon" className="relative mr-2" asChild>
-            <Link to="/checkout" aria-label="Cart">
+            <Link
+              to={
+                isLoggedIn
+                  ? "/checkout"
+                  : "/auth?returnTo=/checkout"
+              }
+              aria-label="Cart"
+            >
               <ShoppingCart className="h-5 w-5" />
               {cartItems.length > 0 && (
                 <Badge

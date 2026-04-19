@@ -1,4 +1,4 @@
-import { Navigate, createBrowserRouter } from "react-router-dom"
+import { Navigate, createBrowserRouter, useLocation } from "react-router-dom"
 import LandingSearchPage from "./routes/user/landing-search"
 import SearchPage from "./routes/user/search-results"
 import AuthPage from "./routes/auth"
@@ -48,6 +48,22 @@ function RequireManagementAccess({ children }) {
   }
 
   return <Navigate to="/auth" replace />
+}
+
+function RequireAuth({ children }) {
+  const location = useLocation()
+  if (isLoggedIn()) {
+    return children
+  }
+
+  return (
+    <Navigate
+      to={`/auth?returnTo=${encodeURIComponent(
+        location.pathname + location.search
+      )}`}
+      replace
+    />
+  )
 }
 
 function RedirectStaffToManagement({ children }) {
@@ -190,9 +206,11 @@ export const router = createBrowserRouter([
       {
         path: "checkout",
         element: (
-          <RedirectStaffToManagement>
-            <CheckoutPage />
-          </RedirectStaffToManagement>
+          <RequireAuth>
+            <RedirectStaffToManagement>
+              <CheckoutPage />
+            </RedirectStaffToManagement>
+          </RequireAuth>
         ),
         handle: { title: "Checkout" },
       },
@@ -208,9 +226,11 @@ export const router = createBrowserRouter([
       {
         path: "rooms",
         element: (
-          <RedirectStaffToManagement>
-            <RoomBookingPage />
-          </RedirectStaffToManagement>
+          <RequireAuth>
+            <RedirectStaffToManagement>
+              <RoomBookingPage />
+            </RedirectStaffToManagement>
+          </RequireAuth>
         ),
         handle: { title: "Room Booking" },
       },

@@ -5,15 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Field, FieldLabel } from "@/components/ui/field"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { API_BASE_URL } from "@/lib/api-config"
 
 import { useCart } from "@/app/cart-provider"
-
-const roles = [
-  { id: "user", label: "User Account" },
-  { id: "staff", label: "Staff Account" },
-]
 
 const emptyForm = {
   firstName: "",
@@ -27,7 +21,6 @@ const emptyForm = {
 export default function AuthPage() {
   const navigate = useNavigate()
   const location = useLocation()
-  const [selectedRole, setSelectedRole] = useState("user")
   const [mode, setMode] = useState("signin")
   const [form, setForm] = useState(emptyForm)
   const [errors, setErrors] = useState({})
@@ -46,24 +39,6 @@ export default function AuthPage() {
     () => new URLSearchParams(location.search).get("userOnly") === "true",
     [location.search]
   )
-  const isUserOnlyAction = useMemo(() => {
-    if (userOnlyParam) return true
-    if (!returnTo) return false
-    return ["/checkout", "/rooms", "/item"].some((path) =>
-      returnTo.startsWith(path)
-    )
-  }, [returnTo, userOnlyParam])
-
-  const visibleRoles = useMemo(() => {
-    let filtered = isUserOnlyAction
-      ? roles.filter((role) => role.id === "user")
-      : roles
-    if (isSignUp) {
-      filtered = filtered.filter((role) => role.id !== "staff")
-    }
-    return filtered
-  }, [isUserOnlyAction, isSignUp])
-
   const submitLabel = useMemo(() => {
     if (isSignUp) return "Create account"
     return "Sign in"
@@ -76,9 +51,6 @@ export default function AuthPage() {
 
   function switchMode(nextMode) {
     setMode(nextMode)
-    if (nextMode === "signup") {
-      setSelectedRole("user")
-    }
     setErrors({})
     setSuccess("")
     setForm(emptyForm)
@@ -122,17 +94,11 @@ export default function AuthPage() {
           password: form.password,
           isFaculty: false,
         }
-      : selectedRole === "staff"
-        ? {
-            accountType: "staff",
-            email: form.email.trim(),
-            password: form.password,
-          }
-        : {
-            accountType: "user",
-            email: form.email.trim(),
-            password: form.password,
-          }
+      : {
+          accountType: "user",
+          email: form.email.trim(),
+          password: form.password,
+        }
 
     setIsSubmitting(true)
     try {
@@ -159,7 +125,7 @@ export default function AuthPage() {
         }
         if (!isSignUp && response.status === 401) {
           setErrors({
-            general: `Account does not exist. ${selectedRole === "staff" ? "Contact your administrator." : "Create an account."}`,
+            general: "Account does not exist. Create an account.",
           })
           return
         }
@@ -249,22 +215,6 @@ export default function AuthPage() {
           </CardHeader>
 
           <CardContent className="space-y-6">
-            <Tabs
-              value={selectedRole}
-              onValueChange={setSelectedRole}
-              className="w-full"
-            >
-              <TabsList
-                className={`grid w-full ${visibleRoles.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}
-              >
-                {visibleRoles.map((role) => (
-                  <TabsTrigger key={role.id} value={role.id}>
-                    {role.label}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </Tabs>
-
             <form className="space-y-4" onSubmit={handleSubmit}>
               {isSignUp && (
                 <>
@@ -411,18 +361,29 @@ export default function AuthPage() {
               </Button>
             </form>
 
-            {(isSignUp || selectedRole !== "staff") && (
-              <div className="text-center text-sm text-muted-foreground">
-                {isSignUp ? "Already have an account?" : "Need an account?"}{" "}
-                <button
-                  type="button"
-                  onClick={() => switchMode(isSignUp ? "signin" : "signup")}
-                  className="font-semibold text-primary underline-offset-4 hover:underline"
-                >
-                  {isSignUp ? "Sign in" : "Create an account"}
-                </button>
-              </div>
-            )}
+            <div className="text-center text-sm text-muted-foreground">
+              {isSignUp ? "Already have an account?" : "Need an account?"}{" "}
+              <button
+                type="button"
+                onClick={() => switchMode(isSignUp ? "signin" : "signup")}
+                className="font-semibold text-primary underline-offset-4 hover:underline"
+              >
+                {isSignUp ? "Sign in" : "Create an account"}
+              </button>
+              {!isSignUp ? (
+                <div className="mt-2">
+                  Employee?{" "}
+                  <Link
+                    to="/employee"
+                    className="text-primary underline-offset-4 hover:underline"
+                  >
+                    Employee Sign In
+                  </Link>
+                </div>
+              ) : (
+                <></>
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>

@@ -2,6 +2,7 @@ import { Navigate, createBrowserRouter, useLocation } from "react-router-dom"
 import LandingSearchPage from "./routes/user/landing-search"
 import SearchPage from "./routes/user/search-results"
 import AuthPage from "./routes/auth"
+import EmployeeAuthPage from "./routes/auth/employee-signin"
 import UserDashboardPage from "./routes/user/user-dashboard"
 import ManagementDashboardPage from "./routes/staff/management-dashboard"
 import AddLibrarianPage from "./routes/staff/add-librarian"
@@ -103,6 +104,11 @@ export const router = createBrowserRouter([
         path: "auth",
         element: <AuthPage />,
         handle: { title: "Sign In" },
+      },
+      {
+        path: "employee",
+        element: <EmployeeAuthPage />,
+        handle: { title: "Employee Sign In" },
       },
       {
         path: "user-dashboard",

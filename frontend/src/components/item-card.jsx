@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react"
-import { Link, useNavigate } from "react-router-dom"
+import { Link, useLocation, useNavigate } from "react-router-dom"
 import { AlertTriangle, Image as ImageIcon, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -53,6 +53,7 @@ function HoldBlockedModal({ open, onClose }) {
 
 export function ItemCard({ item }) {
   const navigate = useNavigate()
+  const location = useLocation()
   const { cartItems, addToCart } = useCart()
   const [open, setOpen] = useState(false)
   const [isPlacingHold, setIsPlacingHold] = useState(false)
@@ -104,7 +105,11 @@ export function ItemCard({ item }) {
   const handleAddToCart = () => {
     const isLoggedIn = sessionStorage.getItem("isLoggedIn") === "true"
     if (!isLoggedIn) {
-      navigate("/auth")
+      const searchParams = new URLSearchParams(location.search)
+      searchParams.set("openItem", item.item_id)
+      const returnUrl = `${location.pathname}?${searchParams.toString()}`
+
+      navigate(`/auth?returnTo=${encodeURIComponent(returnUrl)}&userOnly=true`)
       return
     }
     addToCart(item)
@@ -114,14 +119,22 @@ export function ItemCard({ item }) {
   const handlePlaceHold = async () => {
     const isLoggedIn = sessionStorage.getItem("isLoggedIn") === "true"
     if (!isLoggedIn) {
-      navigate("/auth")
+      const searchParams = new URLSearchParams(location.search)
+      searchParams.set("openItem", item.item_id)
+      const returnUrl = `${location.pathname}?${searchParams.toString()}`
+
+      navigate(`/auth?returnTo=${encodeURIComponent(returnUrl)}&userOnly=true`)
       return
     }
 
     const userStr = sessionStorage.getItem("user")
     const user = userStr ? JSON.parse(userStr) : null
     if (!user?.id) {
-      navigate("/auth")
+      const searchParams = new URLSearchParams(location.search)
+      searchParams.set("openItem", item.item_id)
+      const returnUrl = `${location.pathname}?${searchParams.toString()}`
+
+      navigate(`/auth?returnTo=${encodeURIComponent(returnUrl)}`)
       return
     }
 
@@ -154,6 +167,13 @@ export function ItemCard({ item }) {
       setIsPlacingHold(false)
     }
   }
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search)
+    if (searchParams.get("openItem") === String(item.item_id)) {
+      setOpen(true)
+    }
+  }, [location.search, item.item_id])
 
   useEffect(() => {
     if (!open) {

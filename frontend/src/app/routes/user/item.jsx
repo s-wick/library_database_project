@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react"
-import { useParams, useNavigate } from "react-router-dom"
+import { useParams, useNavigate, useLocation } from "react-router-dom"
 import { ArrowLeft, Image as ImageIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -15,6 +15,7 @@ import { API_BASE_URL } from "@/lib/api-config"
 export default function ItemPage() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
 
   const [book, setBook] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -96,7 +97,11 @@ export default function ItemPage() {
 
     const isLoggedIn = sessionStorage.getItem("isLoggedIn") === "true"
     if (!isLoggedIn) {
-      navigate("/auth")
+      navigate(
+        `/auth?returnTo=${encodeURIComponent(
+          location.pathname + location.search
+        )}&userOnly=true`
+      )
       return
     }
 
@@ -106,7 +111,11 @@ export default function ItemPage() {
       const userStr = sessionStorage.getItem("user")
       const user = userStr ? JSON.parse(userStr) : null
       if (!user?.id) {
-        navigate("/auth")
+        navigate(
+          `/auth?returnTo=${encodeURIComponent(
+            location.pathname + location.search
+          )}`
+        )
         return
       }
 

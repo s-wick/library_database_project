@@ -1,7 +1,8 @@
-import { Navigate, createBrowserRouter } from "react-router-dom"
+import { Navigate, createBrowserRouter, useLocation } from "react-router-dom"
 import LandingSearchPage from "./routes/user/landing-search"
 import SearchPage from "./routes/user/search-results"
 import AuthPage from "./routes/auth"
+import EmployeeAuthPage from "./routes/auth/employee-signin"
 import UserDashboardPage from "./routes/user/user-dashboard"
 import ManagementDashboardPage from "./routes/staff/management-dashboard"
 import AddLibrarianPage from "./routes/staff/add-librarian"
@@ -50,6 +51,22 @@ function RequireManagementAccess({ children }) {
   return <Navigate to="/auth" replace />
 }
 
+function RequireAuth({ children }) {
+  const location = useLocation()
+  if (isLoggedIn()) {
+    return children
+  }
+
+  return (
+    <Navigate
+      to={`/auth?returnTo=${encodeURIComponent(
+        location.pathname + location.search
+      )}`}
+      replace
+    />
+  )
+}
+
 function RedirectStaffToManagement({ children }) {
   const user = getStoredUser()
   if (isLoggedIn() && isStaffUser(user)) {
@@ -87,6 +104,11 @@ export const router = createBrowserRouter([
         path: "auth",
         element: <AuthPage />,
         handle: { title: "Sign In" },
+      },
+      {
+        path: "employee",
+        element: <EmployeeAuthPage />,
+        handle: { title: "Employee Sign In" },
       },
       {
         path: "user-dashboard",
@@ -190,9 +212,11 @@ export const router = createBrowserRouter([
       {
         path: "checkout",
         element: (
-          <RedirectStaffToManagement>
-            <CheckoutPage />
-          </RedirectStaffToManagement>
+          <RequireAuth>
+            <RedirectStaffToManagement>
+              <CheckoutPage />
+            </RedirectStaffToManagement>
+          </RequireAuth>
         ),
         handle: { title: "Checkout" },
       },
@@ -208,9 +232,11 @@ export const router = createBrowserRouter([
       {
         path: "rooms",
         element: (
-          <RedirectStaffToManagement>
-            <RoomBookingPage />
-          </RedirectStaffToManagement>
+          <RequireAuth>
+            <RedirectStaffToManagement>
+              <RoomBookingPage />
+            </RedirectStaffToManagement>
+          </RequireAuth>
         ),
         handle: { title: "Room Booking" },
       },

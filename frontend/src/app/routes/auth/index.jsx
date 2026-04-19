@@ -54,16 +54,15 @@ export default function AuthPage() {
     )
   }, [returnTo, userOnlyParam])
 
-  const visibleRoles = useMemo(
-    () => {
-      let filtered = isUserOnlyAction ? roles.filter((role) => role.id === "user") : roles
-      if (isSignUp) {
-        filtered = filtered.filter((role) => role.id !== "staff")
-      }
-      return filtered
-    },
-    [isUserOnlyAction, isSignUp]
-  )
+  const visibleRoles = useMemo(() => {
+    let filtered = isUserOnlyAction
+      ? roles.filter((role) => role.id === "user")
+      : roles
+    if (isSignUp) {
+      filtered = filtered.filter((role) => role.id !== "staff")
+    }
+    return filtered
+  }, [isUserOnlyAction, isSignUp])
 
   const submitLabel = useMemo(() => {
     if (isSignUp) return "Create account"
@@ -216,9 +215,9 @@ export default function AuthPage() {
           returnTo && returnTo.startsWith("/")
             ? returnTo
             : data?.user?.accountType === "staff" ||
-              data?.user?.roleGroup === "adminStaff"
-            ? "/management-dashboard"
-            : "/"
+                data?.user?.roleGroup === "adminStaff"
+              ? "/management-dashboard"
+              : "/"
 
         navigate(destination, { replace: true })
       }
@@ -255,12 +254,11 @@ export default function AuthPage() {
               onValueChange={setSelectedRole}
               className="w-full"
             >
-              <TabsList className={`grid w-full ${visibleRoles.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
+              <TabsList
+                className={`grid w-full ${visibleRoles.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}
+              >
                 {visibleRoles.map((role) => (
-                  <TabsTrigger
-                    key={role.id}
-                    value={role.id}
-                  >
+                  <TabsTrigger key={role.id} value={role.id}>
                     {role.label}
                   </TabsTrigger>
                 ))}

@@ -203,11 +203,7 @@ export function Navbar({ showBack = true }) {
         {!isStaff && (
           <Button variant="ghost" size="icon" className="relative mr-2" asChild>
             <Link
-              to={
-                isLoggedIn
-                  ? "/checkout"
-                  : "/auth?returnTo=/checkout"
-              }
+              to={isLoggedIn ? "/checkout" : "/auth?returnTo=/checkout"}
               aria-label="Cart"
             >
               <ShoppingCart className="h-5 w-5" />

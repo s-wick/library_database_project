@@ -273,6 +273,7 @@ export function ItemCard({ item }) {
                 {genres.length > 0 && <p>Genres: {genres.join(", ")}</p>}
                 {item.edition && <p>Edition: {item.edition}</p>}
                 {item.publication && <p>Publisher: {item.publication}</p>}
+                {durationLabel && <p>{durationLabel}</p>}
                 {item.publication_date && (
                   <p>Published: {String(item.publication_date).slice(0, 10)}</p>
                 )}

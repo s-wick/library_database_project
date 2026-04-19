@@ -170,6 +170,34 @@ export default function ManageItemsPage() {
   const startIndex = (currentPage - 1) * pageSize
   const pagedItems = (items || []).slice(startIndex, startIndex + pageSize)
 
+async function handleWithdraw() {
+    if (!selected) return
+
+    setIsSubmitting(true)
+    setError("")
+    setSuccess("")
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/items/${selected.item_id}/withdraw`, {
+        method: "POST",
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        setError(data.message || "Failed to withdraw item.")
+        return
+      }
+
+      setSuccess("Item withdrawn from catalog.")
+      if (selected?.item_id === selected.item_id) {
+        setSelected({ ...selected, is_withdrawn: 1 })
+        await loadItems(query)
+      }
+    } catch {
+      setError("Unable to connect to server.")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   async function handleDelete(itemId) {
     setIsSubmitting(true)
     setError("")
@@ -180,11 +208,11 @@ export default function ManageItemsPage() {
       })
       const data = await response.json().catch(() => ({}))
       if (!response.ok) {
-        setError(data.message || "Failed to remove item.")
+        setError(data.message || "Failed to permanently delete item.")
         return
       }
 
-      setSuccess("Item removed successfully.")
+      setSuccess("Item permanently deleted.")
       if (selected?.item_id === itemId) {
         setSelected(null)
         setForm({})
@@ -430,18 +458,25 @@ export default function ManageItemsPage() {
                       </div>
 
                       <Dialog>
-                        <DialogTrigger asChild>
-                          <Button variant="destructive" disabled={isSubmitting}>
-                            Remove item
+<DialogTrigger asChild>
+                          <Button 
+                            variant="destructive" 
+                            disabled={isSubmitting || selected?.is_withdrawn}
+                            onClick={handleWithdraw}
+                          >
+                            {selected?.is_withdrawn 
+                              ? "Already Withdrawn" 
+                              : "Withdraw Item (Leaves Catalog)"
+                            }
                           </Button>
                         </DialogTrigger>
                         <DialogContent>
                           <DialogHeader>
                             <DialogTitle>Delete item</DialogTitle>
-                            <DialogDescription>
-                              Remove "{selected.title}" from the catalog? This
-                              action cannot be undone.
-                            </DialogDescription>
+                        <DialogDescription>
+                          Withdraw "{selected.title}" from catalog? Item will be hidden from user search until fully returned. 
+                          {selected?.is_withdrawn && "Already withdrawn."}
+                        </DialogDescription>
                           </DialogHeader>
                           <DialogFooter>
                             <Button

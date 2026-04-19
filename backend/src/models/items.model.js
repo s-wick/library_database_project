@@ -90,7 +90,7 @@ async function searchItems({ queryText = "", itemType = "All", limit = 50 }) {
     ? Math.min(Math.max(parsedLimit, 1), 200)
     : 50
 
-  const filters = []
+  const filters = ["i.is_withdrawn = 0"]
   const params = []
 
   if (typeCode) {
@@ -125,6 +125,7 @@ async function searchItems({ queryText = "", itemType = "All", limit = 50 }) {
        i.monetary_value,
        i.thumbnail_image,
        i.inventory,
+       i.is_withdrawn,
        GREATEST(
          CAST(i.inventory AS SIGNED) - COALESCE(CAST(ab.active_borrow_count AS SIGNED), 0),
          0
@@ -184,6 +185,9 @@ async function getItemById(itemId) {
        i.monetary_value,
        i.thumbnail_image,
        i.inventory,
+       i.is_withdrawn,
+       i.withdrawn_at,
+       i.withdrawn_by,
        GREATEST(
          CAST(i.inventory AS SIGNED) - COALESCE(CAST(ab.active_borrow_count AS SIGNED), 0),
          0

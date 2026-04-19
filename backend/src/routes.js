@@ -15,6 +15,7 @@ const {
   handleCreateItem,
   handleUpdateItem,
   handleDeleteItem,
+  handleWithdrawItem,
 } = require("./services/items.service")
 const {
   handleBorrow,
@@ -115,19 +116,24 @@ async function handleApiRoute(req, res, url) {
   }
 
   if (
-    (req.method === "PUT" || req.method === "DELETE") &&
+    (req.method === "PUT" || req.method === "DELETE" || req.method === "POST") &&
     pathname.startsWith("/api/items/")
   ) {
     const parts = pathname.split("/").filter(Boolean)
     if (parts.length === 3) {
-      const id = parts[2]
-      if (req.method === "PUT") {
-        await handleUpdateItem(req, res, id)
+      const actionOrId = parts[2]
+      if (req.method === "PUT" && actionOrId !== "withdraw") {
+        await handleUpdateItem(req, res, actionOrId)
         return
       }
-
-      await handleDeleteItem(req, res, id)
-      return
+      if (req.method === "POST" && actionOrId === "withdraw") {
+        await handleWithdrawItem(req, res, actionOrId)
+        return
+      }
+      if (req.method === "DELETE") {
+        await handleDeleteItem(req, res, actionOrId)
+        return
+      }
     }
   }
 

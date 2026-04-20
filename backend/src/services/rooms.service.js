@@ -7,6 +7,7 @@ const {
   updateMeetingRoom,
   deleteMeetingRoom,
   getUserActiveBooking,
+  getUserBookings,
   getRoomBookingsInWindow,
   hasRoomOverlap,
   createRoomBooking,
@@ -154,13 +155,23 @@ async function handleGetRooms(_req, res) {
 async function handleGetMyRoomBooking(_req, res, url) {
   try {
     const userId = Number(url.searchParams.get("userId"))
+    const allParam = url.searchParams.get("all") === "true"
     if (!Number.isFinite(userId) || userId <= 0) {
       sendJson(res, 400, { ok: false, message: "userId is required" })
       return
     }
 
-    const booking = await getUserActiveBooking(userId)
-    sendJson(res, 200, { ok: true, booking: formatBooking(booking) })
+    let bookings
+    if (allParam) {
+      bookings = await getUserBookings(userId)
+      sendJson(res, 200, {
+        ok: true,
+        bookings: bookings.map(formatBooking).filter(Boolean),
+      })
+    } else {
+      const booking = await getUserActiveBooking(userId)
+      sendJson(res, 200, { ok: true, booking: formatBooking(booking) })
+    }
   } catch (error) {
     sendJson(res, 500, {
       ok: false,

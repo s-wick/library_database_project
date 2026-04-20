@@ -281,6 +281,23 @@ async function getUserActiveBooking(userId) {
   return rows[0] || null
 }
 
+async function getUserBookings(userId, limit = 50) {
+  const bookRoomColumns = await getBookRoomColumns()
+  const bookingStartSelect = getBookRoomStartSelect()
+  const bookingEndSelect = getBookRoomEndSelect(bookRoomColumns)
+  const bookingDurationSelect = getBookRoomDurationSelect(bookRoomColumns)
+  const rows = await query(
+    `SELECT room_number, ${bookingStartSelect}, ${bookingEndSelect}, ${bookingDurationSelect}
+     FROM book_room
+     WHERE user_id = ?
+     ORDER BY start_time DESC
+     LIMIT ${Number(limit)}`,
+    [userId]
+  )
+
+  return rows
+}
+
 async function getRoomBookingsInWindow(roomNumber, windowStart, windowEnd) {
   const bookRoomColumns = await getBookRoomColumns()
   const bookingStartSelect = getBookRoomStartSelect()
@@ -373,6 +390,7 @@ module.exports = {
   updateMeetingRoom,
   deleteMeetingRoom,
   getUserActiveBooking,
+  getUserBookings,
   getRoomBookingsInWindow,
   hasRoomOverlap,
   createRoomBooking,

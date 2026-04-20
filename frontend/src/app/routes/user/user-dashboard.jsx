@@ -25,6 +25,7 @@ import {
   CardFooter,
 } from "@/components/ui/card"
 import { API_BASE_URL } from "@/lib/api-config"
+import { DoorOpen } from "lucide-react"
 import { Navbar } from "@/components/navbar"
 
 // ── Borrow Limit Card ─────────────────────────────────────────────────────────
@@ -330,6 +331,76 @@ function HoldQueue({ holdQueue = [], onCancelHold, cancelingHoldId = null }) {
   )
 }
 
+function RoomBookingsSummary({ roomBookings = [] }) {
+  const upcomingBookings = roomBookings
+    .filter((booking) => new Date(booking.endTime) > new Date())
+    .slice(0, 3)
+
+  const formatDateRange = (booking) => {
+    const start = new Date(booking.startTime)
+    const end = new Date(booking.endTime)
+    return `${start.toLocaleDateString()} ${start.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })} - ${end.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
+  }
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <DoorOpen className="h-5 w-5 text-violet-600" />
+            <CardTitle className="text-lg">Upcoming Room Bookings</CardTitle>
+          </div>
+          {upcomingBookings.length > 0 && (
+            <Badge variant="outline" className="text-sm">
+              {upcomingBookings.length}
+            </Badge>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3 pb-6">
+        {upcomingBookings.length === 0 ? (
+          <p className="py-4 text-center text-sm text-muted-foreground">
+            No upcoming bookings.
+          </p>
+        ) : (
+          upcomingBookings.map((booking) => (
+            <div
+              key={`${booking.startTime}-${booking.roomNumber}`}
+              className="flex items-center gap-4 rounded-xl border bg-muted/30 p-3 hover:bg-muted/50"
+            >
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 text-white">
+                <DoorOpen className="h-6 w-6" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold">Room {booking.roomNumber}</p>
+                <p className="text-sm text-muted-foreground">
+                  {formatDateRange(booking)}
+                </p>
+              </div>
+              <Badge variant="secondary" className="ml-auto">
+                {booking.durationHours}h
+              </Badge>
+            </div>
+          ))
+        )}
+        {upcomingBookings.length > 0 && (
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() =>
+              window.dispatchEvent(
+                new CustomEvent("switch-tab", { detail: "rooms" })
+              )
+            }
+          >
+            View All Bookings
+          </Button>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
 function FinesPanel({ fines = [] }) {
   const navigate = useNavigate()
   const unpaid = fines.filter((f) => f.status === "unpaid")
@@ -497,6 +568,14 @@ function BorrowHistory({ borrowHistory = [] }) {
 // Main Dashboard
 export default function UserDashboard() {
   const [activeTab, setActiveTab] = useState("overview")
+
+  useEffect(() => {
+    const handleTabSwitch = (e) => {
+      if (e.detail) setActiveTab(e.detail)
+    }
+    window.addEventListener("switch-tab", handleTabSwitch)
+    return () => window.removeEventListener("switch-tab", handleTabSwitch)
+  }, [])
   const navigate = useNavigate()
 
   const [userData, setUserData] = useState({
@@ -509,6 +588,7 @@ export default function UserDashboard() {
   const [holdQueue, setHoldQueue] = useState([])
   const [fines, setFines] = useState([])
   const [borrowHistory, setBorrowHistory] = useState([])
+  const [roomBookings, setRoomBookings] = useState([])
   const [cancelingHoldId, setCancelingHoldId] = useState(null)
   const [loading, setLoading] = useState(true)
   const [borrowStatus, setBorrowStatus] = useState(null)
@@ -546,6 +626,17 @@ export default function UserDashboard() {
         const statusRes = await fetch(
           `${apiBaseUrl}/api/borrow-status?userId=${userId}`
         )
+
+        // Fetch room bookings
+        const roomsRes = await fetch(
+          `${apiBaseUrl}/api/rooms/my-booking?userId=${userId}&all=true`
+        )
+        if (roomsRes.ok) {
+          const roomsData = await roomsRes.json()
+          setRoomBookings(roomsData.bookings || [])
+        } else {
+          setRoomBookings([])
+        }
         if (statusRes.ok) {
           const statusData = await statusRes.json()
           if (statusData.ok) setBorrowStatus(statusData)
@@ -647,6 +738,7 @@ export default function UserDashboard() {
     { id: "borrowed", label: "Borrowed", icon: BookOpen },
     { id: "holds", label: "Holds", icon: BookMarked },
     { id: "fines", label: "Fines", icon: AlertCircle },
+    { id: "rooms", label: "Rooms", icon: DoorOpen },
     { id: "history", label: "History", icon: Clock },
   ]
 
@@ -701,6 +793,7 @@ export default function UserDashboard() {
                   borrowHistory={borrowHistory}
                 />
                 <BorrowLimitCard borrowStatus={borrowStatus} />
+                <RoomBookingsSummary roomBookings={roomBookings} />
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                   <BorrowedBooks borrowedBooks={borrowedBooks} />
                   <div className="space-y-6">
@@ -745,6 +838,85 @@ export default function UserDashboard() {
             <TabsContent value="history">
               <div className="space-y-4">
                 <BorrowHistory borrowHistory={borrowHistory} />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="rooms">
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Room Bookings</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {roomBookings.length === 0 ? (
+                      <p className="py-8 text-center text-sm text-muted-foreground">
+                        No room bookings found.
+                      </p>
+                    ) : (
+                      <>
+                        {roomBookings.map((booking, index) => {
+                          const startDate = new Date(booking.startTime)
+                          const endDate = new Date(booking.endTime)
+                          const isActive = endDate > new Date()
+                          return (
+                            <div
+                              key={index}
+                              className={`flex flex-col gap-3 rounded-xl border p-4 transition-colors ${
+                                isActive
+                                  ? "border-emerald-200 bg-emerald-50/50"
+                                  : "border-slate-200 bg-slate-50/50"
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="text-lg font-semibold">
+                                  Room {booking.roomNumber}
+                                </div>
+                                <Badge
+                                  variant={isActive ? "default" : "secondary"}
+                                  className={`${
+                                    isActive
+                                      ? "bg-emerald-600 hover:bg-emerald-600"
+                                      : ""
+                                  }`}
+                                >
+                                  {isActive ? "Active" : "Past"}
+                                </Badge>
+                              </div>
+                              <div className="grid grid-cols-1 gap-2 text-sm md:grid-cols-3">
+                                <div>
+                                  <span className="font-medium text-muted-foreground">
+                                    Date:
+                                  </span>{" "}
+                                  {startDate.toLocaleDateString()}
+                                </div>
+                                <div>
+                                  <span className="font-medium text-muted-foreground">
+                                    Time:
+                                  </span>{" "}
+                                  {startDate.toLocaleTimeString([], {
+                                    hour: "numeric",
+                                    minute: "2-digit",
+                                  })}{" "}
+                                  -
+                                  {endDate.toLocaleTimeString([], {
+                                    hour: "numeric",
+                                    minute: "2-digit",
+                                  })}
+                                </div>
+                                <div>
+                                  <span className="font-medium text-muted-foreground">
+                                    Duration:
+                                  </span>{" "}
+                                  {booking.durationHours}h
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
               </div>
             </TabsContent>
           </Tabs>

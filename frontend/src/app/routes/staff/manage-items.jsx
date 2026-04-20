@@ -336,6 +336,16 @@ export default function ManageItemsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {error && (
+              <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {error}
+              </p>
+            )}
+            {success && (
+              <p className="rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-primary">
+                {success}
+              </p>
+            )}
             <div className="flex gap-2">
               <Input
                 placeholder="Search items..."
@@ -1008,16 +1018,6 @@ export default function ManageItemsPage() {
                   )}
                 </div>
               </div>
-            )}
-            {error && (
-              <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                {error}
-              </p>
-            )}
-            {success && (
-              <p className="rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-primary">
-                {success}
-              </p>
             )}
           </CardContent>
         </Card>

@@ -139,7 +139,7 @@ CREATE TABLE `fined_for` (
   `amount` decimal(8,2) DEFAULT NULL,
   `amount_paid` decimal(8,2) DEFAULT NULL,
   PRIMARY KEY (`item_id`,`user_id`,`checkout_date`),
-  CONSTRAINT `fined_for_ibfk_1` FOREIGN KEY (`item_id`, `user_id`, `checkout_date`) REFERENCES `borrow` (`item_id`, `user_id`, `checkout_date`) ON DELETE CASCADE
+  CONSTRAINT `fined_for_ibfk_1` FOREIGN KEY (`item_id`, `user_id`, `checkout_date`) REFERENCES `borrow` (`item_id`, `user_id`, `checkout_date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 

@@ -83,7 +83,7 @@ CREATE TABLE `book_room` (
   PRIMARY KEY (`room_number`,`user_id`,`start_time`),
   KEY `user_id` (`user_id`),
   CONSTRAINT `book_room_ibfk_1` FOREIGN KEY (`room_number`) REFERENCES `meeting_room` (`room_number`) ON DELETE CASCADE,
-  CONSTRAINT `book_room_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `user_account` (`user_id`) ON DELETE CASCADE
+  CONSTRAINT `book_room_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `user_account` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -377,7 +377,7 @@ CREATE TABLE `user_account_faculty_audit` (
   KEY `idx_faculty_audit_action_type` (`action_type_id`),
   CONSTRAINT `fk_faculty_audit_action_type` FOREIGN KEY (`action_type_id`) REFERENCES `user_account_faculty_audit_action_type` (`action_type_id`) ON DELETE RESTRICT,
   CONSTRAINT `fk_faculty_audit_staff` FOREIGN KEY (`changed_by_staff_id`) REFERENCES `staff_account` (`staff_id`) ON DELETE RESTRICT,
-  CONSTRAINT `fk_faculty_audit_user` FOREIGN KEY (`user_id`) REFERENCES `user_account` (`user_id`) ON DELETE CASCADE
+  CONSTRAINT `fk_faculty_audit_user` FOREIGN KEY (`user_id`) REFERENCES `user_account` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -417,7 +417,7 @@ CREATE TABLE `user_notification` (
   KEY `fk_notification_type` (`notification_type`),
   CONSTRAINT `fk_notification_type` FOREIGN KEY (`notification_type`) REFERENCES `user_notification_type` (`notification_type_id`) ON DELETE CASCADE,
   CONSTRAINT `fk_user_notification_item` FOREIGN KEY (`item_id`) REFERENCES `item` (`item_id`) ON DELETE RESTRICT,
-  CONSTRAINT `fk_user_notification_user` FOREIGN KEY (`user_id`) REFERENCES `user_account` (`user_id`) ON DELETE CASCADE
+  CONSTRAINT `fk_user_notification_user` FOREIGN KEY (`user_id`) REFERENCES `user_account` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 

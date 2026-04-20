@@ -732,6 +732,12 @@ async function handleWithdrawItem(req, res, id) {
       return
     }
 
+    await query(
+      `DELETE FROM cart_items
+       WHERE item_id = ?`,
+      [itemId]
+    )
+
     sendJson(res, 200, {
       ok: true,
       message: "Item withdrawn from catalog successfully.",

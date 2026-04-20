@@ -35,6 +35,7 @@ async function getStandardItemForCart(itemId) {
     `SELECT
        i.item_id,
        it.item_type,
+       i.is_withdrawn,
        i.title,
        i.thumbnail_image,
        i.inventory,
@@ -55,6 +56,7 @@ async function getStandardItemForCart(itemId) {
        GROUP BY item_id
      ) ab ON ab.item_id = i.item_id
      WHERE i.item_id = ?
+       AND i.is_withdrawn = 0
      LIMIT 1`,
     [itemId]
   )

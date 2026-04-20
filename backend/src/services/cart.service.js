@@ -62,6 +62,15 @@ async function handleAddToCart(req, res) {
       return
     }
 
+    const item = await getStandardItemForCart(itemId)
+    if (!item) {
+      sendJson(res, 404, {
+        ok: false,
+        message: "Item is not available in catalog.",
+      })
+      return
+    }
+
     const existing = await findCartItem(userId, itemId)
 
     if (existing.length > 0) {

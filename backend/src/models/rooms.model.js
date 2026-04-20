@@ -291,8 +291,8 @@ async function getUserBookings(userId, limit = 50) {
      FROM book_room
      WHERE user_id = ?
      ORDER BY start_time DESC
-     LIMIT ?`,
-    [userId, limit]
+     LIMIT ${Number(limit)}`,
+    [userId]
   )
 
   return rows

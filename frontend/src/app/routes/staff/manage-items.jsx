@@ -135,8 +135,7 @@ export default function ManageItemsPage() {
     setLoading(true)
     setError("")
     try {
-      const includeWithdrawn =
-        mode === "remove" && showWithdrawnItems ? "&includeWithdrawn=1" : ""
+      const includeWithdrawn = showWithdrawnItems ? "&includeWithdrawn=1" : ""
       const response = await fetch(
         `${API_BASE_URL}/api/items/search?q=${encodeURIComponent(search)}&type=All${includeWithdrawn}`
       )
@@ -356,7 +355,7 @@ export default function ManageItemsPage() {
                 {loading ? "Loading..." : "Search"}
               </Button>
             </div>
-            {mode === "remove" && (
+            {
               <label className="inline-flex items-center gap-2 text-sm text-muted-foreground">
                 <input
                   type="checkbox"
@@ -368,7 +367,7 @@ export default function ManageItemsPage() {
                 />
                 Include withdrawn items
               </label>
-            )}
+            }
             {mode === "remove" ? (
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2 rounded-md border p-3">
@@ -544,7 +543,7 @@ export default function ManageItemsPage() {
                                 disabled={isSubmitting || selectedIsWithdrawn}
                                 variant="destructive"
                               >
-                                Withdraw Item (remove from catalog)
+                                Withdraw Item from Catalog
                               </Button>
                             </DialogTrigger>
                             <DialogContent>
@@ -578,7 +577,7 @@ export default function ManageItemsPage() {
                           </Dialog>
                         }
 
-                        <Dialog
+                        {/* <Dialog
                           open={isDeleteDialogOpen}
                           onOpenChange={setIsDeleteDialogOpen}
                         >
@@ -618,7 +617,7 @@ export default function ManageItemsPage() {
                               </Button>
                             </DialogFooter>
                           </DialogContent>
-                        </Dialog>
+                        </Dialog> */}
 
                         <Button
                           variant="outline"
@@ -660,6 +659,11 @@ export default function ManageItemsPage() {
                           <p className="text-xs text-muted-foreground">
                             {item.standard_type} • Stock: {item.stock}
                           </p>
+                          {Number(item.is_withdrawn || 0) === 1 && (
+                            <p className="text-xs font-medium text-orange-600">
+                              Withdrawn
+                            </p>
+                          )}
                         </button>
                       ))}
                   {!pagedItems.length && (

@@ -219,11 +219,15 @@ CREATE TABLE `item` (
   `inventory` tinyint unsigned NOT NULL DEFAULT '0',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `created_by` int unsigned NOT NULL,
+  `is_withdrawn` tinyint(1) NOT NULL DEFAULT '0',
+  `withdrawn_at` datetime DEFAULT NULL,
+  `withdrawn_by` int unsigned DEFAULT NULL,
   PRIMARY KEY (`item_id`),
   KEY `fk_item_type` (`item_type_code`),
   KEY `fk_item_created_by` (`created_by`),
   CONSTRAINT `fk_item_created_by` FOREIGN KEY (`created_by`) REFERENCES `staff_account` (`staff_id`),
-  CONSTRAINT `fk_item_type` FOREIGN KEY (`item_type_code`) REFERENCES `item_type` (`item_code`)
+  CONSTRAINT `fk_item_type` FOREIGN KEY (`item_type_code`) REFERENCES `item_type` (`item_code`),
+  CONSTRAINT `fk_item_withdrawn_by` FOREIGN KEY (`withdrawn_by`) REFERENCES `staff_account` (`staff_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 

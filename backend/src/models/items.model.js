@@ -81,7 +81,12 @@ function mapItemRow(row) {
   }
 }
 
-async function searchItems({ queryText = "", itemType = "All", limit = 50 }) {
+async function searchItems({
+  queryText = "",
+  itemType = "All",
+  limit = 50,
+  includeWithdrawn = false,
+}) {
   const typeCode = await normalizeItemTypeCode(itemType)
   const trimmedQuery = String(queryText || "").trim()
   const likeQuery = `%${trimmedQuery}%`
@@ -90,8 +95,12 @@ async function searchItems({ queryText = "", itemType = "All", limit = 50 }) {
     ? Math.min(Math.max(parsedLimit, 1), 200)
     : 50
 
-  const filters = ["i.is_withdrawn = 0"]
+  const filters = []
   const params = []
+
+  if (!includeWithdrawn) {
+    filters.push("i.is_withdrawn = 0")
+  }
 
   if (typeCode) {
     filters.push("i.item_type_code = ?")

@@ -21,6 +21,7 @@ const triggerFiles = [
   "borrow-limit.sql",
   "hold-limit.sql",
   "duplicate-borrows-holds.sql",
+  "withdraw-item-holds.sql",
   "auto-checkout-hold.sql",
   "fine-remove-holds.sql",
   "fine-accrual-cap.sql",

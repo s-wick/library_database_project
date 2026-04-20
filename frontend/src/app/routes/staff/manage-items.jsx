@@ -117,6 +117,8 @@ export default function ManageItemsPage() {
   const [selectedImageName, setSelectedImageName] = useState("")
   const [genreInput, setGenreInput] = useState("")
   const [genres, setGenres] = useState([])
+  const [isWithdrawDialogOpen, setIsWithdrawDialogOpen] = useState(false)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
 
   const baseInventory = Number(selected?.inventory ?? form.inventory ?? 0)
   const baseStock = Number(selected?.stock ?? form.stock ?? 0)
@@ -132,8 +134,9 @@ export default function ManageItemsPage() {
     setLoading(true)
     setError("")
     try {
+      const includeWithdrawn = mode === "remove" ? "&includeWithdrawn=1" : ""
       const response = await fetch(
-        `${API_BASE_URL}/api/items/search?q=${encodeURIComponent(search)}&type=All`
+        `${API_BASE_URL}/api/items/search?q=${encodeURIComponent(search)}&type=All${includeWithdrawn}`
       )
       const data = await response.json().catch(() => ({}))
       if (!response.ok) {
@@ -173,6 +176,7 @@ export default function ManageItemsPage() {
   async function handleWithdraw() {
     if (!selected) return
 
+    setIsWithdrawDialogOpen(false)
     setIsSubmitting(true)
     setError("")
     setSuccess("")
@@ -202,6 +206,7 @@ export default function ManageItemsPage() {
   }
 
   async function handleDelete(itemId) {
+    setIsDeleteDialogOpen(false)
     setIsSubmitting(true)
     setError("")
     setSuccess("")
@@ -460,39 +465,93 @@ export default function ManageItemsPage() {
                         )}
                       </div>
 
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button
-                            variant="destructive"
-                            disabled={isSubmitting || selected?.is_withdrawn}
-                            onClick={handleWithdraw}
-                          >
-                            {selected?.is_withdrawn
-                              ? "Already Withdrawn"
-                              : "Withdraw Item (Leaves Catalog)"}
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Delete item</DialogTitle>
-                            <DialogDescription>
-                              Withdraw "{selected.title}" from catalog? Item
-                              will be hidden from user search until fully
-                              returned.
-                              {selected?.is_withdrawn && "Already withdrawn."}
-                            </DialogDescription>
-                          </DialogHeader>
-                          <DialogFooter>
+                      <div className="flex flex-wrap gap-2">
+                        <Dialog
+                          open={isWithdrawDialogOpen}
+                          onOpenChange={setIsWithdrawDialogOpen}
+                        >
+                          <DialogTrigger asChild>
                             <Button
                               variant="destructive"
-                              onClick={() => handleDelete(selected.item_id)}
-                              disabled={isSubmitting}
+                              disabled={isSubmitting || selected?.is_withdrawn}
                             >
-                              {isSubmitting ? "Deleting..." : "Confirm delete"}
+                              {selected?.is_withdrawn
+                                ? "Already Withdrawn"
+                                : "Withdraw Item (Hide from users)"}
                             </Button>
-                          </DialogFooter>
-                        </DialogContent>
-                      </Dialog>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Withdraw item</DialogTitle>
+                              <DialogDescription>
+                                Withdraw "{selected.title}" from catalog? This
+                                hides it from users but keeps history in the
+                                database.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <DialogFooter>
+                              <Button
+                                variant="outline"
+                                onClick={() => setIsWithdrawDialogOpen(false)}
+                                disabled={isSubmitting}
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                onClick={handleWithdraw}
+                                disabled={isSubmitting}
+                              >
+                                {isSubmitting
+                                  ? "Withdrawing..."
+                                  : "Confirm withdraw"}
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
+
+                        <Dialog
+                          open={isDeleteDialogOpen}
+                          onOpenChange={setIsDeleteDialogOpen}
+                        >
+                          <DialogTrigger asChild>
+                            <Button
+                              variant="outline"
+                              disabled={isSubmitting || !selected?.is_withdrawn}
+                            >
+                              Permanently Delete
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Delete item</DialogTitle>
+                              <DialogDescription>
+                                Delete "{selected.title}" permanently? This is
+                                only allowed for withdrawn items with no active
+                                checkouts.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <DialogFooter>
+                              <Button
+                                variant="outline"
+                                onClick={() => setIsDeleteDialogOpen(false)}
+                                disabled={isSubmitting}
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                onClick={() => handleDelete(selected.item_id)}
+                                disabled={isSubmitting}
+                              >
+                                {isSubmitting
+                                  ? "Deleting..."
+                                  : "Confirm delete"}
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
+                      </div>
                     </div>
                   )}
                 </div>

@@ -3,4 +3,5 @@ VALUES
 	('Hold grace started'),
 	('Hold ready for pickup'),
 	('Removed hold'),
+	('Hold canceled - item withdrawn'),
 	('Checked out item');

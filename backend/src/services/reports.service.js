@@ -356,6 +356,8 @@ async function getInventoryRows(url) {
        i.title AS itemName,
        i.created_at AS createdAt,
        it.item_type AS itemType,
+       i.is_withdrawn AS isWithdrawn,
+       CASE WHEN i.is_withdrawn = 1 THEN 'INACTIVE' ELSE 'ACTIVE' END AS itemStatus,
        i.inventory AS inventory,
        i.monetary_value AS itemValue,
        COALESCE(i.inventory, 0) * COALESCE(i.monetary_value, 0) AS catalogValue,
@@ -490,6 +492,16 @@ function buildItemOnlyFilters(url, options = {}) {
   if (itemType) {
     clauses.push(`${itemTypeAlias}.item_type = ?`)
     params.push(itemType)
+  }
+
+  const itemStatus = String(url.searchParams.get("itemStatus") || "all")
+    .trim()
+    .toLowerCase()
+  if (itemStatus === "active") {
+    clauses.push(`${itemAlias}.is_withdrawn = 0`)
+  }
+  if (itemStatus === "inactive") {
+    clauses.push(`${itemAlias}.is_withdrawn = 1`)
   }
 
   const genres = parseGenresFilter(url.searchParams.get("genre"))
@@ -859,6 +871,24 @@ async function handleGetReports(_req, res, url) {
         (sum, row) => sum + Number(row.overdueActiveBorrows || 0),
         0
       )
+      const totalActiveItems = rows.filter(
+        (row) => Number(row.isWithdrawn || 0) === 0
+      ).length
+      const totalInactiveItems = rows.filter(
+        (row) => Number(row.isWithdrawn || 0) === 1
+      ).length
+      const totalActiveUnits = rows.reduce(
+        (sum, row) =>
+          sum +
+          (Number(row.isWithdrawn || 0) === 0 ? Number(row.inventory || 0) : 0),
+        0
+      )
+      const totalInactiveUnits = rows.reduce(
+        (sum, row) =>
+          sum +
+          (Number(row.isWithdrawn || 0) === 1 ? Number(row.inventory || 0) : 0),
+        0
+      )
 
       sendJson(res, 200, {
         ok: true,
@@ -870,6 +900,10 @@ async function handleGetReports(_req, res, url) {
           totalInventoryUnits,
           totalActiveBorrows,
           totalOverdueActiveBorrows,
+          totalActiveItems,
+          totalInactiveItems,
+          totalActiveUnits,
+          totalInactiveUnits,
           page,
           pageSize,
           hasMore,

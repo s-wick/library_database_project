@@ -63,4 +63,23 @@ BEGIN
 	END IF;
 END;;
 
+-- Do not allow new holds on withdrawn/inactive items.
+CREATE TRIGGER prevent_hold_for_withdrawn_item
+BEFORE INSERT ON hold_item
+FOR EACH ROW
+BEGIN
+	DECLARE v_is_withdrawn TINYINT(1) DEFAULT 0;
+
+	SELECT COALESCE(is_withdrawn, 0)
+		INTO v_is_withdrawn
+		FROM item
+	 WHERE item_id = NEW.item_id
+	 LIMIT 1;
+
+	IF v_is_withdrawn = 1 THEN
+		SIGNAL SQLSTATE '45000'
+			SET MESSAGE_TEXT = 'Hold blocked: item is inactive and no longer accepts holds.';
+	END IF;
+END;;
+
 DELIMITER ;

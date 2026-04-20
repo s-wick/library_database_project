@@ -190,8 +190,20 @@ async function handleSearchItems(_req, res, url) {
   try {
     const q = url.searchParams.get("q") || ""
     const type = url.searchParams.get("type") || "All"
+    const includeWithdrawnParam = String(
+      url.searchParams.get("includeWithdrawn") || ""
+    )
+      .trim()
+      .toLowerCase()
+    const includeWithdrawn =
+      includeWithdrawnParam === "1" || includeWithdrawnParam === "true"
     const limit = 50
-    const items = await searchItems({ queryText: q, itemType: type, limit })
+    const items = await searchItems({
+      queryText: q,
+      itemType: type,
+      limit,
+      includeWithdrawn,
+    })
 
     sendJson(res, 200, {
       ok: true,

@@ -128,14 +128,20 @@ async function handleApiRoute(req, res, url) {
         await handleUpdateItem(req, res, actionOrId)
         return
       }
-      if (req.method === "POST" && actionOrId === "withdraw") {
-        await handleWithdrawItem(req, res, actionOrId)
-        return
-      }
       if (req.method === "DELETE") {
         await handleDeleteItem(req, res, actionOrId)
         return
       }
+    }
+
+    // Route shape: /api/items/:id/withdraw
+    if (
+      req.method === "POST" &&
+      parts.length === 4 &&
+      parts[3] === "withdraw"
+    ) {
+      await handleWithdrawItem(req, res, parts[2])
+      return
     }
   }
 

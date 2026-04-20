@@ -745,6 +745,62 @@ async function handleWithdrawItem(req, res, id) {
   }
 }
 
+async function handleRestoreItem(req, res, id) {
+  try {
+    const itemId = Number(id)
+    if (!Number.isFinite(itemId)) {
+      sendJson(res, 400, { ok: false, message: "Invalid item id." })
+      return
+    }
+
+    const existingItem = await query(
+      `SELECT item_id, is_withdrawn
+       FROM item
+       WHERE item_id = ?
+       FOR UPDATE`,
+      [itemId]
+    )
+
+    if (!existingItem.length) {
+      sendJson(res, 404, { ok: false, message: "Item not found." })
+      return
+    }
+
+    if (!existingItem[0].is_withdrawn) {
+      sendJson(res, 409, {
+        ok: false,
+        message: "Item is already active in catalog.",
+      })
+      return
+    }
+
+    const result = await query(
+      `UPDATE item
+       SET is_withdrawn = 0,
+           withdrawn_at = NULL,
+           withdrawn_by = NULL
+       WHERE item_id = ?`,
+      [itemId]
+    )
+
+    if (!result.affectedRows) {
+      sendJson(res, 500, { ok: false, message: "Failed to restore item." })
+      return
+    }
+
+    sendJson(res, 200, {
+      ok: true,
+      message: "Item restored to catalog successfully.",
+    })
+  } catch (error) {
+    sendJson(res, 500, {
+      ok: false,
+      message: "Failed to restore item",
+      error: error.message,
+    })
+  }
+}
+
 async function handleDeleteItem(_req, res, id) {
   try {
     const itemId = Number(id)
@@ -806,4 +862,5 @@ module.exports = {
   handleUpdateItem,
   handleDeleteItem,
   handleWithdrawItem,
+  handleRestoreItem,
 }

@@ -16,6 +16,7 @@ const {
   handleUpdateItem,
   handleDeleteItem,
   handleWithdrawItem,
+  handleRestoreItem,
 } = require("./services/items.service")
 const {
   handleBorrow,
@@ -141,6 +142,12 @@ async function handleApiRoute(req, res, url) {
       parts[3] === "withdraw"
     ) {
       await handleWithdrawItem(req, res, parts[2])
+      return
+    }
+
+    // Route shape: /api/items/:id/restore
+    if (req.method === "POST" && parts.length === 4 && parts[3] === "restore") {
+      await handleRestoreItem(req, res, parts[2])
       return
     }
   }

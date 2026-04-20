@@ -117,6 +117,7 @@ export default function ManageItemsPage() {
   const [selectedImageName, setSelectedImageName] = useState("")
   const [genreInput, setGenreInput] = useState("")
   const [genres, setGenres] = useState([])
+  const [showWithdrawnItems, setShowWithdrawnItems] = useState(false)
   const [isWithdrawDialogOpen, setIsWithdrawDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
 
@@ -134,7 +135,8 @@ export default function ManageItemsPage() {
     setLoading(true)
     setError("")
     try {
-      const includeWithdrawn = mode === "remove" ? "&includeWithdrawn=1" : ""
+      const includeWithdrawn =
+        mode === "remove" && showWithdrawnItems ? "&includeWithdrawn=1" : ""
       const response = await fetch(
         `${API_BASE_URL}/api/items/search?q=${encodeURIComponent(search)}&type=All${includeWithdrawn}`
       )
@@ -167,11 +169,12 @@ export default function ManageItemsPage() {
       .catch(() => {
         setGenres([])
       })
-  }, [])
+  }, [showWithdrawnItems])
 
   const totalPages = Math.max(1, Math.ceil((items || []).length / pageSize))
   const startIndex = (currentPage - 1) * pageSize
   const pagedItems = (items || []).slice(startIndex, startIndex + pageSize)
+  const selectedIsWithdrawn = Number(selected?.is_withdrawn || 0) === 1
 
   async function handleWithdraw() {
     if (!selected) return
@@ -225,6 +228,37 @@ export default function ManageItemsPage() {
         setSelected(null)
         setForm({})
       }
+      await loadItems(query)
+    } catch {
+      setError("Unable to connect to server.")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  async function handleRestore() {
+    if (!selected) return
+
+    setIsSubmitting(true)
+    setError("")
+    setSuccess("")
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/items/${selected.item_id}/restore`,
+        {
+          method: "POST",
+        }
+      )
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        setError(data.message || "Failed to restore item.")
+        return
+      }
+
+      setSuccess("Item restored to catalog.")
+      setSelected((prev) =>
+        prev ? { ...prev, is_withdrawn: 0, withdrawn_at: null } : prev
+      )
       await loadItems(query)
     } catch {
       setError("Unable to connect to server.")
@@ -312,6 +346,19 @@ export default function ManageItemsPage() {
                 {loading ? "Loading..." : "Search"}
               </Button>
             </div>
+            {mode === "remove" && (
+              <label className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+                <input
+                  type="checkbox"
+                  checked={showWithdrawnItems}
+                  onChange={(event) => {
+                    setShowWithdrawnItems(event.target.checked)
+                    setSelected(null)
+                  }}
+                />
+                Include withdrawn items
+              </label>
+            )}
             {mode === "remove" ? (
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2 rounded-md border p-3">
@@ -340,6 +387,11 @@ export default function ManageItemsPage() {
                           <p className="text-xs text-muted-foreground">
                             {item.standard_type} • Stock: {item.stock}
                           </p>
+                          {Number(item.is_withdrawn || 0) === 1 && (
+                            <p className="text-xs font-medium text-orange-600">
+                              Withdrawn
+                            </p>
+                          )}
                         </button>
                       ))}
                   {!pagedItems.length && (
@@ -418,6 +470,12 @@ export default function ManageItemsPage() {
                           <span className="font-medium">Value:</span>{" "}
                           {selected.monetary_value}
                         </p>
+                        <p>
+                          <span className="font-medium">Catalog status:</span>{" "}
+                          {selectedIsWithdrawn
+                            ? "Inactive (withdrawn)"
+                            : "Active"}
+                        </p>
 
                         {String(selected.standard_type || "")
                           .trim()
@@ -466,49 +524,49 @@ export default function ManageItemsPage() {
                       </div>
 
                       <div className="flex flex-wrap gap-2">
-                        <Dialog
-                          open={isWithdrawDialogOpen}
-                          onOpenChange={setIsWithdrawDialogOpen}
-                        >
-                          <DialogTrigger asChild>
-                            <Button
-                              variant="destructive"
-                              disabled={isSubmitting || selected?.is_withdrawn}
-                            >
-                              {selected?.is_withdrawn
-                                ? "Already Withdrawn"
-                                : "Withdraw Item (Hide from users)"}
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Withdraw item</DialogTitle>
-                              <DialogDescription>
-                                Withdraw "{selected.title}" from catalog? This
-                                hides it from users but keeps history in the
-                                database.
-                              </DialogDescription>
-                            </DialogHeader>
-                            <DialogFooter>
+                        {
+                          <Dialog
+                            open={isWithdrawDialogOpen}
+                            onOpenChange={setIsWithdrawDialogOpen}
+                          >
+                            <DialogTrigger asChild>
                               <Button
-                                variant="outline"
-                                onClick={() => setIsWithdrawDialogOpen(false)}
-                                disabled={isSubmitting}
-                              >
-                                Cancel
-                              </Button>
-                              <Button
+                                disabled={isSubmitting || selectedIsWithdrawn}
                                 variant="destructive"
-                                onClick={handleWithdraw}
-                                disabled={isSubmitting}
                               >
-                                {isSubmitting
-                                  ? "Withdrawing..."
-                                  : "Confirm withdraw"}
+                                Withdraw Item (remove from catalog)
                               </Button>
-                            </DialogFooter>
-                          </DialogContent>
-                        </Dialog>
+                            </DialogTrigger>
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle>Withdraw item</DialogTitle>
+                                <DialogDescription>
+                                  Withdraw "{selected.title}" from catalog? This
+                                  hides it from users but keeps history in the
+                                  database.
+                                </DialogDescription>
+                              </DialogHeader>
+                              <DialogFooter>
+                                <Button
+                                  variant="outline"
+                                  onClick={() => setIsWithdrawDialogOpen(false)}
+                                  disabled={isSubmitting}
+                                >
+                                  Cancel
+                                </Button>
+                                <Button
+                                  variant="destructive"
+                                  onClick={handleWithdraw}
+                                  disabled={isSubmitting}
+                                >
+                                  {isSubmitting
+                                    ? "Withdrawing..."
+                                    : "Confirm withdraw"}
+                                </Button>
+                              </DialogFooter>
+                            </DialogContent>
+                          </Dialog>
+                        }
 
                         <Dialog
                           open={isDeleteDialogOpen}
@@ -516,8 +574,8 @@ export default function ManageItemsPage() {
                         >
                           <DialogTrigger asChild>
                             <Button
-                              variant="outline"
-                              disabled={isSubmitting || !selected?.is_withdrawn}
+                              variant="destructive"
+                              disabled={isSubmitting || !selectedIsWithdrawn}
                             >
                               Permanently Delete
                             </Button>
@@ -542,7 +600,7 @@ export default function ManageItemsPage() {
                               <Button
                                 variant="destructive"
                                 onClick={() => handleDelete(selected.item_id)}
-                                disabled={isSubmitting}
+                                disabled={isSubmitting || !selectedIsWithdrawn}
                               >
                                 {isSubmitting
                                   ? "Deleting..."
@@ -551,6 +609,14 @@ export default function ManageItemsPage() {
                             </DialogFooter>
                           </DialogContent>
                         </Dialog>
+
+                        <Button
+                          variant="outline"
+                          disabled={isSubmitting || !selectedIsWithdrawn}
+                          onClick={handleRestore}
+                        >
+                          {isSubmitting ? "Restoring..." : "Restore to Catalog"}
+                        </Button>
                       </div>
                     </div>
                   )}

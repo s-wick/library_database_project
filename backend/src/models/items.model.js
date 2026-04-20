@@ -60,6 +60,7 @@ function mapItemRow(row) {
     item_type_code: row.item_type_code,
     title: row.title,
     monetary_value: row.monetary_value,
+    is_withdrawn: Number(row.is_withdrawn || 0),
     standard_type: standardType,
     creator,
     thumbnail_image: row.thumbnail_image,

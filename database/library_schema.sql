@@ -28,7 +28,7 @@ CREATE TABLE `assigned_genres` (
   `assigned_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`item_id`,`genre_id`),
   KEY `genre_id` (`genre_id`),
-  CONSTRAINT `assigned_genres_ibfk_1` FOREIGN KEY (`item_id`) REFERENCES `item` (`item_id`),
+  CONSTRAINT `assigned_genres_ibfk_1` FOREIGN KEY (`item_id`) REFERENCES `item` (`item_id`) ON DELETE RESTRICT,
   CONSTRAINT `assigned_genres_ibfk_2` FOREIGN KEY (`genre_id`) REFERENCES `genre` (`genre_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -45,7 +45,7 @@ CREATE TABLE `audio` (
   `audio_length_seconds` int unsigned DEFAULT NULL,
   `audio_file` blob NOT NULL,
   PRIMARY KEY (`item_id`),
-  CONSTRAINT `fk_audio_item` FOREIGN KEY (`item_id`) REFERENCES `item` (`item_id`) ON DELETE CASCADE
+  CONSTRAINT `fk_audio_item` FOREIGN KEY (`item_id`) REFERENCES `item` (`item_id`) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -63,7 +63,7 @@ CREATE TABLE `book` (
   `publication` varchar(50) NOT NULL,
   `publication_date` date NOT NULL,
   PRIMARY KEY (`item_id`),
-  CONSTRAINT `fk_book_item` FOREIGN KEY (`item_id`) REFERENCES `item` (`item_id`) ON DELETE CASCADE
+  CONSTRAINT `fk_book_item` FOREIGN KEY (`item_id`) REFERENCES `item` (`item_id`) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -83,7 +83,7 @@ CREATE TABLE `book_room` (
   PRIMARY KEY (`room_number`,`user_id`,`start_time`),
   KEY `user_id` (`user_id`),
   CONSTRAINT `book_room_ibfk_1` FOREIGN KEY (`room_number`) REFERENCES `meeting_room` (`room_number`) ON DELETE CASCADE,
-  CONSTRAINT `book_room_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `user_account` (`user_id`) ON DELETE CASCADE
+  CONSTRAINT `book_room_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `user_account` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -102,7 +102,7 @@ CREATE TABLE `borrow` (
   `return_date` datetime DEFAULT NULL,
   PRIMARY KEY (`item_id`,`user_id`,`checkout_date`),
   KEY `user_id` (`user_id`),
-  CONSTRAINT `borrow_ibfk_1` FOREIGN KEY (`item_id`) REFERENCES `item` (`item_id`),
+  CONSTRAINT `borrow_ibfk_1` FOREIGN KEY (`item_id`) REFERENCES `item` (`item_id`) ON DELETE RESTRICT,
   CONSTRAINT `borrow_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `user_account` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -121,7 +121,7 @@ CREATE TABLE `cart_items` (
   `added_to_cart` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`cart_id`),
   KEY `item_id` (`item_id`),
-  CONSTRAINT `cart_items_ibfk_1` FOREIGN KEY (`item_id`) REFERENCES `item` (`item_id`)
+  CONSTRAINT `cart_items_ibfk_1` FOREIGN KEY (`item_id`) REFERENCES `item` (`item_id`) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -139,7 +139,7 @@ CREATE TABLE `fined_for` (
   `amount` decimal(8,2) DEFAULT NULL,
   `amount_paid` decimal(8,2) DEFAULT NULL,
   PRIMARY KEY (`item_id`,`user_id`,`checkout_date`),
-  CONSTRAINT `fined_for_ibfk_1` FOREIGN KEY (`item_id`, `user_id`, `checkout_date`) REFERENCES `borrow` (`item_id`, `user_id`, `checkout_date`) ON DELETE CASCADE
+  CONSTRAINT `fined_for_ibfk_1` FOREIGN KEY (`item_id`, `user_id`, `checkout_date`) REFERENCES `borrow` (`item_id`, `user_id`, `checkout_date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -183,7 +183,7 @@ CREATE TABLE `hold_item` (
   KEY `idx_hold_user_open_grace` (`user_id`,`close_datetime`,`grace_expires_at`),
   KEY `idx_hold_item_open_pickup` (`item_id`,`close_datetime`,`pickup_expires_at`),
   KEY `close_reason_id` (`close_reason_id`),
-  CONSTRAINT `hold_item_ibfk_1` FOREIGN KEY (`item_id`) REFERENCES `item` (`item_id`),
+  CONSTRAINT `hold_item_ibfk_1` FOREIGN KEY (`item_id`) REFERENCES `item` (`item_id`) ON DELETE RESTRICT,
   CONSTRAINT `hold_item_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `user_account` (`user_id`),
   CONSTRAINT `hold_item_ibfk_3` FOREIGN KEY (`close_reason_id`) REFERENCES `hold_item_closing_reasons` (`reason_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
@@ -219,11 +219,15 @@ CREATE TABLE `item` (
   `inventory` tinyint unsigned NOT NULL DEFAULT '0',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `created_by` int unsigned NOT NULL,
+  `is_withdrawn` tinyint(1) NOT NULL DEFAULT '0',
+  `withdrawn_at` datetime DEFAULT NULL,
+  `withdrawn_by` int unsigned DEFAULT NULL,
   PRIMARY KEY (`item_id`),
   KEY `fk_item_type` (`item_type_code`),
   KEY `fk_item_created_by` (`created_by`),
   CONSTRAINT `fk_item_created_by` FOREIGN KEY (`created_by`) REFERENCES `staff_account` (`staff_id`),
-  CONSTRAINT `fk_item_type` FOREIGN KEY (`item_type_code`) REFERENCES `item_type` (`item_code`)
+  CONSTRAINT `fk_item_type` FOREIGN KEY (`item_type_code`) REFERENCES `item_type` (`item_code`),
+  CONSTRAINT `fk_item_withdrawn_by` FOREIGN KEY (`withdrawn_by`) REFERENCES `staff_account` (`staff_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -268,7 +272,7 @@ DROP TABLE IF EXISTS `rental_equipment`;
 CREATE TABLE `rental_equipment` (
   `item_id` int unsigned NOT NULL,
   PRIMARY KEY (`item_id`),
-  CONSTRAINT `fk_equipment_item` FOREIGN KEY (`item_id`) REFERENCES `item` (`item_id`) ON DELETE CASCADE
+  CONSTRAINT `fk_equipment_item` FOREIGN KEY (`item_id`) REFERENCES `item` (`item_id`) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -373,7 +377,7 @@ CREATE TABLE `user_account_faculty_audit` (
   KEY `idx_faculty_audit_action_type` (`action_type_id`),
   CONSTRAINT `fk_faculty_audit_action_type` FOREIGN KEY (`action_type_id`) REFERENCES `user_account_faculty_audit_action_type` (`action_type_id`) ON DELETE RESTRICT,
   CONSTRAINT `fk_faculty_audit_staff` FOREIGN KEY (`changed_by_staff_id`) REFERENCES `staff_account` (`staff_id`) ON DELETE RESTRICT,
-  CONSTRAINT `fk_faculty_audit_user` FOREIGN KEY (`user_id`) REFERENCES `user_account` (`user_id`) ON DELETE CASCADE
+  CONSTRAINT `fk_faculty_audit_user` FOREIGN KEY (`user_id`) REFERENCES `user_account` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -412,8 +416,8 @@ CREATE TABLE `user_notification` (
   KEY `fk_user_notification_user` (`user_id`),
   KEY `fk_notification_type` (`notification_type`),
   CONSTRAINT `fk_notification_type` FOREIGN KEY (`notification_type`) REFERENCES `user_notification_type` (`notification_type_id`) ON DELETE CASCADE,
-  CONSTRAINT `fk_user_notification_item` FOREIGN KEY (`item_id`) REFERENCES `item` (`item_id`) ON DELETE CASCADE,
-  CONSTRAINT `fk_user_notification_user` FOREIGN KEY (`user_id`) REFERENCES `user_account` (`user_id`) ON DELETE CASCADE
+  CONSTRAINT `fk_user_notification_item` FOREIGN KEY (`item_id`) REFERENCES `item` (`item_id`) ON DELETE RESTRICT,
+  CONSTRAINT `fk_user_notification_user` FOREIGN KEY (`user_id`) REFERENCES `user_account` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -443,7 +447,7 @@ CREATE TABLE `video` (
   `video_length_seconds` int unsigned DEFAULT NULL,
   `video_file` blob NOT NULL,
   PRIMARY KEY (`item_id`),
-  CONSTRAINT `fk_video_item` FOREIGN KEY (`item_id`) REFERENCES `item` (`item_id`) ON DELETE CASCADE
+  CONSTRAINT `fk_video_item` FOREIGN KEY (`item_id`) REFERENCES `item` (`item_id`) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;

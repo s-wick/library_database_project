@@ -60,6 +60,7 @@ function mapItemRow(row) {
     item_type_code: row.item_type_code,
     title: row.title,
     monetary_value: row.monetary_value,
+    is_withdrawn: Number(row.is_withdrawn || 0),
     standard_type: standardType,
     creator,
     thumbnail_image: row.thumbnail_image,
@@ -81,7 +82,12 @@ function mapItemRow(row) {
   }
 }
 
-async function searchItems({ queryText = "", itemType = "All", limit = 50 }) {
+async function searchItems({
+  queryText = "",
+  itemType = "All",
+  limit = 50,
+  includeWithdrawn = false,
+}) {
   const typeCode = await normalizeItemTypeCode(itemType)
   const trimmedQuery = String(queryText || "").trim()
   const likeQuery = `%${trimmedQuery}%`
@@ -92,6 +98,10 @@ async function searchItems({ queryText = "", itemType = "All", limit = 50 }) {
 
   const filters = []
   const params = []
+
+  if (!includeWithdrawn) {
+    filters.push("i.is_withdrawn = 0")
+  }
 
   if (typeCode) {
     filters.push("i.item_type_code = ?")
@@ -125,6 +135,7 @@ async function searchItems({ queryText = "", itemType = "All", limit = 50 }) {
        i.monetary_value,
        i.thumbnail_image,
        i.inventory,
+       i.is_withdrawn,
        GREATEST(
          CAST(i.inventory AS SIGNED) - COALESCE(CAST(ab.active_borrow_count AS SIGNED), 0),
          0
@@ -184,6 +195,9 @@ async function getItemById(itemId) {
        i.monetary_value,
        i.thumbnail_image,
        i.inventory,
+       i.is_withdrawn,
+       i.withdrawn_at,
+       i.withdrawn_by,
        GREATEST(
          CAST(i.inventory AS SIGNED) - COALESCE(CAST(ab.active_borrow_count AS SIGNED), 0),
          0

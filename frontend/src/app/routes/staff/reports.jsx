@@ -42,6 +42,7 @@ const INITIAL_FILTERS = {
   endDate: "",
   userType: "",
   itemType: "",
+  itemStatus: "all",
   genre: [],
   overdue: "all",
 }
@@ -556,16 +557,19 @@ function buildInventoryInsights(rows) {
   const unitsByType = new Map()
   const valueByType = new Map()
   const activeByType = new Map()
+  const itemsByStatus = new Map()
 
   rows.forEach((row) => {
     const itemType = formatItemTypeForDisplay(row.itemType)
     const units = Number(row.inventory || 0)
     const value = Number(row.catalogValue || 0)
     const active = Number(row.activeBorrows || 0)
+    const status = Number(row.isWithdrawn || 0) === 1 ? "Inactive" : "Active"
 
     unitsByType.set(itemType, (unitsByType.get(itemType) || 0) + units)
     valueByType.set(itemType, (valueByType.get(itemType) || 0) + value)
     activeByType.set(itemType, (activeByType.get(itemType) || 0) + active)
+    itemsByStatus.set(status, (itemsByStatus.get(status) || 0) + 1)
   })
 
   const inventoryByType = Array.from(unitsByType.entries())
@@ -588,11 +592,17 @@ function buildInventoryInsights(rows) {
     .sort((a, b) => b.value - a.value)
     .slice(0, 10)
 
+  const statusRows = [
+    { label: "Active", value: itemsByStatus.get("Active") || 0 },
+    { label: "Inactive", value: itemsByStatus.get("Inactive") || 0 },
+  ]
+
   return {
     inventoryByType,
     valueByTypeRows,
     activeByTypeRows,
     topByValue,
+    statusRows,
   }
 }
 
@@ -818,6 +828,7 @@ export default function ReportsPage() {
         endDate: filters.endDate,
         userType: filters.userType,
         itemType: filters.itemType,
+        itemStatus: filters.itemStatus,
         genre: Array.isArray(filters.genre) ? filters.genre.join(",") : "",
         overdue: filters.overdue,
         page: String(nextPage),
@@ -1049,6 +1060,25 @@ export default function ReportsPage() {
                     </option>
                   ))}
                 </select>
+              </Field>
+
+              <Field>
+                <FieldLabel htmlFor="itemStatus">Item status</FieldLabel>
+                {isInventoryReport ? (
+                  <select
+                    id="itemStatus"
+                    name="itemStatus"
+                    value={filters.itemStatus}
+                    onChange={onChange}
+                    className="h-9 w-full rounded-md border border-input bg-card px-2.5 py-1 text-sm text-foreground"
+                  >
+                    <option value="all">All</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                ) : (
+                  <Input value="Not applicable" disabled className="h-9" />
+                )}
               </Field>
 
               <Field>
@@ -1387,9 +1417,36 @@ export default function ReportsPage() {
                       label="Number of currently checked out items"
                       value={Number(summary?.totalActiveBorrows || 0)}
                     />
+                    <MetricCard
+                      label="Active items"
+                      value={Number(summary?.totalActiveItems || 0)}
+                    />
+                    <MetricCard
+                      label="Inactive items"
+                      value={Number(summary?.totalInactiveItems || 0)}
+                    />
+                    <MetricCard
+                      label="Inactive units"
+                      value={Number(summary?.totalInactiveUnits || 0)}
+                    />
                   </div>
 
                   <div className="grid gap-4 lg:grid-cols-2">
+                    <ChartBlock
+                      title="Items by status"
+                      formula="How many catalog entries are currently active versus inactive."
+                      chart={
+                        <HorizontalBarChart
+                          data={inventoryInsights.statusRows}
+                        />
+                      }
+                      columns={[
+                        { key: "label", label: "Status" },
+                        { key: "value", label: "Items" },
+                      ]}
+                      rows={inventoryInsights.statusRows}
+                    />
+
                     <ChartBlock
                       title="Units by item type"
                       formula="How many units exist in each item category."
@@ -1592,6 +1649,7 @@ export default function ReportsPage() {
                           <th className="px-3 py-2">Item</th>
                           <th className="px-3 py-2">Created date</th>
                           <th className="px-3 py-2">Item type</th>
+                          <th className="px-3 py-2">Status</th>
                           <th className="px-3 py-2">Units</th>
                           <th className="px-3 py-2">Unit value</th>
                           <th className="px-3 py-2">Catalog value</th>
@@ -1625,7 +1683,7 @@ export default function ReportsPage() {
                                 : isRevenueReport
                                   ? 9
                                   : isInventoryReport
-                                    ? 9
+                                    ? 10
                                     : 10
                             }
                           >
@@ -1706,6 +1764,11 @@ export default function ReportsPage() {
                             </td>
                             <td className="px-3 py-2">
                               {formatItemTypeForDisplay(row.itemType)}
+                            </td>
+                            <td className="px-3 py-2">
+                              {Number(row.isWithdrawn || 0) === 1
+                                ? "Inactive"
+                                : "Active"}
                             </td>
                             <td className="px-3 py-2">
                               {Number(row.inventory || 0)}

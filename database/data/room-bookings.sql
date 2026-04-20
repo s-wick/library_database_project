@@ -1,4 +1,4 @@
--- sample-base-date: 2026-04-19
+-- sample-base-date: 2026-04-20
 -- sample-shift-days: 0
 
 INSERT INTO meeting_room (room_number, capacity, has_projector, has_whiteboard, has_tv)
@@ -10,15 +10,15 @@ VALUES
 -- sample-shift-days-next: 0
 INSERT INTO book_room (room_number, user_id, start_time, duration_hours)
 VALUES
- ('101', 1, '2026-04-19 09:00:00', 2);
+ ('101', 1, '2026-04-20 09:00:00', 2);
 
 -- sample-shift-days-next: 0
 INSERT INTO book_room (room_number, user_id, start_time, duration_hours)
 VALUES
- ('101', 2, '2026-04-20 13:00:00', 1);
+ ('101', 2, '2026-04-21 13:00:00', 1);
 
 -- sample-shift-days-next: 0
 INSERT INTO book_room (room_number, user_id, start_time, duration_hours)
 VALUES
- ('102', 3, '2026-04-20 09:00:00', 3);
+ ('102', 3, '2026-04-21 09:00:00', 3);
 

@@ -1,4 +1,4 @@
--- sample-base-date: 2026-04-19
+-- sample-base-date: 2026-04-20
 -- sample-shift-days: 0
 -- Borrow transactions
 
@@ -26,14 +26,14 @@ SET @faculty_id = (
 -- Student user has borrowed some items (not overdue)
 -- sample-shift-days-next: 0
 INSERT INTO borrow (item_id, user_id, checkout_date, due_date, return_date)
-SELECT item_id, @student1_id, '2026-04-16 10:00:00', '2026-04-23 10:00:00', NULL
+SELECT item_id, @student1_id, '2026-04-17 10:00:00', '2026-04-24 10:00:00', NULL
 FROM item
 WHERE title = 'To Kill a Mockingbird';
 
 -- Student user has a book due tomorrow
 -- sample-shift-days-next: 0
 INSERT INTO borrow (item_id, user_id, checkout_date, due_date, return_date)
-SELECT item_id, @student1_id, '2026-04-12 12:00:00', '2026-04-20 12:00:00', NULL
+SELECT item_id, @student1_id, '2026-04-13 12:00:00', '2026-04-21 12:00:00', NULL
 FROM item
 WHERE title = 'Pride and Prejudice';
 
@@ -41,13 +41,13 @@ WHERE title = 'Pride and Prejudice';
 
 -- sample-shift-days-next: -7
 INSERT INTO borrow (item_id, user_id, checkout_date, due_date, return_date)
-SELECT item_id, @student2_id, '2026-02-28 09:15:00', '2026-03-07 09:15:00', NULL
+SELECT item_id, @student2_id, '2026-02-22 09:15:00', '2026-03-01 09:15:00', NULL
 FROM item
 WHERE title = 'The Great Gatsby';
 
 -- sample-shift-days-next: -7
 INSERT INTO borrow (item_id, user_id, checkout_date, due_date, return_date)
-SELECT item_id, @student2_id, '2026-03-02 11:00:00', '2026-03-09 11:00:00', NULL
+SELECT item_id, @student2_id, '2026-02-24 11:00:00', '2026-03-03 11:00:00', NULL
 FROM item
 WHERE title = 'Pride and Prejudice';
 
@@ -55,12 +55,12 @@ WHERE title = 'Pride and Prejudice';
 
 -- sample-shift-days-next: -14
 INSERT INTO borrow (item_id, user_id, checkout_date, due_date, return_date)
-SELECT item_id, @faculty_id, '2026-01-16 13:20:00', '2026-01-30 13:20:00', NULL
+SELECT item_id, @faculty_id, '2026-01-03 13:20:00', '2026-01-17 13:20:00', NULL
 FROM item
 WHERE title = 'The Hobbit';
 
 -- sample-shift-days-next: -14
 INSERT INTO borrow (item_id, user_id, checkout_date, due_date, return_date)
-SELECT item_id, @faculty_id, '2026-01-19 16:45:00', '2026-02-02 16:45:00', NULL
+SELECT item_id, @faculty_id, '2026-01-06 16:45:00', '2026-01-20 16:45:00', NULL
 FROM item
 WHERE title = 'Dell Latitude 5440 Laptop';

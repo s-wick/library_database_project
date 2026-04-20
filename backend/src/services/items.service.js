@@ -190,8 +190,20 @@ async function handleSearchItems(_req, res, url) {
   try {
     const q = url.searchParams.get("q") || ""
     const type = url.searchParams.get("type") || "All"
+    const includeWithdrawnParam = String(
+      url.searchParams.get("includeWithdrawn") || ""
+    )
+      .trim()
+      .toLowerCase()
+    const includeWithdrawn =
+      includeWithdrawnParam === "1" || includeWithdrawnParam === "true"
     const limit = 50
-    const items = await searchItems({ queryText: q, itemType: type, limit })
+    const items = await searchItems({
+      queryText: q,
+      itemType: type,
+      limit,
+      includeWithdrawn,
+    })
 
     sendJson(res, 200, {
       ok: true,
@@ -668,6 +680,127 @@ async function handleUpdateItem(req, res, id) {
   }
 }
 
+async function handleWithdrawItem(req, res, id) {
+  try {
+    const itemId = Number(id)
+    if (!Number.isFinite(itemId)) {
+      sendJson(res, 400, { ok: false, message: "Invalid item id." })
+      return
+    }
+
+    const staffId = await getDefaultStaffId()
+    if (!staffId) {
+      sendJson(res, 500, {
+        ok: false,
+        message: "No staff account available to record withdrawal.",
+      })
+      return
+    }
+
+    const existingItem = await query(
+      `SELECT item_id, is_withdrawn
+       FROM item 
+       WHERE item_id = ? 
+       FOR UPDATE`,
+      [itemId]
+    )
+
+    if (!existingItem.length) {
+      sendJson(res, 404, { ok: false, message: "Item not found." })
+      return
+    }
+
+    if (existingItem[0].is_withdrawn) {
+      sendJson(res, 409, {
+        ok: false,
+        message: "Item is already withdrawn from catalog.",
+      })
+      return
+    }
+
+    const result = await query(
+      `UPDATE item 
+       SET is_withdrawn = 1, 
+           withdrawn_at = NOW(), 
+           withdrawn_by = ?
+       WHERE item_id = ?`,
+      [staffId, itemId]
+    )
+
+    if (!result.affectedRows) {
+      sendJson(res, 500, { ok: false, message: "Failed to withdraw item." })
+      return
+    }
+
+    sendJson(res, 200, {
+      ok: true,
+      message: "Item withdrawn from catalog successfully.",
+    })
+  } catch (error) {
+    sendJson(res, 500, {
+      ok: false,
+      message: "Failed to withdraw item",
+      error: error.message,
+    })
+  }
+}
+
+async function handleRestoreItem(req, res, id) {
+  try {
+    const itemId = Number(id)
+    if (!Number.isFinite(itemId)) {
+      sendJson(res, 400, { ok: false, message: "Invalid item id." })
+      return
+    }
+
+    const existingItem = await query(
+      `SELECT item_id, is_withdrawn
+       FROM item
+       WHERE item_id = ?
+       FOR UPDATE`,
+      [itemId]
+    )
+
+    if (!existingItem.length) {
+      sendJson(res, 404, { ok: false, message: "Item not found." })
+      return
+    }
+
+    if (!existingItem[0].is_withdrawn) {
+      sendJson(res, 409, {
+        ok: false,
+        message: "Item is already active in catalog.",
+      })
+      return
+    }
+
+    const result = await query(
+      `UPDATE item
+       SET is_withdrawn = 0,
+           withdrawn_at = NULL,
+           withdrawn_by = NULL
+       WHERE item_id = ?`,
+      [itemId]
+    )
+
+    if (!result.affectedRows) {
+      sendJson(res, 500, { ok: false, message: "Failed to restore item." })
+      return
+    }
+
+    sendJson(res, 200, {
+      ok: true,
+      message: "Item restored to catalog successfully.",
+    })
+  } catch (error) {
+    sendJson(res, 500, {
+      ok: false,
+      message: "Failed to restore item",
+      error: error.message,
+    })
+  }
+}
+
 async function handleDeleteItem(_req, res, id) {
   try {
     const itemId = Number(id)
@@ -676,11 +809,26 @@ async function handleDeleteItem(_req, res, id) {
       return
     }
 
+    const activeBorrowCount = await getActiveBorrowCountForItem(itemId)
+    if (activeBorrowCount > 0) {
+      sendJson(res, 409, {
+        ok: false,
+        message: `Item has ${activeBorrowCount} active checkout(s). Return all items first.`,
+      })
+      return
+    }
+
     try {
       await query(`DELETE FROM assigned_genres WHERE item_id = ?`, [itemId])
-      const result = await query(`DELETE FROM item WHERE item_id = ?`, [itemId])
+      const result = await query(
+        `DELETE FROM item WHERE item_id = ? AND is_withdrawn = 1`,
+        [itemId]
+      )
       if (!result.affectedRows) {
-        sendJson(res, 404, { ok: false, message: "Item not found." })
+        sendJson(res, 404, {
+          ok: false,
+          message: "Withdrawn item not found or has active references.",
+        })
         return
       }
     } catch (error) {
@@ -688,18 +836,18 @@ async function handleDeleteItem(_req, res, id) {
         sendJson(res, 409, {
           ok: false,
           message:
-            "Item cannot be removed because it is referenced by existing records.",
+            "Cannot permanently delete - item referenced by history records.",
         })
         return
       }
       throw error
     }
 
-    sendJson(res, 200, { ok: true, message: "Item removed successfully." })
+    sendJson(res, 200, { ok: true, message: "Item permanently deleted." })
   } catch (error) {
     sendJson(res, 500, {
       ok: false,
-      message: "Failed to remove item",
+      message: "Failed to permanently delete item",
       error: error.message,
     })
   }
@@ -713,4 +861,6 @@ module.exports = {
   handleCreateItem,
   handleUpdateItem,
   handleDeleteItem,
+  handleWithdrawItem,
+  handleRestoreItem,
 }
